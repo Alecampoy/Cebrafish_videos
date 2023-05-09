@@ -1,14 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /* Author: Ale Campoy
  * Microscopy Unit (CABD)
- * Date: 18.04.2022
- * User: Mercedes
+ * Date: .04.2022
+ * User: Marta Fernandez
  * 	
- * Description: Analysis of moving c.elegans
+ * Description: Analysis of moving Cebrafish
  * 
- * Input: Folder with the set of bright field images .tiff coming from Apotome
+ * Input: Folder with the set of bright field images .tiff coming from Leica magnifier
  *
- * Method: The T-stack is proyected to the median. Then the result is substracted/diferenced from the stack, this allows for a clean segmentation of the worm, that is measured & skeletonized afterwards 
+ * Method: Segmentation using Phantas
  * 
  * Output: Segmented images, skeleton and results file
  * 
@@ -51,7 +51,7 @@ for (i=0; i<list.length; i++){
 // 1. Get dimensions
 		getDimensions(width, height, channels, slices, frames);
 		getPixelSize(unit, pw, ph, pd);
-		// 2. Process
+// 2. Process
 		rename("original");
 		original = getImageID();
 		run("Duplicate...", "title=median duplicate");
