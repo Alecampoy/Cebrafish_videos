@@ -1,14 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /* Author: Ale Campoy
  * Microscopy Unit (CABD)
- * Date: .04.2022
+ * Date: 10.05.2022
  * User: Marta Fernandez
  * 	
  * Description: Analysis of moving Cebrafish
  * 
  * Input: Folder with the set of bright field images .tiff coming from Leica magnifier
  *
- * Method: Segmentation using Phantas of the worm.
+ * Method: Segmentation of the worm using Phantas.
  * 
  * Output: Segmented images, skeleton and results file
  * 
