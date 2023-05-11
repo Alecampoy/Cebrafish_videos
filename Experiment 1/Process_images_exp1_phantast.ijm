@@ -34,7 +34,7 @@ list= getFileList (dir);
 Results = createFolder(dir, "Results");
 
 Start_time = getTime(); // to inform how long does it take to process the folder
-setBatchMode(true);
+setBatchMode(false);
 	// 0.1 Loop to open and process each file
 imagen = 0;
 for (i=0; i<list.length; i++){
@@ -65,17 +65,28 @@ for (i=0; i<list.length; i++){
 				run("PHANTAST", "sigma=2.8 epsilon=0.02 new slice");
 				run("Invert");
 				
-	//2.3.2 Filters particles
-				run("Analyze Particles...", "size=4000-Infinity show=Masks display add");
+	//2.3.2 Get the largtest element
+				run("Analyze Particles...", "size=0-Infinity show=Masks display add");
 				run("Grays");
 				run("Fill Holes");
-				run("Maximum...", "radius=2 stack");
-				run("Minimum...", "radius=2 stack");
+				Area_column = Table.getColumn("Area");
+				indices_max = Array.findMaxima(Area_column, 1);
+				roiManager("Select", indices_max[0]);
+				setBackgroundColor(0, 0, 0);
+				run("Clear Outside");
+				// Clean the results and ROI to later measure again only the largest particle
+				run("Clear Results");
+				if(roiManager("count") !=0) {roiManager("delete");}
+				// binary closing				
+				run("Maximum...", "radius=6 stack");
+				run("Minimum...", "radius=6 stack");
 				rename("binary_temp"); 
 				binary_temp=getImageID();
-				//close("temp_frame");
+				
+				
 
-	// 2.3.3 Measure several features in the frame
+	// 2.3.3 Get several features in the frame
+				run("Analyze Particles...", "display add");
 				selectWindow("Results");
 				if (nResults == 1) {
 					area = getResultString("Area", 0);
@@ -198,6 +209,7 @@ for (i=0; i<list.length; i++){
 // 4. Save the results
 	// 4.1 Save the result stack image
 		selectWindow("Stack_Result");
+		run("Scale...", "x=0.5 y=0.5 z=1.0 interpolation=Bilinear fill process create");
 		rename(title+"_result");
 		saveAs("Tiff", Results+title+"_segment.tif");
 
