@@ -66,22 +66,25 @@ for (i=0; i<list.length; i++){
 				run("Invert");
 				
 	//2.3.2 Get the largtest element
-				run("Analyze Particles...", "size=0-Infinity show=Masks display add");
-				run("Grays");
+				run("Analyze Particles...", "size=0-Infinity display add");
+				rename("binary_temp"); // Output
+				binary_temp=getImageID();
+				//run("Grays");
 				run("Fill Holes");
+				selectWindow("Results");
 				Area_column = Table.getColumn("Area");
 				indices_max = Array.findMaxima(Area_column, 1);
 				roiManager("Select", indices_max[0]);
 				setBackgroundColor(0, 0, 0);
 				run("Clear Outside");
+				run("Select None");
 				// Clean the results and ROI to later measure again only the largest particle
 				run("Clear Results");
 				if(roiManager("count") !=0) {roiManager("delete");}
 				// binary closing				
 				run("Maximum...", "radius=6 stack");
-				run("Minimum...", "radius=6 stack");
-				rename("binary_temp"); 
-				binary_temp=getImageID();
+				run("Minimum...", "radius=9 stack");
+
 				
 				
 
