@@ -194,7 +194,7 @@ for (i=0; i<list.length; i++){
 					run("Select None");
 					// 3.4 Draw the Euclidean Distance
 					setForegroundColor(0, 255, 0);  // draw in green
-					drawLine(V1x/pw, V1y/pw, V2x/pw, V2y/pw); // functions needs arguments in pixels
+					drawLine(V1x, V1y, V2x, V2y); // functions needs arguments in pixels
 					roiManager("Delete");
 				} 
 				close("skeleton_temp");
