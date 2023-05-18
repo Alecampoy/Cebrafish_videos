@@ -14,7 +14,11 @@
  * 
  *///////////////////////////////////////////////////////////////////////////////////////////////
 
-
+// to do: 
+// proyeccion media
+// crear stack de N frames con Tools>Stack Sorter>Duplicate n 
+// a la proyección restarle la original
+// segmentar con automatic threshold
 
 // Clean previous data in FIJI
 run("Close All");
