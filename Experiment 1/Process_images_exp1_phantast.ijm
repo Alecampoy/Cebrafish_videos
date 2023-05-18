@@ -26,7 +26,7 @@ if(roiManager("count") !=0) {roiManager("delete");}
 run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
 run("Set Measurements...", "area center perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
-print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;BranchLen;EuclideanDist"); // header of the result file
+print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;BranchLen;EuclideanDist;Time"); // header of the result file
 
 // 0. Select the Folder with the files
 dir = getDirectory("Selecciona el directorio con las imagenes en tiff");
@@ -38,16 +38,18 @@ setBatchMode(false);
 	// 0.1 Loop to open and process each file
 imagen = 0;
 for (i=0; i<list.length; i++){
-	if (endsWith(list[i], ".tif")){
+	if (endsWith(list[i], "if")){
 		imagen = imagen+1;
 	// 0.2 Open and get data
 		title=list[i];
-		open(dir+title);
+		//open(dir+title);
+		run("Bio-Formats (Windowless)", "open=["+dir+title+"]");
 		run("Select None");
 		
 // 1. Get dimensions
 		getDimensions(width, height, channels, slices, frames);
 		getPixelSize(unit, pw, ph, pd);
+		frame_interval = Stack.getFrameInterval();
 		
 // 2. Process
 		rename("original");
@@ -56,7 +58,7 @@ for (i=0; i<list.length; i++){
 		run("Median...", "radius=1 stack");
 		run("32-bit");
 		duplicate = getImageID();
-		
+
 // 2.3 Segment the worm
 	//2.3.1 Loop for every temporal frame
 			for (t = 0; t < frames; t++) {
@@ -155,7 +157,7 @@ for (i=0; i<list.length; i++){
 				}
 				
 	// 2.3.5 Write the results of the frame in the table			
-				print((t+1)+";"+area+";"+XM+";"+YM+";"+Perim+";"+Circ+";"+Feret+";"+FeretAngle+";"+MinFeret+";"+AR+";"+Round+";"+Solidity+";"+NBranches+";"+AvgBranchLen+";"+MaxBranchLen+";"+BranchLen+";"+EuclideanDist);
+				print((t+1)+";"+area+";"+XM+";"+YM+";"+Perim+";"+Circ+";"+Feret+";"+FeretAngle+";"+MinFeret+";"+AR+";"+Round+";"+Solidity+";"+NBranches+";"+AvgBranchLen+";"+MaxBranchLen+";"+BranchLen+";"+EuclideanDist+";"+frame_interval*t);
 
 // 3. Draw segmentation	on the original at this frame
 	// 3.1 Get the frame image to print the results
@@ -220,7 +222,7 @@ for (i=0; i<list.length; i++){
 		selectWindow("Log");
 		saveAs("Text", Results+title+"_Results.csv");
 		print("\\Clear");
-		print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;BranchLen;EuclideanDist");
+		print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;BranchLen;EuclideanDist;Time");
 		run("Close All");
 		run("Clear Results");
 	}
