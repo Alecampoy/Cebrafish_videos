@@ -15,10 +15,7 @@
  *///////////////////////////////////////////////////////////////////////////////////////////////
 
 // to do: 
-// proyeccion media
-// crear stack de N frames con Tools>Stack Sorter>Duplicate n 
-// a la proyección restarle la original
-// segmentar con automatic threshold
+// debug que la ventana sale negra al completo
 
 // Clean previous data in FIJI
 run("Close All");
@@ -58,18 +55,22 @@ for (i=0; i<list.length; i++){
 // 2. Process
 		rename("original");
 		original = getImageID();
-		run("Duplicate...", "title=duplicate duplicate");
-		run("Median...", "radius=1 stack");
-		run("32-bit");
-		duplicate = getImageID();
+		run("Z Project...", "projection=Median");
+		newImage("stack_temp", "32-bit black", width, height, frames);	
+		imageCalculator("Add stack", "stack_temp","original");
+		rename("proyection_temp");
+		imageCalculator("Subtract stack", "proyection_temp","original");
+		run("16-bit");
+		run("Gaussian Blur...", "sigma=1 stack");
+		run("Convert to Mask", "method=RenyiEntropy background=Dark black");
+		mask = getImageID();
 
 // 2.3 Segment the worm
 	//2.3.1 Loop for every temporal frame
 			for (t = 0; t < frames; t++) {
-				selectImage(duplicate);
+				selectImage(mask);
 				Stack.setFrame(t+1);
-				run("PHANTAST", "sigma=2.8 epsilon=0.02 new slice");
-				run("Invert");
+				run("Duplicate...", "title=binary");
 				
 	//2.3.2 Get the largtest element
 				run("Analyze Particles...", "size=0-Infinity display add");
