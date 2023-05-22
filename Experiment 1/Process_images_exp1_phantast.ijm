@@ -15,7 +15,7 @@
  *///////////////////////////////////////////////////////////////////////////////////////////////
 
 // to do: 
-// debug que la ventana sale negra al completo
+// debug que la ventana sale negra al completo a partir de linea debub
 
 // Clean previous data in FIJI
 run("Close All");
@@ -57,11 +57,14 @@ for (i=0; i<list.length; i++){
 		original = getImageID();
 		run("Z Project...", "projection=Median");
 		newImage("stack_temp", "32-bit black", width, height, frames);	
-		imageCalculator("Add stack", "stack_temp","original");
+		imageCalculator("Add stack", "stack_temp","MED_original");
+		close("MED_original");
 		rename("proyection_temp");
-		imageCalculator("Subtract stack", "proyection_temp","original");
+		imageCalculator("Subtract create stack", "proyection_temp","original");
 		run("16-bit");
 		run("Gaussian Blur...", "sigma=1 stack");
+		debug;
+		setOption("BlackBackground", true);
 		run("Convert to Mask", "method=RenyiEntropy background=Dark black");
 		mask = getImageID();
 
@@ -89,8 +92,8 @@ for (i=0; i<list.length; i++){
 				run("Clear Results");
 				if(roiManager("count") !=0) {roiManager("delete");}
 				// binary closing				
-				run("Maximum...", "radius=6 stack");
-				run("Minimum...", "radius=9 stack");
+				run("Maximum...", "radius=9 stack");
+				run("Minimum...", "radius=11 stack");
 
 				
 				
