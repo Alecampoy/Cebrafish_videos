@@ -8,14 +8,12 @@
  * 
  * Input: Folder with the set of bright field images .tiff coming from Leica magnifier
  *
- * Method: Segmentation of the worm using Phantas.
+ * Method: Segmentation of the worm using removing the background plus automated segmentation
  * 
  * Output: Segmented images, skeleton and results file
  * 
  *///////////////////////////////////////////////////////////////////////////////////////////////
 
-// to do: 
-// debug que la ventana sale negra al completo a partir de linea debub
 
 // Clean previous data in FIJI
 run("Close All");
