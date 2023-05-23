@@ -63,9 +63,9 @@ for (i=0; i<list.length; i++){
 		imageCalculator("Subtract create stack", "proyection_temp","original");
 		run("16-bit");
 		run("Gaussian Blur...", "sigma=1 stack");
-		debug;
 		setOption("BlackBackground", true);
-		run("Convert to Mask", "method=RenyiEntropy background=Dark black");
+		setAutoThreshold("RenyiEntropy dark");
+		run("Convert to Mask", "method=RenyiEntropy background=Default black");
 		mask = getImageID();
 
 // 2.3 Segment the worm
@@ -93,7 +93,7 @@ for (i=0; i<list.length; i++){
 				if(roiManager("count") !=0) {roiManager("delete");}
 				// binary closing				
 				run("Maximum...", "radius=9 stack");
-				run("Minimum...", "radius=11 stack");
+				run("Minimum...", "radius=9 stack");
 
 				
 				
