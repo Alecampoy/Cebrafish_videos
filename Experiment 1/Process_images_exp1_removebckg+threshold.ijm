@@ -70,7 +70,7 @@ for (i=0; i<list.length; i++){
 	//2.3.1 Loop for every temporal frame
 			for (t = 0; t < frames; t++) {
 				selectImage(mask);
-				Stack.setFrame(t+1);
+				Stack.setSlice(t+1);
 				run("Duplicate...", "title=binary");
 				
 	//2.3.2 Get the largtest element
