@@ -7,11 +7,11 @@
  
  A cebrafish contracts, I want to measure the number of times it does and find patterns. Maybe parameters of the tail are to be measure too
 	
-	## Image Segmentation
-	I use a macro that segments the fish using phantas. Several parameters are measured
+## Image Segmentation
+I use a macro that segments the fish using phantas. Several parameters are measured
 	
-	## Data Analysis
-	Plot of Time series using orange
+## Data Analysis
+Plot of Time series using orange
 	
  # Experiment 2: Tracking of the fish in a well
  
