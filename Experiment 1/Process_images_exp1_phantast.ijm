@@ -22,7 +22,7 @@ run("Clear Results");
 print("\\Clear");
 if(roiManager("count") !=0) {roiManager("delete");}
 
-// Set measurements 
+// Set measurements
 run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
 run("Set Measurements...", "area center perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
@@ -35,6 +35,7 @@ Results = createFolder(dir, "Results");
 
 Start_time = getTime(); // to inform how long does it take to process the folder
 setBatchMode(false);
+
 	// 0.1 Loop to open and process each file
 imagen = 0;
 for (i=0; i<list.length; i++){
@@ -66,11 +67,11 @@ for (i=0; i<list.length; i++){
 				Stack.setFrame(t+1);
 				run("PHANTAST", "sigma=2.8 epsilon=0.02 new slice");
 				run("Invert");
+				rename("binary_temp"); // Output
+				binary_temp=getImageID();
 				
 	//2.3.2 Get the largtest element
 				run("Analyze Particles...", "size=0-Infinity display add");
-				rename("binary_temp"); // Output
-				binary_temp=getImageID();
 				//run("Grays");
 				run("Fill Holes");
 				selectWindow("Results");
@@ -83,12 +84,9 @@ for (i=0; i<list.length; i++){
 				// Clean the results and ROI to later measure again only the largest particle
 				run("Clear Results");
 				if(roiManager("count") !=0) {roiManager("delete");}
-				// binary closing				
+				// binary closing
 				run("Maximum...", "radius=6 stack");
 				run("Minimum...", "radius=9 stack");
-
-				
-				
 
 	// 2.3.3 Get several features in the frame
 				run("Analyze Particles...", "display add");
@@ -107,7 +105,7 @@ for (i=0; i<list.length; i++){
 					Round = getResultString("Round", 0);
 				} else { 
 					wait(50);
-					roiManager("delete"); // To avoid an error
+					roiManager("delete"); // To avoid an error if ROI Manager has several ROI
 					area = "NA";
 					XM = "NA";
 					YM = "NA";
@@ -120,7 +118,7 @@ for (i=0; i<list.length; i++){
 					AR="NA";
 					Round="NA";
 				
-						}
+				}
 
 	// 2.3.4 Skeletonize and measure
 				selectImage(binary_temp);
@@ -173,6 +171,7 @@ for (i=0; i<list.length; i++){
 					roiManager("Select", 0);
 					setForegroundColor(255, 255, 0); // draw in yellow
 					run("Draw", "slice");
+					
 	// 3.3 Draw Feret
 					//run("Properties...", "pixel_width=1 pixel_height=1 voxel_depth=1.0000");
 					List.setMeasurements;
@@ -217,7 +216,7 @@ for (i=0; i<list.length; i++){
 		run("Scale...", "x=0.5 y=0.5 z=1.0 interpolation=Bilinear fill process create");
 		rename(title+"_result");
 		saveAs("Tiff", Results+title+"_segment.tif");
-
+		
 	// 4.2 Save results and clean for the next image
 		selectWindow("Log");
 		saveAs("Text", Results+title+"_Results.csv");
@@ -227,8 +226,8 @@ for (i=0; i<list.length; i++){
 		run("Clear Results");
 	}
 }
-setBatchMode(false);
 
+setBatchMode(false);
 // Macro is finished						
 print("\\Clear");
 print("Terminado");
