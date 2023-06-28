@@ -23,7 +23,7 @@ if(roiManager("count") !=0) {roiManager("delete");}
 
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black"); // Set black binary bckg
-run("Set Measurements...", "area center perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
+run("Set Measurements...", "mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
 print("Frame;X;Y;Mean-Distance;Time;"); // header of the result file in the Log window
 
 // 1 Select the Folder with the files
@@ -57,8 +57,9 @@ for (i=0; i<list.length; i++){
 		run("Gaussian Blur...", "sigma=2");
 		// run("Enhance Contrast...", "saturated=0.001 normalize process_all"); // optional if wand does not work properly
 		doWand(width/2, height/2, 16.0, "Legacy");
+		run("Fit Circle");
+		roiManager("Add");
 		run("Create Mask");
-		run("Morphological Filters", "operation=Opening element=Disk radius=80");
 		run("Distance Map");
 		distance_map=getImageID();
 		rename("distance_map");
@@ -70,23 +71,27 @@ for (i=0; i<list.length; i++){
 		run("Z Project...", "projection=Median");
 		rename("median_proyection");
 		run("Invert");
+		roiManager("Select", 0);
+		run("Enlarge...", "enlarge=-8");
+		run("Gaussian Blur...", "sigma=8");
 		imageCalculator("Add stack", "original","median_proyection");
 		selectImage(original);
 		run("Invert", "stack");
 		
 	//2.3 Loop for every temporal frame to detect the points
-		 	for (t = 0; t < frames; t++) {
+		 	for (t = 0; t < slices; t++) {
 			selectImage(original);
-			Stack.setFrame(t+1);
-			run("Find Maxima...", "prominence=40 output=[Point Selection]");
+			Stack.setSlice(t+1);
+			run("Find Maxima...", "prominence=70 output=[Point Selection]");
 			selectImage(distance_map);
 			run("Restore Selection");
 			run("Measure");
+			run("Select None");
 							
 	// 2.3.3 Get features in the frame
 				selectWindow("Results");
 				if (nResults == 1) {
-					if (t>0) {X_0=X; Y_0=Y} //to draw a line later
+					if (t>0) {X_0=X; Y_0=Y;} //to draw a line later
 					frame = t+1;
 					X = getResultString("XM", 0);
 					Y = getResultString("YM", 0);
@@ -95,7 +100,6 @@ for (i=0; i<list.length; i++){
 					
 				} else { 
 					wait(50);
-					roiManager("delete"); // To avoid an error if ROI Manager has several ROI
 					frame = t+1;
 					X = "NA";
 					Y = "NA";
@@ -109,7 +113,7 @@ for (i=0; i<list.length; i++){
 // 3. Draw result on the original at this frame
 	// 3.1 Get the frame image to print the results
 				selectImage(original);
-				Stack.setFrame(t+1);
+				Stack.setSlice(t+1);
 				run("Duplicate...", "title=result_temp");
 				result_temp = getImageID();
 				run("RGB Color");
@@ -117,7 +121,7 @@ for (i=0; i<list.length; i++){
 				if (nResults == 1 && t>0){
 					selectImage(result_temp);
 					setForegroundColor(255, 0, 0);  // draw in red
-					drawLine(x_0/pw, Y_0/pw, X/pw, Y/pw); // functions needs arguments in pixels
+					drawLine(X_0/pw, Y_0/pw, X/pw, Y/pw); // functions needs arguments in pixels
 				}
 				run("Scale...", "x=0.4 y=0.4 z=1.0 interpolation=Bilinear fill process create"); // to make it small
 				result_temp_2 = getImageID();
@@ -125,7 +129,7 @@ for (i=0; i<list.length; i++){
 				selectImage(result_temp_2);
 				rename("result_temp");
 			
-				// Create the result as stack concatenation
+				// Create the result as stack concatenation
 				if (t==0) {
 					selectImage(result_temp_2);
 					rename("Stack_Result");
@@ -134,8 +138,9 @@ for (i=0; i<list.length; i++){
 				}
 
 			run("Clear Results");
-			} // End of loop for every frame
 			
+			} // End of loop for every frame
+
 // 4. Save the results
 	// 4.1 Save the result stack image
 		selectWindow("Stack_Result");
@@ -148,9 +153,10 @@ for (i=0; i<list.length; i++){
 		print("\\Clear");
 		print("Frame;X;Y;Mean-Distance;Time;");  // header of the result file  in the Log window
 		run("Close All");
+		roiManager("delete"); 
 		run("Clear Results");
-	}
-}
+	}
+}		
 
 setBatchMode(false);
 // Macro is finished. Print time						
