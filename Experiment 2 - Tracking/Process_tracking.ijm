@@ -24,7 +24,7 @@ if(roiManager("count") !=0) {roiManager("delete");}
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black"); // Set black binary bckg
 run("Set Measurements...", "area center perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
-print("Frame;X;Y;Frame;Mean-Distance;Time;"); // header of the result file in the Log window
+print("Frame;X;Y;Mean-Distance;Time;"); // header of the result file in the Log window
 
 // 1 Select the Folder with the files
 dir = getDirectory("Select the folder with the .mp4 movies");
@@ -56,7 +56,7 @@ for (i=0; i<list.length; i++){
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=2");
 		// run("Enhance Contrast...", "saturated=0.001 normalize process_all"); // optional if wand does not work properly
-		doWand(width/2, height/2, 12.0, "Legacy");
+		doWand(width/2, height/2, 16.0, "Legacy");
 		run("Create Mask");
 		run("Morphological Filters", "operation=Opening element=Disk radius=80");
 		run("Distance Map");
@@ -71,46 +71,42 @@ for (i=0; i<list.length; i++){
 		rename("median_proyection");
 		run("Invert");
 		imageCalculator("Add stack", "original","median_proyection");
+		selectImage(original);
 		run("Invert", "stack");
 		
-	//2.1 Loop for every temporal frame to detect the points
-		for (t = 0; t < frames; t++) {
-				
+	//2.3 Loop for every temporal frame to detect the points
+		 	for (t = 0; t < frames; t++) {
+			selectImage(original);
+			Stack.setFrame(t+1);
+			run("Find Maxima...", "prominence=40 output=[Point Selection]");
+			selectImage(distance_map);
+			run("Restore Selection");
+			run("Measure");
+							
 	// 2.3.3 Get features in the frame
-				run("Analyze Particles...", "display add");
 				selectWindow("Results");
 				if (nResults == 1) {
-					area = getResultString("Area", 0);
-					XM = getResultString("XM", 0);
-					YM = getResultString("YM", 0);
-					Perim = getResultString("Perim.", 0);
-					Circ = getResultString("Circ.", 0);
-					Feret = getResultString("Feret", 0);
-					FeretAngle = getResultString("FeretAngle", 0);
-					MinFeret = getResultString("MinFeret", 0);
-					Solidity = getResultString("Solidity", 0);
-					AR = getResultString("AR", 0);
-					Round = getResultString("Round", 0);
+					if (t>0) {X_0=X; Y_0=Y} //to draw a line later
+					frame = t+1;
+					X = getResultString("XM", 0);
+					Y = getResultString("YM", 0);
+					Distance_edge = getResultString("Mean", 0); // the distance to the edge is the mean value of the distance map
+					time = frame/5; // 5 fps
+					
 				} else { 
 					wait(50);
 					roiManager("delete"); // To avoid an error if ROI Manager has several ROI
-					area = "NA";
-					XM = "NA";
-					YM = "NA";
-					Perim = "NA";
-					Circ = "NA";
-					Feret ="NA";
-					FeretAngle = "NA";
-					MinFeret = "NA";
-					Solidity = "NA";
-					AR="NA";
-					Round="NA";
+					frame = t+1;
+					X = "NA";
+					Y = "NA";
+					Distance_edge = "NA";
+					time = frame/5; // 5 fps
 				}
 
 	// 2.3.5 Write the results of the frame in the table			
-				print((t+1)+";"+area+";"+XM+";"+YM+";"+Perim+";"+Circ+";"+Feret+";"+FeretAngle+";"+MinFeret+";"+AR+";"+Round+";"+Solidity+";"+NBranches+";"+AvgBranchLen+";"+MaxBranchLen+";"+BranchLen+";"+EuclideanDist+";"+frame_interval*t);
+				print(frame+";"+X+";"+Y+";"+Distance_edge+";"+time);
 
-// 3. Draw segmentation	on the original at this frame
+// 3. Draw result on the original at this frame
 	// 3.1 Get the frame image to print the results
 				selectImage(original);
 				Stack.setFrame(t+1);
@@ -118,62 +114,39 @@ for (i=0; i<list.length; i++){
 				result_temp = getImageID();
 				run("RGB Color");
 				// If there is one Roi, then draw 
-				if(roiManager("count") >= 1) {
-	//3.2 Draw the segmented worm on the original image
+				if (nResults == 1 && t>0){
 					selectImage(result_temp);
-					roiManager("Select", 0);
-					setForegroundColor(255, 255, 0); // draw in yellow
-					run("Draw", "slice");					
-	// 3.3 Draw Feret
-					//run("Properties...", "pixel_width=1 pixel_height=1 voxel_depth=1.0000");
-					List.setMeasurements;
-					x1 = List.getValue("FeretX")*pw;
-					y1 = List.getValue("FeretY")*pw;
-					length = List.getValue("Feret");
-					degrees = List.getValue("FeretAngle");
-					if (degrees>90){degrees -= 180;}
-					angle = degrees*PI/180;
-					x2 = x1 + cos(angle)*length;
-					y2 = y1 - sin(angle)*length;
 					setForegroundColor(255, 0, 0);  // draw in red
-					drawLine(x1/pw, y1/pw, x2/pw, y2/pw); // functions needs arguments in pixels
-					// 3.3 Draw the Skeleton on the original image
-					selectImage(skeleton_temp);
-					run("Create Selection");
-					selectImage(result_temp);
-					run("Restore Selection");
-					setForegroundColor(0, 255, 255);  // draw in skyblue
-					run("Fill", "slice");
-					run("Select None");
-					// 3.4 Draw the Euclidean Distance
-					setForegroundColor(0, 255, 0);  // draw in green
-					drawLine(V1x, V1y, V2x, V2y); // functions needs arguments in pixels
-					roiManager("Delete");
-				} 
-
-				close("binary_temp");
-				run("Clear Results");
+					drawLine(x_0/pw, Y_0/pw, X/pw, Y/pw); // functions needs arguments in pixels
+				}
+				run("Scale...", "x=0.4 y=0.4 z=1.0 interpolation=Bilinear fill process create"); // to make it small
+				result_temp_2 = getImageID();
+				close("result_temp");
+				selectImage(result_temp_2);
+				rename("result_temp");
+			
 				// Create the result as stack concatenation
 				if (t==0) {
-					selectImage(result_temp);
+					selectImage(result_temp_2);
 					rename("Stack_Result");
 				} else {
 					run("Concatenate...", "  title=Stack_Result open image1=Stack_Result image2=result_temp image3=[-- None --]");
 				}
+
+			run("Clear Results");
 			} // End of loop for every frame
 			
 // 4. Save the results
 	// 4.1 Save the result stack image
 		selectWindow("Stack_Result");
-		run("Scale...", "x=0.5 y=0.5 z=1.0 interpolation=Bilinear fill process create");
 		rename(title+"_result");
-		saveAs("Tiff", Results+title+"_segment.tif");
+		saveAs("Tiff", Results+title+"_tracking.tif");
 		
 	// 4.2 Save results and clean for the next image
 		selectWindow("Log");
 		saveAs("Text", Results+title+"_Results.csv");
 		print("\\Clear");
-		print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;BranchLen;EuclideanDist;Time");
+		print("Frame;X;Y;Mean-Distance;Time;");  // header of the result file  in the Log window
 		run("Close All");
 		run("Clear Results");
 	}
