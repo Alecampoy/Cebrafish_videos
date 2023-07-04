@@ -233,7 +233,7 @@ print("\\Clear");
 print("Terminado");
 Finish_time = getTime();
 Time_used = Finish_time - Start_time;
-print("It took =", Time_used/1000, "second to finish the proccess");
+print("It took =", Time_used/60000, "minutes to finish the proccess");
 //Functions
 
 function createFolder(dir, name) {
