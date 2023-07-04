@@ -54,11 +54,11 @@ for (i=0; i<list.length; i++){
 		rename("original");
 		original = getImageID();
 		run("Z Project...", "projection=Median");
-		newImage("stack_temp", "32-bit black", width, height, frames);	
-		imageCalculator("Add stack", "stack_temp","MED_original");
-		close("MED_original");
+		//newImage("stack_temp", "32-bit black", width, height, frames);	
+		//imageCalculator("Add stack", "stack_temp","MED_original");
+		//close("MED_original");
 		rename("proyection_temp");
-		imageCalculator("Subtract create stack", "proyection_temp","original");
+		imageCalculator("Difference create stack", "proyection_temp","original");
 		run("16-bit");
 		run("Gaussian Blur...", "sigma=1 stack");
 		setOption("BlackBackground", true);
