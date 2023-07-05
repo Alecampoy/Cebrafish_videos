@@ -86,7 +86,7 @@ for (i=0; i<list.length; i++){
 				if(roiManager("count") !=0) {roiManager("delete");}
 				// binary closing
 				run("Maximum...", "radius=6 stack");
-				run("Minimum...", "radius=8 stack");
+				run("Minimum...", "radius=9 stack");
 
 	// 2.3.3 Get several features in the frame
 				run("Analyze Particles...", "display add");
@@ -188,13 +188,14 @@ for (i=0; i<list.length; i++){
 					y2 = y1 - sin(angle)*length;
 					setForegroundColor(255, 0, 0);  // draw in red
 					drawLine(x1/pw, y1/pw, x2/pw, y2/pw); // functions needs arguments in pixels
-	// 3.3 Draw the Skeleton on the original image
+	// 3.3 Draw the Skeleton and the LSP on the original image
 					selectImage(skeleton_temp);
 					run("Create Selection");
 					selectWindow("Longest shortest paths");
 					run("Restore Selection");
 					run("Copy");
 					selectImage(result_temp);
+					run("Restore Selection");
 					run("Paste");
 					run("Select None");
 	// 3.4 Draw the Euclidean Distance

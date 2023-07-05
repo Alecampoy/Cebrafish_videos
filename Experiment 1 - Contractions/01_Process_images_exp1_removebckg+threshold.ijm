@@ -14,6 +14,10 @@
  * 
  *///////////////////////////////////////////////////////////////////////////////////////////////
 
+// ***************************************
+// This macro does not measure the Longest shortest path and does not draw it
+// ***************************************
+
 
 // Clean previous data in FIJI
 run("Close All");
