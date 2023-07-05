@@ -26,7 +26,7 @@ if(roiManager("count") !=0) {roiManager("delete");}
 run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
 run("Set Measurements...", "area center perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
-print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;BranchLen;EuclideanDist;Time"); // header of the result file
+print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;LongestShortestPath;BranchLen;EuclideanDist;Time"); // header of the result file
 
 // 0. Select the Folder with the files
 dir = getDirectory("Selecciona el directorio con las imagenes en tiff");
@@ -128,11 +128,14 @@ for (i=0; i<list.length; i++){
 				skeleton_temp=getImageID();
 				if (nResults == 1) { // to avoid erros due to empty images
 					run("Clear Results");
-					run("Analyze Skeleton (2D/3D)", "prune=none show");
+					run("Analyze Skeleton (2D/3D)", "prune=none calculate show");
 					selectWindow("Results");
 					NBranches = getResultString("# Branches", 0);
 					AvgBranchLen = getResultString("Average Branch Length", 0);
 					MaxBranchLen = getResultString("Maximum Branch Length", 0);
+					LongestShortestPath = getResultString("Longest Shortest Path", 0);
+					SPx = getResultString("spx", 0);
+					SPy = getResultString("spy", 0);
 					run("Clear Results");
 					selectWindow("Branch information");
 					BranchLen = getResultString("Branch length", 0);
@@ -155,7 +158,7 @@ for (i=0; i<list.length; i++){
 				}
 				
 	// 2.3.5 Write the results of the frame in the table			
-				print((t+1)+";"+area+";"+XM+";"+YM+";"+Perim+";"+Circ+";"+Feret+";"+FeretAngle+";"+MinFeret+";"+AR+";"+Round+";"+Solidity+";"+NBranches+";"+AvgBranchLen+";"+MaxBranchLen+";"+BranchLen+";"+EuclideanDist+";"+frame_interval*t);
+				print((t+1)+";"+area+";"+XM+";"+YM+";"+Perim+";"+Circ+";"+Feret+";"+FeretAngle+";"+MinFeret+";"+AR+";"+Round+";"+Solidity+";"+NBranches+";"+AvgBranchLen+";"+MaxBranchLen+";"+LongestShortestPath+";"+BranchLen+";"+EuclideanDist+";"+frame_interval*t);
 
 // 3. Draw segmentation	on the original at this frame
 	// 3.1 Get the frame image to print the results
@@ -185,21 +188,23 @@ for (i=0; i<list.length; i++){
 					y2 = y1 - sin(angle)*length;
 					setForegroundColor(255, 0, 0);  // draw in red
 					drawLine(x1/pw, y1/pw, x2/pw, y2/pw); // functions needs arguments in pixels
-					// 3.3 Draw the Skeleton on the original image
+	// 3.3 Draw the Skeleton on the original image
 					selectImage(skeleton_temp);
 					run("Create Selection");
-					selectImage(result_temp);
+					selectWindow("Longest shortest paths");
 					run("Restore Selection");
-					setForegroundColor(0, 255, 255);  // draw in skyblue
-					run("Fill", "slice");
+					run("Copy");
+					selectImage(result_temp);
+					run("Paste");
 					run("Select None");
-					// 3.4 Draw the Euclidean Distance
-					setForegroundColor(0, 255, 0);  // draw in green
-					drawLine(V1x, V1y, V2x, V2y); // functions needs arguments in pixels
+	// 3.4 Draw the Euclidean Distance
+					//setForegroundColor(0, 255, 0);  // draw in green
+					//drawLine(V1x, V1y, V2x, V2y); // functions needs arguments in pixels
 					roiManager("Delete");
 				} 
 				close("skeleton_temp");
 				close("binary_temp");
+				close("Longest shortest paths");
 				run("Clear Results");
 				// Create the result as stack
 				if (t==0) {
@@ -221,7 +226,7 @@ for (i=0; i<list.length; i++){
 		selectWindow("Log");
 		saveAs("Text", Results+title+"_Results.csv");
 		print("\\Clear");
-		print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;BranchLen;EuclideanDist;Time");
+		print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;LongestShortestPath;BranchLen;EuclideanDist;Time");
 		run("Close All");
 		run("Clear Results");
 	}
