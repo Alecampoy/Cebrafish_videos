@@ -8,30 +8,35 @@
 # %% librerias
 
 import pandas as pd
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.signal import find_peaks, detrend, periodogram, lombscargle
 from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
-import functions_aux_analysis
+from functions_aux_analysis import *
 
-# %% Lectura de todos los archivos de la carpeta
-windows = False
+# %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
+# Se añade una columna representando el gusano y el batch mediante el uso de regex
+
+windows = True
 if windows:
-    folder_path = "p:/CABD/"
+    folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
-    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/"
+    folder_path = (
+        "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/"
+    )
 files = get_files_in_folder(folder_path)
-files
 
-# %% 
 df = []
 for f in files:
     csv = pd.read_csv(f, sep=";").drop(["FeretAngle"], axis=1)
-    csv.insert(0, "Gusano", f[f.index(" - ") + 3 : f.index(".tif")])
+    csv.insert(0, "Batch", re.search("batch \d*", f).group(0))
+    csv.insert(1, "Pez", "ZebraF " + re.search("(?<=hpf_)(\d*)(?=.)", f).group(0))
     df.append(csv)
     del (csv, f)
+
 df = pd.concat(df)
 # renombro la columna con nombre repetido
 df = df.rename(columns={"XM.1": "YM"})
@@ -39,8 +44,8 @@ df = df.rename(columns={"XM.1": "YM"})
 
 # %% Calculo de las magnitudes derivadas y preparo el dataset
 
-df.insert(2, "T_seg", (df.Frame - 1) / (750 / 60))  # frames / long video
 df["Curvatura"] = df.EuclideanDist / df.BranchLen
+
 df.insert(
     0,
     "Condicion",
