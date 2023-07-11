@@ -12,6 +12,15 @@ Funciones para el analisis de gusanos
 
 # from scipy.stats import sem
 
+import os
+import glob
+
+def get_files_in_folder(folder_path):
+    file_list = glob.glob(folder_path + '/**', recursive=True)
+    files = [file for file in file_list if not os.path.isdir(file)]
+    return files
+
+
 
 def agrupamiento_gusanos_fft(df, condicion):
     n_gus = sum([condicion in g for g in df.columns])

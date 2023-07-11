@@ -9,7 +9,6 @@
 
 import pandas as pd
 import numpy as np
-import glob
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.signal import find_peaks, detrend, periodogram, lombscargle
@@ -18,14 +17,15 @@ from scipy.linalg import dft
 import functions_aux_analysis
 
 # %% Lectura de todos los archivos de la carpeta
-windows = True
+windows = False
 if windows:
-    files = glob.glob("p:\CABD\Lab Manolo Muñoz/Mercedes Gusanos/Results_batch3/*.csv")
-    # + glob.glob("p:\CABD\Lab Manolo Muñoz/Mercedes Gusanos/Batch 1/Results mut/*.csv")
+    folder_path = "p:/CABD/"
 else:
-    files = glob.glob(
-        "/home/ale/pCloudDrive/CABD/Lab Manolo Muñoz/Mercedes Gusanos/Batch 1/Results control/*.csv"
-    )  # + glob.glob(        "/home/ale/pCloudDrive/CABD/Lab Manolo Muñoz/Mercedes Gusanos/Batch 1/Results mut/*.csv" )
+    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/"
+files = get_files_in_folder(folder_path)
+files
+
+# %% 
 df = []
 for f in files:
     csv = pd.read_csv(f, sep=";").drop(["FeretAngle"], axis=1)
