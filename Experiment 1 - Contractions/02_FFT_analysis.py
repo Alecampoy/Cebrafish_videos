@@ -31,81 +31,98 @@ files = get_files_in_folder(folder_path)
 
 df = []
 for f in files:
-    csv = pd.read_csv(f, sep=";").drop(["FeretAngle"], axis=1)
-    csv.insert(0, "Batch", re.search("batch \d*", f).group(0))
-    csv.insert(1, "Pez", "ZebraF " + re.search("(?<=hpf_)(\d*)(?=.)", f).group(0))
-    df.append(csv)
-    del (csv, f)
+    if ".csv" in f:
+        csv = pd.read_csv(f, sep=";").drop(["FeretAngle"], axis=1)
+        csv.insert(0, "Batch", re.search("Batch \d*", f).group(0))
+        csv.insert(1, "Fish", "ZebraF " + re.search("(?<=hpf_)(\d*)(?=.)", f).group(0))
+        df.append(csv)
+        del (csv, f)
 
 df = pd.concat(df)
 # renombro la columna con nombre repetido
 df = df.rename(columns={"XM.1": "YM"})
 
 
-# %% Calculo de las magnitudes derivadas y preparo el dataset
+# %% Calculo de las magnitudes derivadas y añado la condición al dataset
 
 df["Curvatura"] = df.EuclideanDist / df.BranchLen
 
-df.insert(
-    0,
-    "Condicion",
-    "WT"
-    # df.Gusano.apply(lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"),
+fenotype = pd.read_excel(
+    "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\Fenotype.ods"
 )
-# Dataframe con cada condicion para después
-df_gusanos_condicion = df.iloc[:, 0:2].drop_duplicates()
+# añado fenotipo
+df = pd.merge(df, fenotype, on=["Batch", "Fish"])
 
-# %% Cuento el número de NA que hay por gusano
+
+# %% Número de NAs que hay por frame. Imputo mediante interpolación
+
+
 NAs = (
-    df.groupby("Gusano")
+    df.groupby(["Batch", "Fish"])
     .apply(lambda x: x.isnull().sum())[["area"]]
     .rename(columns={"area": "NAs"})
 )  # me quedo solo con una columna ya que el numero de NAN es el mismo en todas
 
-NAs_barplot = sns.barplot(x=NAs.index, y="NAs", data=NAs)
-plt.xticks(rotation=90)
+# NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
+# plt.xticks(rotation=90)
+# plt.show()
+
+NAs_barplot = sns.catplot(
+    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Batch"
+)
+NAs_barplot.set_xticklabels(rotation=90)
 plt.show()
 
-# %%% elimino los que tienen muchos NA - no es necesario eliminar ninguno
-# df.shape
-# df_NA = df
-# df = df[
-#     (df.Gusano != "CONTROL 6")
-#     & (df.Gusano != "MUT 1")
-#     & (df.Gusano != "MUT 3")
-#     & (df.Gusano != "MUT 4")
-#     & (df.Gusano != "MUT 9")
-# ]
-# df = df.dropna()  # Eliminación NA para todo el dataset
-# df = df.reset_index(drop=True)  # para que funcione bien el codigo
-# df.shape
+df = df.interpolate(method="linear")
 
-# # voy a usar el DF con los NA, pero quito los que tienen demasiados
-# df_NA = df_NA[
-#     (df_NA.Gusano != "CONTROL 6")
-#     & (df_NA.Gusano != "MUT 1")
-#     & (df_NA.Gusano != "MUT 3")
-#     & (df_NA.Gusano != "MUT 4")
-#     & (df_NA.Gusano != "MUT 9")
-# ]
 
 # %% Distancia Recorrida
 
 # distancia en cada paso
 
-df.insert(6, "X_diff", df.groupby("Gusano").XM.diff())
-df.insert(8, "Y_diff", df.groupby("Gusano").YM.diff())
-df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
+df.insert(6, "X_diff", df.groupby(["Batch", "Fish"]).XM.diff())
+df.insert(7, "Y_diff", df.groupby(["Batch", "Fish"]).YM.diff())
+df.insert(8, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
-Dist = df.groupby("Gusano")[["dist"]].sum().round().reset_index()
-Dist = pd.merge(Dist, df_gusanos_condicion, on="Gusano", how="left")
+Dist = df.groupby(["Batch", "Fish"])[["dist"]].sum().round().reset_index()
+Dist = pd.merge(Dist, fenotype, on=["Batch", "Fish"], how="left").dropna()
 
 # %%% Box-Plot de la distancia
-a = sns.boxplot(x="Condicion", y="dist", data=Dist)
+a = sns.boxplot(x="Fenotype", y="dist", data=Dist)
 a.set_title("Distancia Recorrida por el gusano en pixeles")
-b = sns.stripplot(x="Condicion", y="dist", data=Dist, color="grey", size=8)
+b = sns.stripplot(x="Fenotype", y="dist", data=Dist, color="grey", size=8)
 plt.show()
+
+# %%% Box-plot por batch
+
+grped_bplot = sns.catplot(
+    x="Batch",
+    y="dist",
+    hue="Fenotype",
+    kind="box",
+    legend=False,
+    height=6,
+    aspect=1.9,
+    data=Dist,
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch",
+    y="dist",
+    hue="Fenotype",
+    jitter=True,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    data=Dist,
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
+
+l = plt.legend(handles[0:3], labels[0:3])
+plt.show()
+
 
 # %% Repliegamientos
 
