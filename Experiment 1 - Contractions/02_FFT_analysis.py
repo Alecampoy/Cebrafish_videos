@@ -20,7 +20,7 @@ from functions_aux_analysis import *
 # %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
 # Se añade una columna representando el gusano y el batch mediante el uso de regex
 
-windows = False
+windows = True
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
@@ -32,7 +32,17 @@ files = get_files_in_folder(folder_path)
 df = []
 for f in files:
     if ".csv" in f:
-        csv = pd.read_csv(f, sep=";").drop(["FeretAngle"], axis=1)
+        csv = pd.read_csv(f, sep=";").drop(
+            [
+                "FeretAngle",
+                "NBranches",
+                "AvgBranchLen",
+                "MaxBranchLen",
+                "BranchLen",
+                "EuclideanDist",
+            ],
+            axis=1,
+        )
         csv.insert(0, "Batch", re.search("Batch \d*", f).group(0))
         csv.insert(1, "Fish", "ZebraF " + re.search("(?<=hpf_)(\d*)(?=.)", f).group(0))
         df.append(csv)
@@ -45,9 +55,9 @@ df = df.rename(columns={"XM.1": "YM"})
 
 # %% Calculo de las magnitudes derivadas y añado la condición al dataset
 
-df["Curvatura"] = df.EuclideanDist / df.BranchLen
+# df["Curvatura"] = df.EuclideanDist / df.BranchLen
 
-fenotype = pd.read_excel(folder_path+"Fenotype.ods")
+fenotype = pd.read_excel(folder_path + "Fenotype.ods")
 # añado fenotipo
 df = pd.merge(df, fenotype, on=["Batch", "Fish"])
 
@@ -61,9 +71,9 @@ NAs = (
     .rename(columns={"area": "NAs"})
 )  # me quedo solo con una columna ya que el numero de NAN es el mismo en todas
 
-NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
-plt.xticks(rotation=90)
-plt.show()
+# NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
+# plt.xticks(rotation=90)
+# plt.show()
 
 NAs_barplot = sns.catplot(
     kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Batch"
@@ -121,7 +131,25 @@ handles, labels = grped_bplot.get_legend_handles_labels()
 l = plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
+# %% Representación de la evolución temporal
 
+# Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usan un par de peces
+
+df_filter = df[(df.Batch == "Batch 3") & (df.Fish == "ZebraF 1")]
+
+fig, axs = plt.subplots(2, 1, sharex=True)
+# Remove horizontal space between axes
+fig.subplots_adjust(hspace=0)
+
+# Plot each graph, and manually set the y tick values
+axs[0].lineplot(x="Time", y="Circ", data="df_filter")
+
+axs[1].lineplot(x="Time", y="Round", data="df_filter")
+
+
+plt.show()
+
+# %% CODIGO GUSANOS
 # %% Repliegamientos
 
 
