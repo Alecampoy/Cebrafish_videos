@@ -20,7 +20,7 @@ from functions_aux_analysis import *
 # %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
 # Se añade una columna representando el gusano y el batch mediante el uso de regex
 
-windows = True
+windows = False
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
@@ -47,9 +47,7 @@ df = df.rename(columns={"XM.1": "YM"})
 
 df["Curvatura"] = df.EuclideanDist / df.BranchLen
 
-fenotype = pd.read_excel(
-    "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\Fenotype.ods"
-)
+fenotype = pd.read_excel(folder_path+"Fenotype.ods")
 # añado fenotipo
 df = pd.merge(df, fenotype, on=["Batch", "Fish"])
 
@@ -63,9 +61,9 @@ NAs = (
     .rename(columns={"area": "NAs"})
 )  # me quedo solo con una columna ya que el numero de NAN es el mismo en todas
 
-# NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
-# plt.xticks(rotation=90)
-# plt.show()
+NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
+plt.xticks(rotation=90)
+plt.show()
 
 NAs_barplot = sns.catplot(
     kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Batch"
