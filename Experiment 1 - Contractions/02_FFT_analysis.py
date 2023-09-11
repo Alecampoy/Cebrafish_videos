@@ -60,6 +60,7 @@ df = df.rename(columns={"XM.1": "YM"})
 fenotype = pd.read_excel(folder_path + "Fenotype.ods")
 # añado fenotipo
 df = pd.merge(df, fenotype, on=["Batch", "Fish"])
+df.insert(2, "Fenotype", df.pop("Fenotype"))
 
 
 # %% Número de NAs que hay por frame. Imputo mediante interpolación
@@ -88,9 +89,9 @@ df = df.interpolate(method="linear")
 
 # distancia en cada paso
 
-df.insert(6, "X_diff", df.groupby(["Batch", "Fish"]).XM.diff())
-df.insert(7, "Y_diff", df.groupby(["Batch", "Fish"]).YM.diff())
-df.insert(8, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
+df.insert(7, "X_diff", df.groupby(["Batch", "Fish"]).XM.diff())
+df.insert(8, "Y_diff", df.groupby(["Batch", "Fish"]).YM.diff())
+df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
 Dist = df.groupby(["Batch", "Fish"])[["dist"]].sum().round().reset_index()
@@ -131,23 +132,39 @@ handles, labels = grped_bplot.get_legend_handles_labels()
 l = plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
-# %% Representación de la evolución temporal
+# %%
 
 # Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usan un par de peces
 
-df_filter = df[(df.Batch == "Batch 3") & (df.Fish == "ZebraF 1")]
+df_temp = df[(df.Batch == "Batch 3") & (df.Fish == "ZebraF 1")].melt(
+    id_vars=["Time"],
+    value_vars=[
+        "area",
+        "Perim",
+        "Circ",
+        "Feret",
+        "MinFeret",
+        "AR",
+        "Round",
+        "Solidity",
+        "LongestShortestPath",
+    ],
+)  # filtrado para un solo pez y re
 
-fig, axs = plt.subplots(2, 1, sharex=True)
-# Remove horizontal space between axes
-fig.subplots_adjust(hspace=0)
 
-# Plot each graph, and manually set the y tick values
-axs[0].lineplot(x="Time", y="Circ", data="df_filter")
+# %%
+g = sns.FacetGrid(
+    df_temp,
+    hue="variable",
+    row="variable",
+    sharex="col",
+    sharey=False,
+    height=6,
+    aspect=4,
+    margin_titles=True,
+)
+g.map(sns.lineplot, "Time", "value")
 
-axs[1].lineplot(x="Time", y="Round", data="df_filter")
-
-
-plt.show()
 
 # %% CODIGO GUSANOS
 # %% Repliegamientos
