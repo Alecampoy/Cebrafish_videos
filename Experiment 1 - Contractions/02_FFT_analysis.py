@@ -20,7 +20,7 @@ from functions_aux_analysis import *
 # %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
 # Se añade una columna representando el gusano y el batch mediante el uso de regex
 
-windows = True
+windows = False
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
@@ -43,8 +43,9 @@ for f in files:
             ],
             axis=1,
         )
-        csv.insert(0, "Batch", re.search("Batch \d*", f).group(0))
-        csv.insert(1, "Fish", "ZebraF " + re.search("(?<=hpf_)(\d*)(?=.)", f).group(0))
+        csv.insert(0, "Batch", re.search("Batch \d+", f).group(0))
+        csv.insert(1, "Fish", "ZebraF " + re.search("(\d+)(.lif)", f).group(1))
+        csv.insert(2, "Fenotype", re.search("KO\d*|WT", f).group(0))
         df.append(csv)
         del (csv, f)
 
@@ -52,15 +53,16 @@ df = pd.concat(df)
 # renombro la columna con nombre repetido
 df = df.rename(columns={"XM.1": "YM"})
 
+PENSAR COMO REALIZAR LOS AGRUPAMIENTOS AHORA QUE NO HAY UN IDENTIFICADOR UNIVOCO
 
 # %% Calculo de las magnitudes derivadas y añado la condición al dataset
 
 # df["Curvatura"] = df.EuclideanDist / df.BranchLen
 
-fenotype = pd.read_excel(folder_path + "Fenotype.ods")
-# añado fenotipo
-df = pd.merge(df, fenotype, on=["Batch", "Fish"])
-df.insert(2, "Fenotype", df.pop("Fenotype"))
+# fenotype = pd.read_excel(folder_path + "Fenotype.ods")
+# # añado fenotipo
+# df = pd.merge(df, fenotype, on=["Batch", "Fish"])
+# df.insert(2, "Fenotype", df.pop("Fenotype"))
 
 
 # %% Número de NAs que hay por frame. Imputo mediante interpolación
@@ -132,7 +134,7 @@ handles, labels = grped_bplot.get_legend_handles_labels()
 l = plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
-# %%
+# %% Evolución temporal de todas las variables
 
 # Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usan un par de peces
 
@@ -151,20 +153,18 @@ df_temp = df[(df.Batch == "Batch 3") & (df.Fish == "ZebraF 1")].melt(
     ],
 )  # filtrado para un solo pez y re
 
-
-# %%
 g = sns.FacetGrid(
     df_temp,
     hue="variable",
     row="variable",
     sharex="col",
     sharey=False,
-    height=6,
+    height=5,
     aspect=4,
     margin_titles=True,
 )
 g.map(sns.lineplot, "Time", "value")
-
+sns.set(font_scale=2) 
 
 # %% CODIGO GUSANOS
 # %% Repliegamientos
