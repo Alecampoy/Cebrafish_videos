@@ -44,8 +44,8 @@ for f in files:
             axis=1,
         )
         csv.insert(0, "Batch", re.search("Batch \d+", f).group(0))
-        csv.insert(1, "Fish", "ZebraF " + re.search("(\d+)(.lif)", f).group(1))
-        csv.insert(2, "Fenotype", re.search("KO\d*|WT", f).group(0))
+        csv.insert(1, "Fenotype", re.search("KO\d*|WT", f).group(0))
+        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.lif)", f).group(1))
         df.append(csv)
         del (csv, f)
 
@@ -53,9 +53,12 @@ df = pd.concat(df)
 # renombro la columna con nombre repetido
 df = df.rename(columns={"XM.1": "YM"})
 
-PENSAR COMO REALIZAR LOS AGRUPAMIENTOS AHORA QUE NO HAY UN IDENTIFICADOR UNIVOCO
+# renombro KO a KO44 para el batch 6 y 7
+df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
 
 # %% Calculo de las magnitudes derivadas y añado la condición al dataset
+
+# No son interesantes ni utiles
 
 # df["Curvatura"] = df.EuclideanDist / df.BranchLen
 
@@ -69,35 +72,36 @@ PENSAR COMO REALIZAR LOS AGRUPAMIENTOS AHORA QUE NO HAY UN IDENTIFICADOR UNIVOCO
 
 
 NAs = (
-    df.groupby(["Batch", "Fish"])
+    df.groupby(["Batch", 'Fenotype', "Fish"])
     .apply(lambda x: x.isnull().sum())[["area"]]
     .rename(columns={"area": "NAs"})
-)  # me quedo solo con una columna ya que el numero de NAN es el mismo en todas
+).reset_index()  # me quedo solo con una columna ya que el numero de NAN es el mismo en todas
 
+NAs['Batch_Feno'] = NAs.Batch + "_" + NAs.Fenotype
 # NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
 # plt.xticks(rotation=90)
 # plt.show()
 
 NAs_barplot = sns.catplot(
-    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Batch"
+    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Fenotype", row = "Batch"
 )
 NAs_barplot.set_xticklabels(rotation=90)
 plt.show()
 
 df = df.interpolate(method="linear")
 
+# El Zebra 10 WT del batch 7 se ha eliminado por contener >500 NAs
 
 # %% Distancia Recorrida
 
 # distancia en cada paso
 
-df.insert(7, "X_diff", df.groupby(["Batch", "Fish"]).XM.diff())
-df.insert(8, "Y_diff", df.groupby(["Batch", "Fish"]).YM.diff())
+df.insert(7, "X_diff", df.groupby(["Batch", "Fenotype", "Fish"]).XM.diff())
+df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).YM.diff())
 df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
-Dist = df.groupby(["Batch", "Fish"])[["dist"]].sum().round().reset_index()
-Dist = pd.merge(Dist, fenotype, on=["Batch", "Fish"], how="left").dropna()
+Dist = df.groupby(["Batch", "Fenotype", "Fish"])[["dist"]].sum().round().reset_index()
 
 # %%% Box-Plot de la distancia
 a = sns.boxplot(x="Fenotype", y="dist", data=Dist)
@@ -136,20 +140,28 @@ plt.show()
 
 # %% Evolución temporal de todas las variables
 
-# Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usan un par de peces
+# %% Inversa de algunas magnitudes
+# Busco picos, por lo que algunas magnitudes son más interesantes si tienen una line basal baja, a estas le aplico la inversa
 
-df_temp = df[(df.Batch == "Batch 3") & (df.Fish == "ZebraF 1")].melt(
+df["Circ_inv"] = 1/df.Circ
+
+# %% Grafico evolución temporal
+# Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usa un pez
+# Espero seleccionar la magnitud a la que voy a aplicarle los métodos, que será la que tenga la señal más limpia
+
+df_temp = df[(df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")].melt(
     id_vars=["Time"],
     value_vars=[
         "area",
         "Perim",
         "Circ",
+        "Circ_inv",
+        "Round",        
+        "LongestShortestPath",
         "Feret",
         "MinFeret",
         "AR",
-        "Round",
         "Solidity",
-        "LongestShortestPath",
     ],
 )  # filtrado para un solo pez y re
 
@@ -165,6 +177,9 @@ g = sns.FacetGrid(
 )
 g.map(sns.lineplot, "Time", "value")
 sns.set(font_scale=2) 
+
+# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC()
+
 
 # %% CODIGO GUSANOS
 # %% Repliegamientos
