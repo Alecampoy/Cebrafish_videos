@@ -20,7 +20,7 @@ from functions_aux_analysis import *
 # %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
 # Se añade una columna representando el gusano y el batch mediante el uso de regex
 
-windows = False
+windows = True
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
@@ -40,6 +40,7 @@ for f in files:
                 "MaxBranchLen",
                 "BranchLen",
                 "EuclideanDist",
+                "AR",  # this is the inverse of Roundness
             ],
             axis=1,
         )
@@ -72,18 +73,18 @@ df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
 
 
 NAs = (
-    df.groupby(["Batch", 'Fenotype', "Fish"])
+    df.groupby(["Batch", "Fenotype", "Fish"])
     .apply(lambda x: x.isnull().sum())[["area"]]
     .rename(columns={"area": "NAs"})
 ).reset_index()  # me quedo solo con una columna ya que el numero de NAN es el mismo en todas
 
-NAs['Batch_Feno'] = NAs.Batch + "_" + NAs.Fenotype
+NAs["Batch_Feno"] = NAs.Batch + "_" + NAs.Fenotype
 # NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
 # plt.xticks(rotation=90)
 # plt.show()
 
 NAs_barplot = sns.catplot(
-    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Fenotype", row = "Batch"
+    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Fenotype", row="Batch"
 )
 NAs_barplot.set_xticklabels(rotation=90)
 plt.show()
@@ -141,26 +142,36 @@ plt.show()
 # %% Evolución temporal de todas las variables
 
 # %% Inversa de algunas magnitudes
-# Busco picos, por lo que algunas magnitudes son más interesantes si tienen una line basal baja, a estas le aplico la inversa
 
-df["Circ_inv"] = 1/df.Circ
+# El estado basal del pez se considera estirado, y los cambios de estado se consideran cuando cambia su disposicion: se contrae
+# Busco picos, por lo que algunas magnitudes son más interesantes si tienen la linea basal baja, por lo que calculo la inversa
+
+df["area_inv"] = 1 / df.area
+df["Perim_inv"] = 1 / df.Perim
+df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
+df["Feret_inv"] = 1 / df.Feret
 
 # %% Grafico evolución temporal
 # Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usa un pez
 # Espero seleccionar la magnitud a la que voy a aplicarle los métodos, que será la que tenga la señal más limpia
 
-df_temp = df[(df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")].melt(
+df_temp = df[
+    (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_3")
+].melt(
     id_vars=["Time"],
     value_vars=[
-        "area",
-        "Perim",
+        # "area",
+        "area_inv",
+        # "Perim",
+        "Perim_inv",
         "Circ",
-        "Circ_inv",
-        "Round",        
-        "LongestShortestPath",
-        "Feret",
-        "MinFeret",
-        "AR",
+        "Round",
+        # "AR",
+        # "LongestShortestPath",
+        "LongestShortestPath_inv",
+        # "Feret",
+        "Feret_inv",
+        # "MinFeret",
         "Solidity",
     ],
 )  # filtrado para un solo pez y re
@@ -176,70 +187,65 @@ g = sns.FacetGrid(
     margin_titles=True,
 )
 g.map(sns.lineplot, "Time", "value")
-sns.set(font_scale=2) 
+sns.set(font_scale=2)
 
-# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC()
+# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC(). Para continuar tomo cualquiera de ellas
+
+# %% Tiempo que pasa replegado
+# Aunque solo observo picos, puedo contar el tiempo que pasa replegado usando la solidity.
+
+
+threshold = 0.78
+solidity_over_Thr = (
+    df.groupby(["Batch", "Fenotype", "Fish"])["Solidity"]
+    .apply(lambda x: (x > threshold).sum())
+    .reset_index()
+    .rename(columns={"Solidity": "contracted"})
+)
+
+solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
+
+df_temp_median = solidity_over_Thr.groupby("Fenotype")["contracted_perc"].median()
+df_temp_median["WT"]
+
+a = sns.boxplot(x="Fenotype", y="contracted_perc", data=solidity_over_Thr)
+a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
+b = sns.stripplot(
+    x="Fenotype", y="contracted_perc", data=solidity_over_Thr, color="grey", size=8
+)
+plt.show()
+
+# %%% evolución del resultado con el threshold
+# compruebo como cambia el resultado segun el threshold elegido
+
+threshold_result = pd.DataFrame(columns=["Threshold", "Result_44", "Result_179"])
+
+i = 0
+
+for thr in np.arange(0.5, df.Solidity.max() + 0.01, 0.01):
+    solidity_over_Thr = (
+        df.groupby(["Batch", "Fenotype", "Fish"])["Solidity"]
+        .apply(lambda x: (x > thr).sum())
+        .reset_index()
+        .rename(columns={"Solidity": "contracted"})
+    )
+    solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
+
+    df_temp_mean = solidity_over_Thr.groupby("Fenotype")["contracted_perc"].median()
+    threshold_result.loc[i] = [
+        thr,
+        df_temp_mean["WT"] - df_temp_mean["KO44"],
+        df_temp_mean["WT"] - df_temp_mean["KO179"],
+    ]
+    i = i + 1
+
+sns.lineplot(x="Threshold", y="Result_44", data=threshold_result)
+
+# No me gusta este resultado, pues es muy dependiente del Threshold y no tiene una meseta fuerte. Aunque parece que el KO44 y el KO179m se comportan diferente, pues 44 pasa más tiempo replegado que el WT y el 179 menos. Hay que repensar esto
 
 
 # %% CODIGO GUSANOS
 # %% Repliegamientos
-
-
-# #%%% Mediante threshold (No apropiada)
-# # esta medida no es apropiada, ya que indica el tiempo que pasa con algo de replegamiento y no el numero de veces que se repliega.
-# Para el tiempo que pasa replegado, mejor usar solidity
-# #%%%% Roundness
-# # Para contar los repliegamientos, defino un threshold y simplemente cuento
-
-# threshold = 0.5
-# replieg_round = (
-#     df[df.Round > threshold]
-#     .groupby("Gusano")
-#     .count()[["area"]]
-#     .rename(columns={"area": "Repliegamientos"})
-#     .reset_index()
-# )
-# replieg_round.insert(
-#     0,
-#     "Condicion",
-#     replieg_round.Gusano.apply(
-#         lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-#     ),
-# )
-
-# a = sns.boxplot(x="Condicion", y="Repliegamientos", data=replieg_round)
-# a.set_title("Numero de repliegamientos con Roundness y Threshold " + str(threshold))
-# b = sns.stripplot(
-#     x="Condicion", y="Repliegamientos", data=replieg_round, color="grey", size=8
-# )
-# plt.show()
-
-# #%%%% Circularity
-# # Para contar los repliegamientos, defino un threshold y simplemente cuento
-
-# threshold = 0.7
-# replieg_circ = (
-#     df[df.Circ > threshold]
-#     .groupby("Gusano")
-#     .count()[["area"]]
-#     .rename(columns={"area": "Repliegamientos"})
-#     .reset_index()
-# )
-# replieg_circ.insert(
-#     0,
-#     "Condicion",
-#     replieg_circ.Gusano.apply(
-#         lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-#     ),
-# )
-
-# a = sns.boxplot(x="Condicion", y="Repliegamientos", data=replieg_circ)
-# a.set_title("Numero de repliegamientos con circularity y Threshold " + str(threshold))
-# b = sns.stripplot(
-#     x="Condicion", y="Repliegamientos", data=replieg_circ, color="grey", size=8
-# )
-# plt.show()
-
 # %%% Mediante peak finder
 # %%%% Función peak finder y plot de los peaks detectados
 #
