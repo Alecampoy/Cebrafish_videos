@@ -151,12 +151,12 @@ df["Perim_inv"] = 1 / df.Perim
 df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
 df["Feret_inv"] = 1 / df.Feret
 
-# %% Grafico evolución temporal
+# %% Grafico todas las magnitudes temporales
 # Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usa un pez
 # Espero seleccionar la magnitud a la que voy a aplicarle los métodos, que será la que tenga la señal más limpia
 
 df_temp = df[
-    (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_3")
+    (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
 ].melt(
     id_vars=["Time"],
     value_vars=[
@@ -188,11 +188,13 @@ g = sns.FacetGrid(
 )
 g.map(sns.lineplot, "Time", "value")
 sns.set(font_scale=2)
+plt.show()
 
 # Todas las señales correlacionan altamente, esto se podrá comprobar con AFC(). Para continuar tomo cualquiera de ellas
 
-# %% Tiempo que pasa replegado
-# Aunque solo observo picos, puedo contar el tiempo que pasa replegado usando la solidity.
+# %% Tiempo replegado
+# Aunque  observo picos, se puede evaluar el tiempo total que pasa replegado usando la solidity y un threshold. Si el valor de la solidity es superior al Threshold, indica que el gusano esta replegado
+#  Solidity = area/convex area. estudiarla sobre el video
 
 
 threshold = 0.78
@@ -205,9 +207,6 @@ solidity_over_Thr = (
 
 solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
 
-df_temp_median = solidity_over_Thr.groupby("Fenotype")["contracted_perc"].median()
-df_temp_median["WT"]
-
 a = sns.boxplot(x="Fenotype", y="contracted_perc", data=solidity_over_Thr)
 a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
 b = sns.stripplot(
@@ -215,34 +214,37 @@ b = sns.stripplot(
 )
 plt.show()
 
-# %%% evolución del resultado con el threshold
+# %%% Evolución del resultado con el threshold
 # compruebo como cambia el resultado segun el threshold elegido
 
 threshold_result = pd.DataFrame(columns=["Threshold", "Result_44", "Result_179"])
 
 i = 0
 
-for thr in np.arange(0.5, df.Solidity.max() + 0.01, 0.01):
+for thr in np.arange(0.2, df.Solidity.max() + 0.01, 0.01):
     solidity_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])["Solidity"]
+        df.groupby(["Batch", "Fenotype", "Fish"])["Round"]
         .apply(lambda x: (x > thr).sum())
         .reset_index()
-        .rename(columns={"Solidity": "contracted"})
+        .rename(columns={"Round": "contracted"})
     )
     solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
 
-    df_temp_mean = solidity_over_Thr.groupby("Fenotype")["contracted_perc"].median()
+    df_temp_median = solidity_over_Thr.groupby("Fenotype")["contracted_perc"].median()
     threshold_result.loc[i] = [
         thr,
-        df_temp_mean["WT"] - df_temp_mean["KO44"],
-        df_temp_mean["WT"] - df_temp_mean["KO179"],
+        df_temp_median["WT"] - df_temp_median["KO44"],
+        df_temp_median["WT"] - df_temp_median["KO179"],
     ]
     i = i + 1
 
-sns.lineplot(x="Threshold", y="Result_44", data=threshold_result)
+sns.lineplot(x="Threshold", y="Result_179", data=threshold_result)
+plt.show()
 
 # No me gusta este resultado, pues es muy dependiente del Threshold y no tiene una meseta fuerte. Aunque parece que el KO44 y el KO179m se comportan diferente, pues 44 pasa más tiempo replegado que el WT y el 179 menos. Hay que repensar esto
 
+# %% Peaks - Numero de coletazos
+# Contando el número de picos de las señales anteriores pueden evaluarse el numero de coletazos que ejecuta el pez. Para ello usamos la funcion peak finder. Mirar en scipy.signal los diferentes metodos de detectar peaks.
 
 # %% CODIGO GUSANOS
 # %% Repliegamientos
