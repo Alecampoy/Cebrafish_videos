@@ -20,7 +20,7 @@ from functions_aux_analysis import *
 # %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
 # Se añade una columna representando el gusano y el batch mediante el uso de regex
 
-windows = True
+windows = False
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
