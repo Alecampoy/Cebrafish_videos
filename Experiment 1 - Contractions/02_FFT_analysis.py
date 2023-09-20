@@ -12,15 +12,17 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.signal import find_peaks, detrend, periodogram, lombscargle
+from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
 from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
 from functions_aux_analysis import *
 
+plt.rcParams["figure.figsize"] = (15, 8)
+
 # %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
 # Se añade una columna representando el gusano y el batch mediante el uso de regex
 
-windows = False
+windows = True
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
@@ -244,19 +246,81 @@ plt.show()
 # No me gusta este resultado, pues es muy dependiente del Threshold y no tiene una meseta fuerte. Aunque parece que el KO44 y el KO179m se comportan diferente, pues 44 pasa más tiempo replegado que el WT y el 179 menos. Hay que repensar esto
 
 # %% Peaks - Numero de coletazos
-# Contando el número de picos de las señales anteriores pueden evaluarse el numero de coletazos que ejecuta el pez. Para ello usamos la funcion peak finder. Mirar en scipy.signal los diferentes metodos de detectar peaks.
+# Contando el número de picos de las señales anteriores pueden evaluarse el numero de coletazos que ejecuta el pez. Para ello usamos la funcion peak finder.
+
+# %%% Mediante Peak Finder
+fish_temp = df[
+    (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
+].Round
+
+peaks, _ = find_peaks(
+    fish_temp, height=0.4, prominence=0.1, threshold=0.0, distance=2, width=2
+)  # ajustar estos parametros
+
+plt.plot(fish_temp)
+plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
+plt.show()
+
+# %%%% comprobacion de peak_finder en todos los gusanos
+
+df["unique_fish"] = df.Batch + "_" + df.Fenotype + "_" + df.Fish
+
+for f in set(df.unique_fish):
+    fish_temp = df[df.unique_fish == f].Round  # ajustar estos parametros
+    peaks, _ = find_peaks(
+        fish_temp, height=0.4, prominence=0.1, threshold=0.0, distance=2, width=2
+    )
+
+    plt.plot(fish_temp)
+    plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
+    plt.title(f)
+    plt.show()
+# %%% Aplicando un filtro
+
+# %%% Por condición
+
+peaks_Round = (
+    df.groupby(["Batch", "Fenotype", "Fish"])["Round"]
+    .apply(
+        lambda x: len(
+            find_peaks(
+                x, height=0.6, prominence=0.1, threshold=0.0, distance=2, width=2
+            )[0]
+        )
+    )
+    .reset_index()
+)
+
+grped_bplot = sns.catplot(
+    x="Batch",
+    y="Round",
+    hue="Fenotype",
+    kind="box",
+    legend=False,
+    height=6,
+    aspect=1.9,
+    data=peaks_Round,
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch",
+    y="Round",
+    hue="Fenotype",
+    jitter=True,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    data=peaks_Round,
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
+
+l = plt.legend(handles[0:3], labels[0:3])
+plt.show()
 
 # %% CODIGO GUSANOS
 # %% Repliegamientos
 # %%% Mediante peak finder
-# %%%% Función peak finder y plot de los peaks detectados
-#
-# Para plotear los peaks encontrados usar :
-g_temp = df.Round[df.Gusano == "Series007"].to_numpy()  # reset_index(drop=True)
-peaks, _ = find_peaks(g_temp, height=0.45, prominence=0.0, threshold=0.0, distance=5)
-plt.plot(g_temp)
-plt.plot(peaks, g_temp[peaks], "2")
-plt.show()
 
 # %%%% Repliegamientos dados por Roundness
 
@@ -284,72 +348,6 @@ b = sns.stripplot(
     x="Condicion",
     y="N_peaks",
     data=peaks_round,
-    color="grey",
-    size=8,
-    order=["WT", "MUT"],
-)
-plt.show()
-
-
-# #%%%% Circularity
-# # La circularity NO es adecuada ya que solo se vuelve pequeña cuando el gusano se toca
-
-# # Creo un dataframe con el número de peaks de cada gusano
-# peaks_circ = pd.DataFrame(columns=["Gusano", "N_peaks"])
-# for g in set(df.Gusano):
-#     g_temp = df.Circ[df.Gusano == g].to_numpy()  # reset_index(drop=True)
-#     peaks, _ = find_peaks(
-#         g_temp, height=0.45, prominence=0.0, threshold=0.0, distance=5
-#     )
-#     peaks_circ = pd.concat(
-#         [peaks_circ, pd.DataFrame({"Gusano": g, "N_peaks": [len(peaks)]})],
-#     ).reset_index(drop=True)
-# peaks_circ.insert(
-#     0,
-#     "Condicion",
-#     peaks_circ.Gusano.apply(
-#         lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-#     ),
-# )
-
-# a = sns.boxplot(x="Condicion", y="N_peaks", data=peaks_circ, order=["WT", "MUT"])
-# a.set_title("Numero de repliegamientos con Find_Peaks y Circularity")
-# b = sns.stripplot(
-#     x="Condicion",
-#     y="N_peaks",
-#     data=peaks_circ,
-#     color="grey",
-#     size=8,
-#     order=["WT", "MUT"],
-# )
-# plt.show()
-
-# %% Euclidean distance # Maximos Mediante peak finder
-
-# Creo un dataframe con el número de peaks de cada gusano
-peaks_euclidean = pd.DataFrame(columns=["Gusano", "N_peaks"])
-for g in set(df.Gusano):
-    g_temp = df.EuclideanDist[df.Gusano == g].to_numpy()  # reset_index(drop=True)
-    peaks, _ = find_peaks(
-        g_temp, height=0.45, prominence=0.0, threshold=0.0, distance=5
-    )
-    peaks_euclidean = pd.concat(
-        [peaks_euclidean, pd.DataFrame({"Gusano": g, "N_peaks": [len(peaks)]})],
-    ).reset_index(drop=True)
-peaks_euclidean.insert(
-    0,
-    "Condicion",
-    peaks_euclidean.Gusano.apply(
-        lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-    ),
-)
-
-a = sns.boxplot(x="Condicion", y="N_peaks", data=peaks_euclidean, order=["WT", "MUT"])
-a.set_title("Numero de peaks en euclidean distance")
-b = sns.stripplot(
-    x="Condicion",
-    y="N_peaks",
-    data=peaks_euclidean,
     color="grey",
     size=8,
     order=["WT", "MUT"],
