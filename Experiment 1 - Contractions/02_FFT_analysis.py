@@ -22,7 +22,7 @@ plt.rcParams["figure.figsize"] = (15, 8)
 # %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
 # Se añade una columna representando el gusano y el batch mediante el uso de regex
 
-windows = True
+windows = False
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
@@ -123,6 +123,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=Dist,
+    hue_order = ["WT", "KO44", "KO179"]
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -135,10 +136,11 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=Dist,
+    hue_order = ["WT", "KO44", "KO179"]
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
-l = plt.legend(handles[0:3], labels[0:3])
+plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %% Evolución temporal de todas las variables
@@ -146,7 +148,7 @@ plt.show()
 # %% Inversa de algunas magnitudes
 
 # El estado basal del pez se considera estirado, y los cambios de estado se consideran cuando cambia su disposicion: se contrae
-# Busco picos, por lo que algunas magnitudes son más interesantes si tienen la linea basal baja, por lo que calculo la inversa
+# Busco picos, por lo que las magnitudes son interesantes si tienen la linea basal baja, por lo que calculo la inversa -picos en vez de 
 
 df["area_inv"] = 1 / df.area
 df["Perim_inv"] = 1 / df.Perim
@@ -160,7 +162,7 @@ df["Feret_inv"] = 1 / df.Feret
 df_temp = df[
     (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
 ].melt(
-    id_vars=["Time"],
+    id_vars=["Frame"],
     value_vars=[
         # "area",
         "area_inv",
@@ -188,8 +190,8 @@ g = sns.FacetGrid(
     aspect=4,
     margin_titles=True,
 )
-g.map(sns.lineplot, "Time", "value")
-sns.set(font_scale=2)
+g.map(sns.lineplot, "Frame", "value")
+# sns.set(font_scale=2)
 plt.show()
 
 # Todas las señales correlacionan altamente, esto se podrá comprobar con AFC(). Para continuar tomo cualquiera de ellas
@@ -247,15 +249,16 @@ plt.show()
 
 # %% Peaks - Numero de coletazos
 # Contando el número de picos de las señales anteriores pueden evaluarse el numero de coletazos que ejecuta el pez. Para ello usamos la funcion peak finder.
-
+# La magnitud que creo es más sensible (muestra un mayor rango o SNR) es Roundness
 # %%% Mediante Peak Finder
 fish_temp = df[
     (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
 ].Round
 
 peaks, _ = find_peaks(
-    fish_temp, height=0.4, prominence=0.1, threshold=0.0, distance=2, width=2
+    fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
 )  # ajustar estos parametros
+# he comprobado que algun gusano realiza contracciones y extensiones en 2 frames, por lo que distance = 1 & width = 1
 
 plt.plot(fish_temp)
 plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
@@ -268,13 +271,14 @@ df["unique_fish"] = df.Batch + "_" + df.Fenotype + "_" + df.Fish
 for f in set(df.unique_fish):
     fish_temp = df[df.unique_fish == f].Round  # ajustar estos parametros
     peaks, _ = find_peaks(
-        fish_temp, height=0.4, prominence=0.1, threshold=0.0, distance=2, width=2
+        fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
     )
 
     plt.plot(fish_temp)
     plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
     plt.title(f)
     plt.show()
+    
 # %%% Aplicando un filtro
 
 # %%% Por condición
@@ -284,13 +288,14 @@ peaks_Round = (
     .apply(
         lambda x: len(
             find_peaks(
-                x, height=0.6, prominence=0.1, threshold=0.0, distance=2, width=2
+                x, height=0.6, prominence=0.08, threshold=0.0, distance=1, width=1
             )[0]
         )
     )
     .reset_index()
-)
+) 
 
+########################### Cambiar el nombre Round por N_peaks
 grped_bplot = sns.catplot(
     x="Batch",
     y="Round",
@@ -300,6 +305,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=peaks_Round,
+    hue_order = ["WT", "KO44", "KO179"]
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -312,6 +318,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=peaks_Round,
+    hue_order = ["WT", "KO44", "KO179"]
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
@@ -319,41 +326,6 @@ l = plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %% CODIGO GUSANOS
-# %% Repliegamientos
-# %%% Mediante peak finder
-
-# %%%% Repliegamientos dados por Roundness
-
-# Creo un dataframe con el número de peaks de cada gusano
-peaks_round = pd.DataFrame(columns=["Gusano", "N_peaks"])
-for g in set(df.Gusano):
-    g_temp = df.Round[df.Gusano == g].to_numpy()  # reset_index(drop=True)
-    peaks, _ = find_peaks(
-        g_temp, height=0.45, prominence=0.0, threshold=0.0, distance=5
-    )
-    peaks_round = pd.concat(
-        [peaks_round, pd.DataFrame({"Gusano": g, "N_peaks": [len(peaks)]})],
-    ).reset_index(drop=True)
-peaks_round.insert(
-    0,
-    "Condicion",
-    peaks_round.Gusano.apply(
-        lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-    ),
-)
-
-a = sns.boxplot(x="Condicion", y="N_peaks", data=peaks_round, order=["WT", "MUT"])
-a.set_title("Numero de repliegamientos con Find_Peaks y Roundness")
-b = sns.stripplot(
-    x="Condicion",
-    y="N_peaks",
-    data=peaks_round,
-    color="grey",
-    size=8,
-    order=["WT", "MUT"],
-)
-plt.show()
-
 
 # %% Solidity
 # Espero con esta medida comprobar que el WT esta mas tiempo en una posición contraida
