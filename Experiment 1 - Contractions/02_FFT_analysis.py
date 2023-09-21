@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 # """
 # Spyder Editor
+# %% Intro [md]
+"""
+# **Análisis de Zebrafish**
+### Author: Alejandro Campoy Lopez  
+"""
 
-# This is a temporary script file.
-# """
 
-# %% librerias
+# %% Librerias
 
 import pandas as pd
 import re
@@ -194,7 +197,12 @@ g.map(sns.lineplot, "Frame", "value")
 # sns.set(font_scale=2)
 plt.show()
 
-# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC(). Para continuar tomo cualquiera de ellas
+# %% Correlación entre variables
+
+sns.scatterplot(data=df[(df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")], x="Round", y="Solidity", hue = "Frame")
+plt.show()
+
+# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC(). Se ejecuta el análisis solamente sobre una única
 
 # %% Tiempo replegado
 # Aunque  observo picos, se puede evaluar el tiempo total que pasa replegado usando la solidity y un threshold. Si el valor de la solidity es superior al Threshold, indica que el gusano esta replegado
@@ -283,22 +291,23 @@ for f in set(df.unique_fish):
 
 # %%% Por condición
 
+Variable_plot = "Round"
 peaks_Round = (
-    df.groupby(["Batch", "Fenotype", "Fish"])["Round"]
+    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(
         lambda x: len(
             find_peaks(
-                x, height=0.6, prominence=0.08, threshold=0.0, distance=1, width=1
+                x, height=0.4, prominence=0.08, threshold=0.0, distance=1, width=1
             )[0]
         )
     )
     .reset_index()
+    .rename(columns={Variable_plot: "N_peaks"})
 ) 
 
-########################### Cambiar el nombre Round por N_peaks
 grped_bplot = sns.catplot(
     x="Batch",
-    y="Round",
+    y="N_peaks",
     hue="Fenotype",
     kind="box",
     legend=False,
@@ -310,7 +319,7 @@ grped_bplot = sns.catplot(
 # make grouped stripplot
 grped_bplot = sns.stripplot(
     x="Batch",
-    y="Round",
+    y="N_peaks",
     hue="Fenotype",
     jitter=True,
     dodge=True,
@@ -324,6 +333,14 @@ handles, labels = grped_bplot.get_legend_handles_labels()
 
 l = plt.legend(handles[0:3], labels[0:3])
 plt.show()
+
+
+# %%% [md]
+"""
+He visualizado la gráfica anterior cambiando el valor de `height` en el intervalo 0.1-0.9 y 
+no cambia hasta 0.8, el cual es ya un valor extremo para Roundness. Lo mismo con `prominence`en el 
+intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altura del pico)
+"""
 
 # %% CODIGO GUSANOS
 
