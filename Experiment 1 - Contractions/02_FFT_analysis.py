@@ -50,7 +50,7 @@ for f in files:
             axis=1,
         )
         csv.insert(0, "Batch", re.search("Batch \d+", f).group(0))
-        csv.insert(1, "Fenotype", re.search("KO\d*|WT", f).group(0))
+        csv.insert(1, "Fenotype", re.search("KO\d*|WT", f.upper()).group(0))
         csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.lif)", f).group(1))
         df.append(csv)
         del (csv, f)
@@ -62,16 +62,6 @@ df = df.rename(columns={"XM.1": "YM"})
 # renombro KO a KO44 para el batch 6 y 7
 df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
 
-# %% Calculo de las magnitudes derivadas y añado la condición al dataset
-
-# No son interesantes ni utiles
-
-# df["Curvatura"] = df.EuclideanDist / df.BranchLen
-
-# fenotype = pd.read_excel(folder_path + "Fenotype.ods")
-# # añado fenotipo
-# df = pd.merge(df, fenotype, on=["Batch", "Fish"])
-# df.insert(2, "Fenotype", df.pop("Fenotype"))
 
 
 # %% Número de NAs que hay por frame. Imputo mediante interpolación
@@ -148,7 +138,7 @@ plt.show()
 
 # %% Evolución temporal de todas las variables
 
-# %% Inversa de algunas magnitudes
+# %%% Inversa de algunas magnitudes
 
 # El estado basal del pez se considera estirado, y los cambios de estado se consideran cuando cambia su disposicion: se contrae
 # Busco picos, por lo que las magnitudes son interesantes si tienen la linea basal baja, por lo que calculo la inversa -picos en vez de 
@@ -158,7 +148,7 @@ df["Perim_inv"] = 1 / df.Perim
 df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
 df["Feret_inv"] = 1 / df.Feret
 
-# %% Grafico todas las magnitudes temporales
+# %%% Grafico todas las magnitudes temporales
 # Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usa un pez
 # Espero seleccionar la magnitud a la que voy a aplicarle los métodos, que será la que tenga la señal más limpia
 
@@ -209,36 +199,67 @@ plt.show()
 #  Solidity = area/convex area. estudiarla sobre el video
 
 
-threshold = 0.78
+Variable_plot = "Round"
+threshold = 0.76
 solidity_over_Thr = (
-    df.groupby(["Batch", "Fenotype", "Fish"])["Solidity"]
+    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x > threshold).sum())
     .reset_index()
-    .rename(columns={"Solidity": "contracted"})
+    .rename(columns={Variable_plot: "contracted"})
 )
 
 solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
 
-a = sns.boxplot(x="Fenotype", y="contracted_perc", data=solidity_over_Thr)
-a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
-b = sns.stripplot(
-    x="Fenotype", y="contracted_perc", data=solidity_over_Thr, color="grey", size=8
+# a = sns.boxplot(x="Fenotype", y="contracted_perc", data=solidity_over_Thr)
+# a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
+# b = sns.stripplot(
+#     x="Fenotype", y="contracted_perc", data=solidity_over_Thr, color="grey", size=8
+# )
+# plt.show()
+
+grped_bplot = sns.catplot(
+    x="Batch", y="contracted_perc", data=solidity_over_Thr,
+    hue="Fenotype",
+    kind="box",
+    legend=False,
+    height=6,
+    aspect=1.9,
+    hue_order = ["WT", "KO44", "KO179"]
 )
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch", y="contracted_perc", data=solidity_over_Thr,
+    hue="Fenotype",
+    jitter=True,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    hue_order = ["WT", "KO44", "KO179"]
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
+
+plt.legend(handles[0:3], labels[0:3])
 plt.show()
+
+
+
+
 
 # %%% Evolución del resultado con el threshold
 # compruebo como cambia el resultado segun el threshold elegido
 
 threshold_result = pd.DataFrame(columns=["Threshold", "Result_44", "Result_179"])
 
-i = 0
 
+i = 0
+Variable_plot = "Solidity"
 for thr in np.arange(0.2, df.Solidity.max() + 0.01, 0.01):
     solidity_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])["Round"]
+        df[df.Batch == "Batch 6"].groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
         .apply(lambda x: (x > thr).sum())
         .reset_index()
-        .rename(columns={"Round": "contracted"})
+        .rename(columns={Variable_plot: "contracted"})
     )
     solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
 
@@ -246,21 +267,24 @@ for thr in np.arange(0.2, df.Solidity.max() + 0.01, 0.01):
     threshold_result.loc[i] = [
         thr,
         df_temp_median["WT"] - df_temp_median["KO44"],
-        df_temp_median["WT"] - df_temp_median["KO179"],
+        "NA" # df_temp_median["WT"] - df_temp_median["KO179"],
     ]
     i = i + 1
 
+sns.lineplot(x="Threshold", y="Result_44", data=threshold_result)
+plt.show()
 sns.lineplot(x="Threshold", y="Result_179", data=threshold_result)
 plt.show()
+# No me gusta este resultado, pues es dependiente del Threshold y de la magnitud.
+# Parece que el KO44 y el KO179 se comportan diferente igual en el batch 8, pero en los batches 6 y 7 tiene el KO44 tiene un comportamiento opuesto
 
-# No me gusta este resultado, pues es muy dependiente del Threshold y no tiene una meseta fuerte. Aunque parece que el KO44 y el KO179m se comportan diferente, pues 44 pasa más tiempo replegado que el WT y el 179 menos. Hay que repensar esto
 
 # %% Peaks - Numero de coletazos
 # Contando el número de picos de las señales anteriores pueden evaluarse el numero de coletazos que ejecuta el pez. Para ello usamos la funcion peak finder.
 # La magnitud que creo es más sensible (muestra un mayor rango o SNR) es Roundness
 # %%% Mediante Peak Finder
 fish_temp = df[
-    (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
+    (df.Batch == "Batch 6") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_3")
 ].Round
 
 peaks, _ = find_peaks(
@@ -276,8 +300,11 @@ plt.show()
 
 df["unique_fish"] = df.Batch + "_" + df.Fenotype + "_" + df.Fish
 
-for f in set(df.unique_fish):
-    fish_temp = df[df.unique_fish == f].Round  # ajustar estos parametros
+# Filtro para ver por batch
+dfa = df[df.Batch == "Batch 6"]
+
+for f in set(dfa.unique_fish):
+    fish_temp = dfa[dfa.unique_fish == f].Round  # ajustar estos parametros
     peaks, _ = find_peaks(
         fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
     )
