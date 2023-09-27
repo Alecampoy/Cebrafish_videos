@@ -200,7 +200,7 @@ plt.show()
 
 
 Variable_plot = "Round"
-threshold = 0.76
+threshold = 0.8
 solidity_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x > threshold).sum())
@@ -256,7 +256,7 @@ i = 0
 Variable_plot = "Solidity"
 for thr in np.arange(0.2, df.Solidity.max() + 0.01, 0.01):
     solidity_over_Thr = (
-        df[df.Batch == "Batch 6"].groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+        df[df.Batch == "Batch 8"].groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
         .apply(lambda x: (x > thr).sum())
         .reset_index()
         .rename(columns={Variable_plot: "contracted"})
@@ -284,7 +284,7 @@ plt.show()
 # La magnitud que creo es más sensible (muestra un mayor rango o SNR) es Roundness
 # %%% Mediante Peak Finder
 fish_temp = df[
-    (df.Batch == "Batch 6") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_3")
+    (df.Batch == "Batch 8") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_3")
 ].Round
 
 peaks, _ = find_peaks(
