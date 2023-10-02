@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
+# """
 # Spyder Editor
-
 # %% Intro [md]
 """
-# **Análisis de Movimiento Zebrafish**
+# **Análisis de Zebrafish**
 ### Author: Alejandro Campoy Lopez  
 """
 
 
 # %% Librerias
+
 import pandas as pd
 import re
 import numpy as np
@@ -21,13 +22,8 @@ from functions_aux_analysis import *
 
 plt.rcParams["figure.figsize"] = (15, 8)
 
-# %% Lectura Archivos [md]
-'''
-Lectura de todos los archivos csv con los resultados de los diferentes batches.
-Se añade una columna representando el gusano y el batch mediante el uso de regex
-'''
-
-# %%% Load Files
+# %% Lectura de todos los archivos csv con los resultados de los diferentes batches.
+# Se añade una columna representando el gusano y el batch mediante el uso de regex
 
 windows = False
 if windows:
@@ -68,13 +64,9 @@ df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
 
 
 
-# %% NAs [md]
-'''
-## Número de NAs por ZebraF
-Visualizamos el número de Nas por pez. Se imputan mediante interpolación Lineal.
-'''
+# %% Número de NAs que hay por frame. Imputo mediante interpolación
 
-# %%% NAs Plot
+
 NAs = (
     df.groupby(["Batch", "Fenotype", "Fish"])
     .apply(lambda x: x.isnull().sum())[["area"]]
@@ -92,20 +84,13 @@ NAs_barplot = sns.catplot(
 NAs_barplot.set_xticklabels(rotation=90)
 plt.show()
 
-# %%% NA Impute
-
 df = df.interpolate(method="linear")
 
-# %%% [md]
-'''El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs'''
+# El Zebra 10 WT del batch 7 se ha eliminado por contener >500 NAs
 
-# %% Distancia Recorrida [md]
-'''
-## Distancia Recorrida
-Se calcula la distancia que recorre el pez a lo largo del video y se gráfica por batch
-'''
+# %% Distancia Recorrida
 
-# %%% Calculo de la distancia
+# distancia en cada paso
 
 df.insert(7, "X_diff", df.groupby(["Batch", "Fenotype", "Fish"]).XM.diff())
 df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).YM.diff())
@@ -114,6 +99,11 @@ df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 # dataframe con la distancia recorrida por el  gusano
 Dist = df.groupby(["Batch", "Fenotype", "Fish"])[["dist"]].sum().round().reset_index()
 
+# %%% Box-Plot de la distancia
+a = sns.boxplot(x="Fenotype", y="dist", data=Dist)
+a.set_title("Distancia Recorrida por el gusano en pixeles")
+b = sns.stripplot(x="Fenotype", y="dist", data=Dist, color="grey", size=8)
+plt.show()
 
 # %%% Box-plot por batch
 
@@ -122,7 +112,6 @@ grped_bplot = sns.catplot(
     y="dist",
     hue="Fenotype",
     kind="box",
-    showfliers=False,
     legend=False,
     height=6,
     aspect=1.9,
@@ -134,7 +123,7 @@ grped_bplot = sns.stripplot(
     x="Batch",
     y="dist",
     hue="Fenotype",
-    jitter=0.18,
+    jitter=True,
     dodge=True,
     marker="o",
     color="black",
@@ -144,35 +133,25 @@ grped_bplot = sns.stripplot(
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
-
-grped_bplot.set_title("Distancia Recorrida por el gusano(px)")
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %% Evolución temporal de todas las variables
 
-''' 
-## Evolución temporal de las variables
-
-Dado que buscamos evaluar el comportamiento de los peces, vamos a representar
-las variables que hemos extraido del análisis de los videos con el tiempo.
-  
-
-El estado basal del pez se considera estirado, así, cuando el pez realiza alguna acción, se reflejara como un cambios en las variables.
-Las contracciones que esperamos, se reflejaran como picos en la evolución temporal.  
-  
-
-Busco picos, por lo que las magnitudes son interesantes si presentan la linea basal baja, por lo que calculo la inversa de las que no la tienen.
-'''
-
 # %%% Inversa de algunas magnitudes
-# Inversa de algunas magnitudes
+
+# El estado basal del pez se considera estirado, y los cambios de estado se consideran cuando cambia su disposicion: se contrae
+# Busco picos, por lo que las magnitudes son interesantes si tienen la linea basal baja, por lo que calculo la inversa -picos en vez de 
+
 df["area_inv"] = 1 / df.area
 df["Perim_inv"] = 1 / df.Perim
 df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
 df["Feret_inv"] = 1 / df.Feret
 
 # %%% Grafico todas las magnitudes temporales
+# Voy a graficar la evolución de las magnitudes con el tiempo. Como ejemplo se usa un pez
+# Espero seleccionar la magnitud a la que voy a aplicarle los métodos, que será la que tenga la señal más limpia
+
 df_temp = df[
     (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
 ].melt(
@@ -192,7 +171,7 @@ df_temp = df[
         # "MinFeret",
         "Solidity",
     ],
-)  
+)  # filtrado para un solo pez y re
 
 g = sns.FacetGrid(
     df_temp,
@@ -205,49 +184,21 @@ g = sns.FacetGrid(
     margin_titles=True,
 )
 g.map(sns.lineplot, "Frame", "value")
-g.set_title("Evolución temporal de todas las variables para un pez de ejemplo")
 # sns.set(font_scale=2)
 plt.show()
 
-# %%% Correlación entre variables
+# %% Correlación entre variables
 
-#  Correlación entre variables
+sns.scatterplot(data=df[(df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")], x="Round", y="Solidity", hue = "Frame")
+plt.show()
 
-# sns.scatterplot(data=df[(df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")], x="Round", y="Solidity", hue = "Frame")
-# plt.show()
+# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC(). Se ejecuta el análisis solamente sobre una única
 
-# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC() o con gringer 
-
-# %%% [md]
-
-'''
-Los picos en las señales correlacionan altamente, Se ejecuta el análisis solamente sobre una única.
-'''
-
-# %% Análisis [md]
-'''
-# Análisis
-
-Para modelar el comportamiento del pez voy a realizar 3 aproximaciones:
-
-## - Tiempo que pasa replegado
-Dado que observamos picos, se puede evaluar el tiempo total que pasa replegado usando un threshold. 
-Se asocia el tiempo total replegado a todo el tiempo que el valor esta por encima del threshold.
-  
-## - Contado de picos
-
-## - Periodograma
-'''
-    
 # %% Tiempo replegado
-# %%% [md]
-'''
-# Tiempo Replegado
+# Aunque  observo picos, se puede evaluar el tiempo total que pasa replegado usando la solidity y un threshold. Si el valor de la solidity es superior al Threshold, indica que el gusano esta replegado
+#  Solidity = area/convex area. estudiarla sobre el video
 
-Usando la Solidity = area/convex area, si su valor es superior al Threshold, indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1 
-'''
 
-# %%%
 Variable_plot = "Round"
 threshold = 0.8
 solidity_over_Thr = (
