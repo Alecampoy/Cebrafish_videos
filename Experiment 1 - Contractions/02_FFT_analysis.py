@@ -205,8 +205,11 @@ g = sns.FacetGrid(
     margin_titles=True,
 )
 g.map(sns.lineplot, "Frame", "value")
-g.set_title("Evolución temporal de todas las variables para un pez de ejemplo")
+g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+              fontsize=24, fontdict={"weight": "bold"})
+g.fig.subplots_adjust(top=0.97)
 # sns.set(font_scale=2)
+
 plt.show()
 
 # %%% Correlación entre variables
@@ -235,8 +238,12 @@ Dado que observamos picos, se puede evaluar el tiempo total que pasa replegado u
 Se asocia el tiempo total replegado a todo el tiempo que el valor esta por encima del threshold.
   
 ## - Contado de picos
+Usando la función Peak Finder detectamos picos en las señales, que se pueden tanto contar como cuantificar con parámetros
+como altura (no de interes) o anchura
 
 ## - Periodograma
+Usando la FFT ver las frecuencias intrinsicas de cada uno de los peces. (puede ser interesante buscar la baseline)
+
 '''
     
 # %% Tiempo replegado
@@ -244,40 +251,60 @@ Se asocia el tiempo total replegado a todo el tiempo que el valor esta por encim
 '''
 # Tiempo Replegado
 
-Usando la Solidity = area/convex area, si su valor es superior al Threshold, indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1 
+Usando la Solidity = area/convex area, si su valor es superior al Threshold, 
+indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1 
 '''
 
-# %%%
-Variable_plot = "Round"
-threshold = 0.8
-solidity_over_Thr = (
+# %%% Plot Ejemplo threshold
+
+df_temp = df[
+    (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
+]
+
+g = sns.lineplot(data = df_temp, x = "Time", y = "Solidity")
+g.axhline(0.88, color = "red")
+g.set_title("Threshold on Solidity", size = 25)
+plt.show()
+
+# %%% [md]
+'''
+Contando para cada gusano el total del tiempo que pasa sobre el Threshold, obtenemos
+'''
+
+
+# %%% Para un threshold fijo
+
+Variable_plot = "Solidity"
+threshold = 0.88
+time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x > threshold).sum())
     .reset_index()
     .rename(columns={Variable_plot: "contracted"})
 )
 
-solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
+time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
 
-# a = sns.boxplot(x="Fenotype", y="contracted_perc", data=solidity_over_Thr)
+# a = sns.boxplot(x="Fenotype", y="contracted_perc", data=time_over_Thr)
 # a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
 # b = sns.stripplot(
-#     x="Fenotype", y="contracted_perc", data=solidity_over_Thr, color="grey", size=8
+#     x="Fenotype", y="contracted_perc", data=time_over_Thr, color="grey", size=8
 # )
 # plt.show()
 
 grped_bplot = sns.catplot(
-    x="Batch", y="contracted_perc", data=solidity_over_Thr,
+    x="Batch", y="contracted_perc", data=time_over_Thr,
     hue="Fenotype",
     kind="box",
     legend=False,
+    showfliers=False,
     height=6,
     aspect=1.9,
     hue_order = ["WT", "KO44", "KO179"]
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
-    x="Batch", y="contracted_perc", data=solidity_over_Thr,
+    x="Batch", y="contracted_perc", data=time_over_Thr,
     hue="Fenotype",
     jitter=True,
     dodge=True,
@@ -287,7 +314,7 @@ grped_bplot = sns.stripplot(
     hue_order = ["WT", "KO44", "KO179"]
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
-
+grped_bplot.set_title("Porcentaje del tiempo que pasa el gusano replegado (sobre el Threshold)", size =20)
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
@@ -295,37 +322,114 @@ plt.show()
 
 
 
-# %%% Evolución del resultado con el threshold
-# compruebo como cambia el resultado segun el threshold elegido
+# %%% Evolución del resultado con el threshold [md]
 
-threshold_result = pd.DataFrame(columns=["Threshold", "Result_44", "Result_179"])
+'''
+## Evolución del resultado con el threshold
+Dado que este resultado es sensible al Threshold, vamos a ver como cambia el resultado con el Threshold
+elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa replegado el KO con respecto a su mutante. 
+(Este resultado puede ser sensible a la normalización de la señal que queda aún pendiente.)
 
+### Solidity Plot
+'''
+
+# %%% plot del threshold para Solidity
+threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
 
 i = 0
 Variable_plot = "Solidity"
-for thr in np.arange(0.2, df.Solidity.max() + 0.01, 0.01):
-    solidity_over_Thr = (
-        df[df.Batch == "Batch 8"].groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+for thr in np.arange(0.5, df.Solidity.max() + 0.01, 0.01):
+    time_over_Thr = (
+        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
         .apply(lambda x: (x > thr).sum())
         .reset_index()
         .rename(columns={Variable_plot: "contracted"})
     )
-    solidity_over_Thr["contracted_perc"] = 100 * solidity_over_Thr.contracted / 1550
-
-    df_temp_median = solidity_over_Thr.groupby("Fenotype")["contracted_perc"].median()
+    time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
+    
+    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])["contracted_perc"].median()
     threshold_result.loc[i] = [
         thr,
-        df_temp_median["WT"] - df_temp_median["KO44"],
-        "NA" # df_temp_median["WT"] - df_temp_median["KO179"],
-    ]
-    i = i + 1
+        "Batch 6",
+        df_temp_median["Batch 6","WT"] - df_temp_median["Batch 6","KO44"],
+        np.nan
+        ]
+    threshold_result.loc[i+1] = [
+        thr,
+        "Batch 7",
+        df_temp_median["Batch 7","WT"] - df_temp_median["Batch 7","KO44"],
+        np.nan
+        ]
+    threshold_result.loc[i+2] = [
+        thr,
+        "Batch 8",
+        df_temp_median["Batch 8","WT"] - df_temp_median["Batch 8","KO44"],
+        df_temp_median["Batch 8","WT"] - df_temp_median["Batch 8","KO179"]
+        ]    
+    i = i + 3
+    
 
-sns.lineplot(x="Threshold", y="Result_44", data=threshold_result)
+df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
+df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
+g = sns.lineplot(data = df_temp, 
+             x = "Threshold",
+             y = "value",
+             hue = "hue")
+g.set_title("Diference of Solidity Batch Median values with Threshold")
 plt.show()
-sns.lineplot(x="Threshold", y="Result_179", data=threshold_result)
+
+# %%% [md]
+'''
+Parece que el KO44 y el KO179 se comportan diferente igual en el batch 8, pero en los batches 6 y 7 tiene el KO44 tiene un comportamiento opuesto
+
+### Circularity plot
+Lo mismo para la circularity
+'''
+
+# %%% plot del threshold para Solidity
+threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
+
+i = 0
+Variable_plot = "Circ"
+for thr in np.arange(0.2, df.Solidity.max() + 0.01, 0.01):
+    time_over_Thr = (
+        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+        .apply(lambda x: (x > thr).sum())
+        .reset_index()
+        .rename(columns={Variable_plot: "contracted"})
+    )
+    time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
+    
+    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])["contracted_perc"].median()
+    threshold_result.loc[i] = [
+        thr,
+        "Batch 6",
+        df_temp_median["Batch 6","WT"] - df_temp_median["Batch 6","KO44"],
+        np.nan
+        ]
+    threshold_result.loc[i+1] = [
+        thr,
+        "Batch 7",
+        df_temp_median["Batch 7","WT"] - df_temp_median["Batch 7","KO44"],
+        np.nan
+        ]
+    threshold_result.loc[i+2] = [
+        thr,
+        "Batch 8",
+        df_temp_median["Batch 8","WT"] - df_temp_median["Batch 8","KO44"],
+        df_temp_median["Batch 8","WT"] - df_temp_median["Batch 8","KO179"]
+        ]    
+    i = i + 3
+    
+
+df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
+df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
+g = sns.lineplot(data = df_temp, 
+             x = "Threshold",
+             y = "value",
+             hue = "hue")
+g.set_title("Diference of Solidity Batch Median values with Threshold")
 plt.show()
-# No me gusta este resultado, pues es dependiente del Threshold y de la magnitud.
-# Parece que el KO44 y el KO179 se comportan diferente igual en el batch 8, pero en los batches 6 y 7 tiene el KO44 tiene un comportamiento opuesto
 
 
 # %% Peaks - Numero de coletazos
