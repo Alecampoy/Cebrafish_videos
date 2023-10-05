@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# %%
 # Spyder Editor
 
 # %% Intro [md]
@@ -11,15 +12,22 @@
 # %% Librerias
 import pandas as pd
 import re
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
 from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
+
+os.chdir("/home/ale/Documentos/GitHub/Cebrafish_videos/Experiment 1 - Contractions")
 from functions_aux_analysis import *
 
 plt.rcParams["figure.figsize"] = (15, 8)
+
+%matplotlib inline
+import warnings
+warnings.filterwarnings('ignore')
 
 # %% Lectura Archivos [md]
 '''
@@ -97,7 +105,7 @@ plt.show()
 df = df.interpolate(method="linear")
 
 # %%% [md]
-'''El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs'''
+# El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs
 
 # %% Distancia Recorrida [md]
 '''
@@ -172,6 +180,8 @@ df["Perim_inv"] = 1 / df.Perim
 df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
 df["Feret_inv"] = 1 / df.Feret
 
+# df['Prueba'] = (df.Circ + df.Round)*df.Solidity # composición de varias magnitudes
+
 # %%% Grafico todas las magnitudes temporales
 df_temp = df[
     (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
@@ -222,7 +232,6 @@ plt.show()
 # Todas las señales correlacionan altamente, esto se podrá comprobar con AFC() o con gringer 
 
 # %%% [md]
-
 '''
 Los picos en las señales correlacionan altamente, Se ejecuta el análisis solamente sobre una única.
 '''
@@ -243,9 +252,8 @@ como altura (no de interes) o anchura
 
 ## - Periodograma
 Usando la FFT ver las frecuencias intrinsicas de cada uno de los peces. (puede ser interesante buscar la baseline)
-
 '''
-    
+
 # %% Tiempo replegado
 # %%% [md]
 '''
@@ -272,7 +280,7 @@ Contando para cada gusano el total del tiempo que pasa sobre el Threshold, obten
 '''
 
 
-# %%% Para un threshold fijo
+# %%% Comparación usando un threshold fijo
 
 Variable_plot = "Solidity"
 threshold = 0.88
@@ -323,7 +331,6 @@ plt.show()
 
 
 # %%% Evolución del resultado con el threshold [md]
-
 '''
 ## Evolución del resultado con el threshold
 Dado que este resultado es sensible al Threshold, vamos a ver como cambia el resultado con el Threshold
@@ -338,7 +345,7 @@ threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
 
 i = 0
 Variable_plot = "Solidity"
-for thr in np.arange(0.5, df.Solidity.max() + 0.01, 0.01):
+for thr in np.arange(0.1, 1.01, 0.01):
     time_over_Thr = (
         df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
         .apply(lambda x: (x > thr).sum())
@@ -391,7 +398,7 @@ threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
 
 i = 0
 Variable_plot = "Circ"
-for thr in np.arange(0.2, df.Solidity.max() + 0.01, 0.01):
+for thr in np.arange(0.2, 1.01, 0.01):
     time_over_Thr = (
         df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
         .apply(lambda x: (x > thr).sum())
@@ -428,36 +435,51 @@ g = sns.lineplot(data = df_temp,
              x = "Threshold",
              y = "value",
              hue = "hue")
-g.set_title("Diference of Solidity Batch Median values with Threshold")
+g.set_title("Diference of Circularity Batch Median values with Threshold")
 plt.show()
+
 
 
 # %% Peaks - Numero de coletazos
-# Contando el número de picos de las señales anteriores pueden evaluarse el numero de coletazos que ejecuta el pez. Para ello usamos la funcion peak finder.
-# La magnitud que creo es más sensible (muestra un mayor rango o SNR) es Roundness
+# %%% [md]
+'''
+# Peaks - Numero de coletazos
+
+Contando el número de picos de las señales anteriores se evalua el número de coletazos que ejecuta el pez en el tiempo del video.
+Para ello usamos la funcion peak finder sobre la magnitud que parece que muestra un mayor rango o SNR, Roundness
+
+### Ejemplo de Peak Finder sobre un pez
+'''
+
 # %%% Mediante Peak Finder
-fish_temp = df[
-    (df.Batch == "Batch 8") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_3")
+df_temp = df[
+    (df.Batch == "Batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
 ].Round
 
 peaks, _ = find_peaks(
-    fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
+    df_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
 )  # ajustar estos parametros
 # he comprobado que algun gusano realiza contracciones y extensiones en 2 frames, por lo que distance = 1 & width = 1
 
-plt.plot(fish_temp)
-plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
+plt.plot(df_temp)
+plt.plot(peaks, df_temp[peaks], "2", markersize=24)
+plt.title("Picos encontrados sobre la Roundness", size = 20)
 plt.show()
 
-# %%%% comprobacion de peak_finder en todos los gusanos
+# %%% [md]
+'''
+Es interesante ver como funciona sobre todas las gráficas de los gusanos
+'''
+
+# %%% Peak finder en todos los gusanos
 
 df["unique_fish"] = df.Batch + "_" + df.Fenotype + "_" + df.Fish
 
 # Filtro para ver por batch
-dfa = df[df.Batch == "Batch 6"]
+# dfa = df[df.Batch == "Batch 6"]
 
-for f in set(dfa.unique_fish):
-    fish_temp = dfa[dfa.unique_fish == f].Round  # ajustar estos parametros
+for f in sorted(set(df.unique_fish)):
+    fish_temp = df[df.unique_fish == f].Round  # ajustar estos parametros
     peaks, _ = find_peaks(
         fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
     )
@@ -466,18 +488,19 @@ for f in set(dfa.unique_fish):
     plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
     plt.title(f)
     plt.show()
-    
+
 # %%% Aplicando un filtro
 
+# No es necesario, pues los peaks estan bien encontrados
 # %%% Por condición
 
-Variable_plot = "Round"
-peaks_Round = (
+Variable_plot = "Circ"
+peaks_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(
         lambda x: len(
             find_peaks(
-                x, height=0.4, prominence=0.08, threshold=0.0, distance=1, width=1
+                x, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
             )[0]
         )
     )
@@ -491,9 +514,10 @@ grped_bplot = sns.catplot(
     hue="Fenotype",
     kind="box",
     legend=False,
+    showfliers=False,
     height=6,
     aspect=1.9,
-    data=peaks_Round,
+    data=peaks_df,
     hue_order = ["WT", "KO44", "KO179"]
 )
 # make grouped stripplot
@@ -501,17 +525,17 @@ grped_bplot = sns.stripplot(
     x="Batch",
     y="N_peaks",
     hue="Fenotype",
-    jitter=True,
+    jitter=0.18,
     dodge=True,
     marker="o",
     color="black",
     # palette="Set2",
-    data=peaks_Round,
+    data=peaks_df,
     hue_order = ["WT", "KO44", "KO179"]
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
-
 l = plt.legend(handles[0:3], labels[0:3])
+grped_bplot.set_title("Number of peaks")
 plt.show()
 
 
@@ -523,112 +547,6 @@ intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altur
 """
 
 # %% CODIGO GUSANOS
-
-# %% Solidity
-# Espero con esta medida comprobar que el WT esta mas tiempo en una posición contraida
-
-# %%% media
-
-solidity_mean = df.groupby("Gusano").mean().reset_index()
-solidity_mean.insert(
-    0,
-    "Condicion",
-    solidity_mean["Gusano"].apply(
-        lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-    ),
-)
-
-a = sns.boxplot(x="Condicion", y="Solidity", data=solidity_mean, order=["WT", "MUT"])
-a.set_title("Solidity media")
-b = sns.stripplot(
-    x="Condicion",
-    y="Solidity",
-    data=solidity_mean,
-    color="grey",
-    size=8,
-    order=["WT", "MUT"],
-)
-plt.show()
-
-# %%% threshold
-
-threshold = 0.7
-solidity_thr = (
-    df[df.Solidity > threshold]
-    .groupby("Gusano")
-    .count()[["Solidity"]]  # .rename(columns={"Solidity": "solidity_thr"})
-    .reset_index()
-)
-solidity_thr.insert(
-    0,
-    "Condicion",
-    solidity_thr.Gusano.apply(
-        lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-    ),
-)
-
-a = sns.boxplot(x="Condicion", y="Solidity", data=solidity_thr)
-a.set_title("Tiempo total con una solidity mayor que " + str(threshold))
-b = sns.stripplot(x="Condicion", y="Solidity", data=solidity_thr, color="grey", size=8)
-plt.show()
-
-
-# %% Curvatura
-# %%% Mediante threshold
-
-# Esta medida indica el numero de frames en los que el gusano pasa estirado
-# Curvatura cercana a 1 indica que el gusano esta estirado
-threshold = 0.9
-curvatura_frames = (
-    df[df.Curvatura > threshold].groupby("Gusano").count()[["Curvatura"]].reset_index()
-)
-curvatura_frames.insert(
-    0,
-    "Condicion",
-    curvatura_frames.Gusano.apply(
-        lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-    ),
-)
-
-a = sns.boxplot(x="Condicion", y="Curvatura", data=curvatura_frames)
-a.set_title("Numero de frames con curvatura > " + str(threshold))
-b = sns.stripplot(
-    x="Condicion", y="Curvatura", data=curvatura_frames, color="grey", size=8
-)
-plt.show()
-
-
-# %%% Mediante peak finder
-
-# Creo un dataframe con el número de peaks de cada gusano
-peaks_curvatura = pd.DataFrame(columns=["Gusano", "N_peaks"])
-for g in set(df.Gusano):
-    g_temp = df.Curvatura[df.Gusano == g].to_numpy()  # reset_index(drop=True)
-    peaks, _ = find_peaks(
-        g_temp, height=0.45, prominence=0.0, threshold=0.0, distance=5
-    )
-    peaks_curvatura = pd.concat(
-        [peaks_curvatura, pd.DataFrame({"Gusano": g, "N_peaks": [len(peaks)]})],
-    ).reset_index(drop=True)
-peaks_curvatura.insert(
-    0,
-    "Condicion",
-    peaks_curvatura.Gusano.apply(
-        lambda x: "WT" if x[0 : x.index(" ")] == "CONTROL" else "MUT"
-    ),
-)
-
-a = sns.boxplot(x="Condicion", y="N_peaks", data=peaks_curvatura, order=["WT", "MUT"])
-a.set_title("Numero de peaks con Find_Peaks para la curvatura")
-b = sns.stripplot(
-    x="Condicion",
-    y="N_peaks",
-    data=peaks_curvatura,
-    color="grey",
-    size=8,
-    order=["WT", "MUT"],
-)
-plt.show()
 
 # %% Analisis de Frecuencias del movimiento para un gusano
 
