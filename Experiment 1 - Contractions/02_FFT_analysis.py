@@ -25,12 +25,13 @@ from functions_aux_analysis import *
 
 plt.rcParams["figure.figsize"] = (15, 8)
 
-%matplotlib inline
+# %matplotlib inline
 import warnings
 warnings.filterwarnings('ignore')
 
 # %% Lectura Archivos [md]
 '''
+# Lectura de Archivos
 Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
 '''
@@ -79,7 +80,7 @@ df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
 # %% NAs [md]
 '''
 ## Número de NAs por ZebraF
-Visualizamos el número de Nas por pez. Se imputan mediante interpolación Lineal.
+Visualizamos el número de Frames no segmentados apropiadamente por pez. Dado que no son demasiados, los imputo mediante interpolación Lineal.
 '''
 
 # %%% NAs Plot
@@ -153,25 +154,23 @@ grped_bplot = sns.stripplot(
 handles, labels = grped_bplot.get_legend_handles_labels()
 
 
-grped_bplot.set_title("Distancia Recorrida por el gusano(px)")
+grped_bplot.set_title("Distancia Recorrida por el Zebrafish (px)")
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
-# %% Evolución temporal de todas las variables
-
-''' 
-## Evolución temporal de las variables
-
-Dado que buscamos evaluar el comportamiento de los peces, vamos a representar
-las variables que hemos extraido del análisis de los videos con el tiempo.
-  
-
-El estado basal del pez se considera estirado, así, cuando el pez realiza alguna acción, se reflejara como un cambios en las variables.
-Las contracciones que esperamos, se reflejaran como picos en la evolución temporal.  
-  
-
-Busco picos, por lo que las magnitudes son interesantes si presentan la linea basal baja, por lo que calculo la inversa de las que no la tienen.
-'''
+# %% Evolución temporal de todas las variables [md]
+#  
+# ## Evolución temporal de las variables
+#
+# Dado que buscamos evaluar el comportamiento de los peces, vamos a representar
+# las variables que hemos extraido del análisis de los videos con el tiempo.
+#   
+#
+# El estado basal del pez se considera estirado, así, cuando el pez realiza alguna acción, se reflejara como un cambios en las variables.
+# Las contracciones que esperamos, se reflejaran como picos en la evolución temporal.  
+#   
+#
+# Busco picos, por lo que las magnitudes son interesantes si presentan la linea basal baja, por lo que calculo la inversa de las que no la tienen.
 
 # %%% Inversa de algunas magnitudes
 # Inversa de algunas magnitudes
@@ -215,6 +214,7 @@ g = sns.FacetGrid(
     margin_titles=True,
 )
 g.map(sns.lineplot, "Frame", "value")
+g.set_axis_labels(fontsize=20)
 g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
               fontsize=24, fontdict={"weight": "bold"})
 g.fig.subplots_adjust(top=0.97)
@@ -233,7 +233,7 @@ plt.show()
 
 # %%% [md]
 '''
-Los picos en las señales correlacionan altamente, Se ejecuta el análisis solamente sobre una única.
+Los picos en las señales correlacionan altamente, se ejecuta el análisis solamente sobre una única.
 '''
 
 # %% Análisis [md]
@@ -254,8 +254,7 @@ como altura (no de interes) o anchura
 Usando la FFT ver las frecuencias intrinsicas de cada uno de los peces. (puede ser interesante buscar la baseline)
 '''
 
-# %% Tiempo replegado
-# %%% [md]
+# %% Tiempo replegado [md]
 '''
 # Tiempo Replegado
 
@@ -440,8 +439,7 @@ plt.show()
 
 
 
-# %% Peaks - Numero de coletazos
-# %%% [md]
+# %% Peaks - Numero de coletazos [md]
 '''
 # Peaks - Numero de coletazos
 
@@ -468,7 +466,7 @@ plt.show()
 
 # %%% [md]
 '''
-Es interesante ver como funciona sobre todas las gráficas de los gusanos
+Es interesante ver como funciona sobre todos los gusanos
 '''
 
 # %%% Peak finder en todos los gusanos
@@ -491,7 +489,19 @@ for f in sorted(set(df.unique_fish)):
 
 # %%% Aplicando un filtro
 
-# No es necesario, pues los peaks estan bien encontrados
+# Aplicar un filtro No es necesario, pues los peaks estan bien encontrados
+
+# %%% [md]
+'''
+## Número de picos por condición
+
+Represento el número de picos por condición y batch. Dado que todos los videos duran el mismo tiempo, se puede asociar a la frecuencia.
+
+### Circularity
+
+Usando la circularity
+'''
+
 # %%% Por condición
 
 Variable_plot = "Circ"
@@ -535,7 +545,7 @@ grped_bplot = sns.stripplot(
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 l = plt.legend(handles[0:3], labels[0:3])
-grped_bplot.set_title("Number of peaks")
+grped_bplot.set_title("Number of peaks using Circularity")
 plt.show()
 
 
@@ -544,7 +554,60 @@ plt.show()
 He visualizado la gráfica anterior cambiando el valor de `height` en el intervalo 0.1-0.9 y 
 no cambia hasta 0.8, el cual es ya un valor extremo para Roundness. Lo mismo con `prominence`en el 
 intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altura del pico)
+
+### Conclusión
+
+El método funciona correctamente, pero hay mucha variabilidad interbatch. 
+Recomiendo repasar las gráficas de los peces comparandolas con las fotos y ver que videos contienen defectos. También es necesario aumentar la N
+
+### Batch 6 & 8
+
+A petición de Ozrem, se gráfican conjuntamente solo los batch 6 y 8
 """
+
+# %%% Solo Batch 6 & 7 []
+
+Variable_plot = "Circ"
+peaks_df = (df[(df.Batch == "Batch 6") | (df.Batch == "Batch 8")].groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+    .apply(
+        lambda x: len(
+            find_peaks(
+                x, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
+            )[0]
+        )
+    )
+    .reset_index()
+    .rename(columns={Variable_plot: "N_peaks"})
+) 
+
+grped_bplot = sns.catplot(
+    x="Fenotype",
+    y="N_peaks",
+    kind="box",
+    legend=False,
+    showfliers=False,
+    height=6,
+    aspect=1.9,
+    data=peaks_df,
+    order = ["WT", "KO44", "KO179"]
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Fenotype",
+    y="N_peaks",
+    jitter=0.18,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    data=peaks_df,
+    order = ["WT", "KO44", "KO179"]
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
+l = plt.legend(handles[0:3], labels[0:3])
+grped_bplot.set_title("Number of peaks using Circularity", size = 20)
+plt.show()
+
 
 # %% CODIGO GUSANOS
 

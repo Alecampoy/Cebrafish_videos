@@ -31,16 +31,16 @@ def agrupamiento_gusanos_fft(df, condicion):
     df.insert(len(df.columns), "SEM", df.iloc[:, :n_gus].sem(axis=1))
 
 
-# change names of Batch 8
+# # change names of Batch 8
 
-folder_path = (
-      "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/Batch 6 Results/"
-)
-file_list = os.listdir(folder_path)
+# folder_path = (
+#       "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/Batch 6 Results/"
+# )
+# file_list = os.listdir(folder_path)
  
-file_list
-for f in file_list:
-    os.rename(folder_path+f, folder_path + '150923_' + f[8:])
+# file_list
+# for f in file_list:
+#     os.rename(folder_path+f, folder_path + '150923_' + f[8:])
     
 
 
