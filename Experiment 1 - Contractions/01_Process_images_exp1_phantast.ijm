@@ -70,25 +70,27 @@ for (i=0; i<list.length; i++){
 				run("Fill Holes");
 				rename("binary_temp"); // Output
 				binary_temp=getImageID();
-				
-	//2.3.2 Get the largtest element
-				run("Analyze Particles...", "size=0-Infinity display add");
-				//run("Grays");
-				selectWindow("Results");
-				Area_column = Table.getColumn("Area");
-				indices_max = Array.findMaxima(Area_column, 1);
-				roiManager("Select", indices_max[0]);
-				setBackgroundColor(0, 0, 0);
-				run("Clear Outside");
-				run("Select None");
-				// Clean the results and ROI to later measure again only the largest particle
-				run("Clear Results");
-				if(roiManager("count") !=0) {roiManager("delete");}
-				// binary closing
-				run("Maximum...", "radius=6 stack");
-				run("Minimum...", "radius=9 stack");
 
-	// 2.3.3 Get several features in the frame
+    //2.3.2 Get the largtest element
+                run("Analyze Particles...", "size=0-Infinity display add");
+                //run("Grays");
+                selectWindow("Results");
+                if (nResults > 1) { // if loop to keep only the largest element
+                    Area_column = Table.getColumn("Area");
+                    indices_max = Array.findMaxima(Area_column, 1);
+                    roiManager("Select", indices_max[0]);
+                    setBackgroundColor(0, 0, 0);
+                    run("Clear Outside");
+                    run("Select None");
+                }
+                // Clean the results and ROI to later measure again only the largest particle
+                run("Clear Results");
+                if(roiManager("count") !=0) {roiManager("delete");}
+                // binary closing
+                run("Maximum...", "radius=6 stack");
+                run("Minimum...", "radius=9 stack");
+
+    // 2.3.3 Get several features in the frame
 				run("Analyze Particles...", "display add");
 				selectWindow("Results");
 				if (nResults == 1) {
