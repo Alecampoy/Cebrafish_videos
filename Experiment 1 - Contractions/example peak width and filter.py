@@ -8,6 +8,8 @@ Created on Wed Sep 20 11:51:04 2023
 
 import numpy as np
 
+import pandas as pd
+
 import matplotlib.pyplot as plt
 
 from scipy.datasets import electrocardiogram
