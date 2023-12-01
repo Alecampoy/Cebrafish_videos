@@ -89,7 +89,7 @@ for (i=0; i<list.length; i++){
 			run("Select None");
 							
 	// 2.3.3 Get features in the frame
-				selectWindow("Results");
+			selectWindow("Results");
 				if (nResults == 1) {
 					if (t>0) {X_0=X; Y_0=Y;} //to draw a line later
 					frame = t+1;
