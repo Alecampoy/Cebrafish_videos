@@ -12,9 +12,11 @@
  * 
  * Output: Segmented images in folder and result file
  * 
- *///////////////////////////////////////////////////////////////////////////////////////////////
+*///////////////////////////////////////////////////////////////////////////////////////////////
 
-
+
+
+
 // 0.0 Clean previous data in FIJI
 run("Close All");
 run("Clear Results");
@@ -22,11 +24,13 @@ print("\\Clear");
 if(roiManager("count") !=0) {roiManager("delete");}
 
 // 0.1 Set measurements
-run("Options...", "iterations=1 count=1 black"); // Set black binary bckg
+run("Options...", "iterations=1 count=1 black");
+ // Set black binary bckg
 run("Set Measurements...", "mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
 print("Frame;X;Y;Mean-Distance;Time;"); // header of the result file in the Log window
 
-// 1 Select the Folder with the files
+
+// 1 Select the Folder with the files
 dir = getDirectory("Select the folder with the .mp4 movies");
 list= getFileList (dir);
 Results = createFolder(dir, "Results");
@@ -40,7 +44,7 @@ for (i=0; i<list.length; i++){
 	
 	// 1.2 Open and get data
 		title=list[i];
-		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=1001 last_frame=5500");
+		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=300 last_frame=4501"); // 14 minutes video
 		rename("original");
 		original = getImageID();
 				
@@ -72,8 +76,8 @@ for (i=0; i<list.length; i++){
 		rename("median_proyection");
 		run("Invert");
 		roiManager("Select", 0);
-		run("Enlarge...", "enlarge=-8");
-		run("Gaussian Blur...", "sigma=8");
+		run("Enlarge...", "enlarge=-7");
+		run("Gaussian Blur...", "sigma=8"); // elimina cualquier resto del gusano, en caso de que este mucho tiempo quieto en el centro
 		imageCalculator("Add stack", "original","median_proyection");
 		selectImage(original);
 		run("Invert", "stack");
@@ -93,8 +97,8 @@ for (i=0; i<list.length; i++){
 				if (nResults == 1) {
 					if (t>0) {X_0=X; Y_0=Y;} //to draw a line later
 					frame = t+1;
-					X = getResultString("XM", 0);
-					Y = getResultString("YM", 0);
+					X = getResultString("X", 0);
+					Y = getResultString("Y", 0);
 					Distance_edge = getResultString("Mean", 0); // the distance to the edge is the mean value of the distance map
 					time = frame/5; // 5 fps
 					
@@ -105,7 +109,8 @@ for (i=0; i<list.length; i++){
 					Y = "NA";
 					Distance_edge = "NA";
 					time = frame/5; // 5 fps
-				}
+				
+}
 
 	// 2.3.5 Write the results of the frame in the table			
 				print(frame+";"+X+";"+Y+";"+Distance_edge+";"+time);
@@ -123,7 +128,7 @@ for (i=0; i<list.length; i++){
 					setForegroundColor(255, 0, 0);  // draw in red
 					drawLine(X_0/pw, Y_0/pw, X/pw, Y/pw); // functions needs arguments in pixels
 				}
-				run("Scale...", "x=0.4 y=0.4 z=1.0 interpolation=Bilinear fill process create"); // to make it small
+				run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); // to make it smaller
 				result_temp_2 = getImageID();
 				close("result_temp");
 				selectImage(result_temp_2);
