@@ -60,7 +60,7 @@ for (i=0; i<list.length; i++){
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=2");
 		// run("Enhance Contrast...", "saturated=0.001 normalize process_all"); // optional if wand does not work properly
-		doWand(width/2, height/2, 16.0, "Legacy");
+		doWand(width/2, height/2, 8.0, "Legacy");
 		run("Fit Circle");
 		roiManager("Add");
 		run("Create Mask");
@@ -76,7 +76,7 @@ for (i=0; i<list.length; i++){
 		rename("median_proyection");
 		run("Invert");
 		roiManager("Select", 0);
-		run("Enlarge...", "enlarge=-7");
+		run("Enlarge...", "enlarge=-8");
 		run("Gaussian Blur...", "sigma=8"); // elimina cualquier rastro del pez en caso de que este tanto tiempo quieto que aparezca en la proyeccion mediana
 		imageCalculator("Add stack", "original","median_proyection");
 		selectImage(original);
@@ -84,14 +84,14 @@ for (i=0; i<list.length; i++){
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 0);
 		run("Enlarge...", "enlarge=10");
-		run("Clear Outside");
+		run("Clear Outside", "stack");
 		run("Select None");
 		
 	//2.3 Loop for every temporal frame to detect the points
 		 	for (t = 0; t < slices; t++) {
 			selectImage(original);
 			Stack.setSlice(t+1);
-			run("Find Maxima...", "prominence=65 output=[Point Selection]");
+			run("Find Maxima...", "prominence=71 output=[Point Selection]");
 			selectImage(distance_map);
 			run("Restore Selection");
 			run("Measure");
