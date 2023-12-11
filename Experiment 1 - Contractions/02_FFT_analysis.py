@@ -62,9 +62,9 @@ for f in files:
             ],
             axis=1,
         )
-        csv.insert(0, "Batch", re.search("Batch \d+", f).group(0))
+        csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
         csv.insert(1, "Fenotype", re.search("KO\d*|WT", f.upper()).group(0))
-        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.lif)", f).group(1))
+        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.lif)", f.upper()).group(1))
         df.append(csv)
         del (csv, f)
 
@@ -75,7 +75,9 @@ df = df.rename(columns={"XM.1": "YM"})
 # renombro KO a KO44 para el batch 6 y 7
 df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
 
-
+set(df.Batch)
+set(df.Fenotype)
+set(df.Fish)
 
 # %% NAs [md]
 '''
