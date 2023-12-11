@@ -15,8 +15,7 @@
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
-
+
 // 0.0 Clean previous data in FIJI
 run("Close All");
 run("Clear Results");
@@ -28,7 +27,7 @@ run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
 setBackgroundColor(0, 0, 0);
 run("Set Measurements...", "mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
-print("Frame;X;Y;Mean-Distance;Time;"); // header of the result file in the Log window
+print("Frame;X;Y;Mean-Distance;Time;"); // header of the result file in the Log window
 
 
 // 1 Select the Folder with the files
@@ -74,15 +73,15 @@ for (i=0; i<list.length; i++){
 		run("8-bit");
 		run("Gaussian Blur...", "sigma=1 stack"); 
 		run("Z Project...", "projection=Median");
-		rename("median_proyection"); 
+		rename("median_proyection");
 		run("Invert");
 		roiManager("Select", 0);
 		run("Enlarge...", "enlarge=-7");
-		run("Gaussian Blur...", "sigma=8"); 
+		run("Gaussian Blur...", "sigma=8"); // elimina cualquier rastro del pez en caso de que este tanto tiempo quieto que aparezca en la proyeccion mediana
 		imageCalculator("Add stack", "original","median_proyection");
 		selectImage(original);
 		run("Invert", "stack");
-		// limpio fuera para evitar que se detecte debris que ocurre en el video
+		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 0);
 		run("Enlarge...", "enlarge=10");
 		run("Clear Outside");
