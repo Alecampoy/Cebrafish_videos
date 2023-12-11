@@ -26,6 +26,7 @@ if(roiManager("count") !=0) {roiManager("delete");}
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
+setBackgroundColor(0, 0, 0);
 run("Set Measurements...", "mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
 print("Frame;X;Y;Mean-Distance;Time;"); // header of the result file in the Log window
 
@@ -71,22 +72,27 @@ for (i=0; i<list.length; i++){
 	// 2.2 process of the original image
 		selectImage(original);
 		run("8-bit");
-		run("Gaussian Blur...", "sigma=1 stack"); // opcional
+		run("Gaussian Blur...", "sigma=1 stack"); 
 		run("Z Project...", "projection=Median");
-		rename("median_proyection");
+		rename("median_proyection"); 
 		run("Invert");
 		roiManager("Select", 0);
 		run("Enlarge...", "enlarge=-7");
-		run("Gaussian Blur...", "sigma=8"); // elimina cualquier resto del gusano, en caso de que este mucho tiempo quieto en el centro
+		run("Gaussian Blur...", "sigma=8"); 
 		imageCalculator("Add stack", "original","median_proyection");
 		selectImage(original);
 		run("Invert", "stack");
+		// limpio fuera para evitar que se detecte debris que ocurre en el video
+		roiManager("Select", 0);
+		run("Enlarge...", "enlarge=10");
+		run("Clear Outside");
+		run("Select None");
 		
 	//2.3 Loop for every temporal frame to detect the points
 		 	for (t = 0; t < slices; t++) {
 			selectImage(original);
 			Stack.setSlice(t+1);
-			run("Find Maxima...", "prominence=70 output=[Point Selection]");
+			run("Find Maxima...", "prominence=65 output=[Point Selection]");
 			selectImage(distance_map);
 			run("Restore Selection");
 			run("Measure");
@@ -126,9 +132,10 @@ for (i=0; i<list.length; i++){
 				if (nResults == 1 && t>0){
 					selectImage(result_temp);
 					setForegroundColor(255, 0, 0);  // draw in red
+					// pinto una linea del movimiento entre frame y frame
 					drawLine(X_0/pw, Y_0/pw, X/pw, Y/pw); // functions needs arguments in pixels
 				}
-				run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); // to make it smaller
+				run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
 				result_temp_2 = getImageID();
 				close("result_temp");
 				selectImage(result_temp_2);
@@ -151,6 +158,9 @@ for (i=0; i<list.length; i++){
 		selectWindow("Stack_Result");
 		rename(title+"_result");
 		saveAs("Tiff", Results+title+"_tracking.tif");
+		run("Z Project...", "projection=[Max Intensity]");
+		saveAs("Tiff", Results+title+"_tracking_projection.tif");
+		
 		
 	// 4.2 Save results and clean for the next image
 		selectWindow("Log");
@@ -169,7 +179,7 @@ print("\\Clear");
 print("Terminado");
 Finish_time = getTime();
 Time_used = Finish_time - Start_time;
-print("It took =", Time_used/1000, "second to finish the proccess");
+print("It took =", Time_used/60000, "minutes to finish the proccess");
 
 
 //Functions
