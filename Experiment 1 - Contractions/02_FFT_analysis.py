@@ -131,7 +131,7 @@ df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).YM.diff())
 df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
-Dist = df.groupby(["Batch", "Fenotype", "Fish"], dropna=True)["dist"].sum().round().reset_index()
+Dist = df.dropna().groupby(["Batch", "Fenotype", "Fish"], as_index=False).dist.sum(min_count=1).round()#.reset_index()
 
 
 # %%% Box-plot por batch
@@ -246,7 +246,7 @@ plt.show()
 Los picos en las señales correlacionan altamente, se ejecuta el análisis solamente sobre una única.
 '''
 
-# %% Análisis [md]
+# %% Análisis Overview[md]
 '''
 # Análisis
 
@@ -394,7 +394,7 @@ g = sns.lineplot(data = df_temp,
 g.set_title("Diference of Solidity Batch Median values with Threshold")
 plt.show()
 
-# %%% plot del threshold para Solidity 2
+# %%% plot del threshold para Solidity, más batches
 threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
 
 i = 0
@@ -441,7 +441,7 @@ plt.show()
 
 # %%% [md]
 '''
-Parece que el KO44 y el KO179 se comportan diferente igual en el batch 8, pero en los batches 6 y 7 tiene el KO44 tiene un comportamiento opuesto
+Parece que el KO44 y el KO179 se comportan igual en el batch 8, pero los batches 6 y 7 tiene el KO44 un comportamiento opuesto
 
 ### Circularity plot
 Lo mismo para la circularity
@@ -537,6 +537,11 @@ g = sns.lineplot(data = df_temp,
 g.set_title("Diference of "+Variable_plot+"Batch Median values with Threshold 2")
 plt.show()
 
+# %%% [md]
+'''
+Como es de esperar, y debido a la alta correlación entre variables, el efecto es el mismo
+
+'''
 
 # %% Peaks - Numero de coletazos [md]
 '''
@@ -570,7 +575,7 @@ Es interesante ver como funciona sobre todos los gusanos
 
 # %%% Peak finder en todos los gusanos
 
-df["unique_fish"] = df.Batch + "_" + df.Fenotype + "_" + df.Fish
+df["unique_fish"] = df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
 
 # Filtro para ver por batch
 # dfa = df[df.Batch == "batch 6"]
@@ -603,13 +608,14 @@ Usando la circularity
 
 # %%% Por condición
 
-Variable_plot = "Circ"
+Variable_plot = "LongestShortestPath_inv"
 peaks_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(
         lambda x: len(
             find_peaks(
-                x, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
+                # x, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1 # para magnitudes 0-1
+                x, height=0.005, prominence=0.002, threshold=0.0, distance=2, width=1 # para perimetro_inv
             )[0]
         )
     )
@@ -644,7 +650,7 @@ grped_bplot = sns.stripplot(
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 l = plt.legend(handles[0:3], labels[0:3])
-grped_bplot.set_title("Number of peaks using Circularity")
+grped_bplot.set_title("Number of peaks using "+Variable_plot)
 # plt.figure(figsize=(19,8))
 plt.show()
 
@@ -658,32 +664,44 @@ intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altur
 ### Conclusión
 
 El método funciona correctamente, pero hay mucha variabilidad interbatch. 
-Recomiendo repasar las gráficas de los peces comparandolas con las fotos y ver que videos contienen defectos. También es necesario aumentar la N
-
-
+Recomiendo repasar las gráficas de los peces comparandolas con las fotos de microscopia y ver que videos contienen defectos. También es necesario aumentar la N
 """
 
+# %% Intro FFT y Periodograma [md]
+'''
+# Fourier Transform & Periodogram
+
+En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
+
+'''
+# %% FFT [md]
+'''
+# Fourier Transform & Periodogram
+
+En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
+
+'''
+
+# %%% FFT Analisis de Frecuencias del movimiento para un Pez Zebra
+# Ajustar al cebra
+# la duracion esta ajustada para cada sample por haber eliminado los NA
+sample_rate = 900 / 60
+duration = np.int(len(x) / sample_rate)
+N_points = len(x)
+
+# usando la función FFT
+g_fft = rfft(detrend(x, axis=0), axis=0, norm="forward")
+# Calculo de las frecuencias pare representar en el eje X
+x_fft = rfftfreq(N_points, 1 / sample_rate)
+
+
+plt.plot(x_fft, np.abs(g_fft))
+plt.title("FFT")
+plt.xlabel("Frecuency (Hz)")
+plt.show()
 
 # %% CODIGO GUSANOS
 
-# %% Analisis de Frecuencias del movimiento para un gusano
-
-# %%% Detrend
-# Muestro como se normaliza mediante la función detrend
-g = "CONTROL 1"
-x = df[["Curvatura"]][df.Gusano == g]
-t = df["T_seg"][df.Gusano == g]
-
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-
-plt.plot(t, x.Curvatura)
-
-plt.subplot(122)
-plt.plot(t, detrend(x, axis=0), "r")
-plt.title("Serie Temporal sin tendencia")
-plt.tight_layout()
-plt.show()
 
 # %%% FFT
 # la duracion esta ajustada para cada sample por haber eliminado los NA
@@ -703,40 +721,6 @@ plt.xlabel("Frecuency (Hz)")
 plt.show()
 
 
-# %%% DFT
-# def DFT(x):
-#     """
-#     Function to calculate the
-#     discrete Fourier Transform
-#     of a 1D real-valued signal x
-#     """
-
-#     N = len(x)
-#     n = np.arange(N)
-#     k = n.reshape((N, 1))
-#     e = np.exp(-2j * np.pi * k * n / N)
-
-#     X = np.dot(e, x)
-
-#     return X
-
-
-# #%%% Prueba DFT
-# g_dft = DFT(detrend(x, axis=0))
-
-# plt.plot(x_fft, np.abs(g_dft)[: int(len(g_dft) / 2) + 1])
-# plt.xlabel("Frecuency (Hz)")
-# plt.show()
-
-
-# #%%% mismo con la funcion DFT
-# dft_matrix = dft(len(x))
-
-# g_dft = dft_matrix @ detrend(x, axis=0)
-
-# plt.plot(x_fft, np.abs(g_dft)[: int(len(g_dft) / 2) + 1])
-# plt.xlabel("Frecuency (Hz)")
-# plt.show()
 
 
 # %% Analisis de Frecuencias (FFT) por condición
