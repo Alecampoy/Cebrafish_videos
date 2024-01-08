@@ -97,15 +97,17 @@ NAs = (
     .rename(columns={"area": "NAs"})
 ).reset_index()  # me quedo solo con una columna ya que el numero de NAN es el mismo en todas
 
-NAs["Batch_Feno"] = NAs.Batch + "_" + NAs.Fenotype
+# NAs["Batch_Feno"] = NAs.Batch.astype(str) + "_" + NAs.Fenotype.astype(str)
 # NAs_barplot = sns.barplot(x="Fish", y="NAs", hue="Batch", data=NAs.reset_index())
 # plt.xticks(rotation=90)
 # plt.show()
 
 NAs_barplot = sns.catplot(
-    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Fenotype", row="Batch"
+    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Fenotype", row="Batch", legend=True
 )
-NAs_barplot.set_xticklabels(rotation=90)
+
+NAs_barplot.set_xticklabels(rotation = 45, size = 333)
+NAs_barplot.set_xlabels('Fish', fontsize=15)
 plt.show()
 
 # %%% NA Impute
@@ -129,7 +131,7 @@ df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).YM.diff())
 df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
-Dist = df.groupby(["Batch", "Fenotype", "Fish"])[["dist"]].sum().round().reset_index()
+Dist = df.groupby(["Batch", "Fenotype", "Fish"], dropna=True)["dist"].sum().round().reset_index()
 
 
 # %%% Box-plot por batch
@@ -329,7 +331,7 @@ grped_bplot = sns.stripplot(
     hue_order = ["WT", "KO44", "KO179"]
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
-grped_bplot.set_title("Porcentaje del tiempo que pasa el gusano replegado (sobre el Threshold)", size =20)
+grped_bplot.set_title("Porcentaje del tiempo que pasa el gusano replegado - sobre el Threshold = "+str(threshold), size =20)
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
