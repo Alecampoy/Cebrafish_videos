@@ -44,23 +44,25 @@ for (i=0; i<list.length; i++){
 	
 	// 1.2 Open and get data
 		title=list[i];
-		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=300 last_frame=4501"); // 14 minutes video
+		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=500 last_frame=4701"); // 14 minutes video
 		rename("original");
-		original = getImageID();
+		run("8-bit");
+		original = getImageID();		
 				
 	// 1.3 Get dimensions
 		getDimensions(width, height, channels, slices, frames);
 		getPixelSize(unit, pw, ph, pd);
 		frame_interval = Stack.getFrameInterval();
-		
+
 // 2. Process
 	// 2.1 generate the distance map
 		selectImage(original);
 		Stack.setFrame(frames/2);
 		run("Duplicate...", "title=well_edge");
+		run("Gamma...", "value=0.41");
 		run("Gaussian Blur...", "sigma=2");
 		// run("Enhance Contrast...", "saturated=0.001 normalize process_all"); // optional if wand does not work properly
-		doWand(width/2, height/2, 8.0, "Legacy");
+		doWand(width/2, height/2, 4.0, "Legacy");
 		run("Fit Circle");
 		roiManager("Add");
 		run("Create Mask");
@@ -70,7 +72,6 @@ for (i=0; i<list.length; i++){
 		
 	// 2.2 process of the original image
 		selectImage(original);
-		run("8-bit");
 		run("Gaussian Blur...", "sigma=1 stack"); 
 		run("Z Project...", "projection=Median");
 		rename("median_proyection");
@@ -83,15 +84,16 @@ for (i=0; i<list.length; i++){
 		run("Invert", "stack");
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 0);
-		run("Enlarge...", "enlarge=10");
+		run("Enlarge...", "enlarge=8");
 		run("Clear Outside", "stack");
 		run("Select None");
 		
 	//2.3 Loop for every temporal frame to detect the points
 		 	for (t = 0; t < slices; t++) {
 			selectImage(original);
+			run("Select None");
 			Stack.setSlice(t+1);
-			run("Find Maxima...", "prominence=71 output=[Point Selection]");
+			run("Find Maxima...", "prominence=83 output=[Point Selection]");
 			selectImage(distance_map);
 			run("Restore Selection");
 			run("Measure");
