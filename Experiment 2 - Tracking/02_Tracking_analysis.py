@@ -54,7 +54,12 @@ for f in files:
         csv = pd.read_csv(f, sep=";")
         csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
         csv.insert(1, "Fenotype", re.search("(KO\d*|WT)", f.upper()).group(1))
-        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.mp4)", f.lower()).group(1))
+        if csv.Batch.iloc[1] == "batch 7":
+            csv.insert(2, "Fish", "ZebraF_" + re.search("(Ko |Wt )(\d+)", f).group(2))
+        else:
+            csv.insert(
+                2, "Fish", "ZebraF_" + re.search("(\d+)(.mp4)", f.lower()).group(1)
+            )
         df.append(csv)
         del (csv, f)
 
@@ -69,7 +74,7 @@ df.loc[df.Fenotype == "KO 179", "Fenotype"] = "KO179"
 
 df["Batch"] = pd.Categorical(
     df["Batch"],
-    categories=["batch 6", "batch 7", "batch 8", "batch 9", "batch 10", "batch 11"],
+    categories=["batch 6", "batch 7", "batch 8", "batch 11"],
     ordered=True,
 )
 
@@ -133,7 +138,7 @@ Dist = (
     .round()
 )  # .reset_index()
 
-
+Dist = Dist.loc[Dist.dist != 0]
 # %%% Box-plot por batch
 
 grped_bplot = sns.catplot(
@@ -170,26 +175,8 @@ plt.show()
 
 # %% Evolución temporal de todas las variables [md]
 """ 
-## Evolución temporal de las variables
 
-Dado que buscamos evaluar el comportamiento de los peces, vamos a representar
-las variables que hemos extraido del análisis de los videos con el tiempo.
-  
-
-El estado basal del pez se considera estirado, así, cuando el pez realiza alguna acción, se reflejará como un cambios en las variables.
-Las contracciones que esperamos, se reflejaran como picos en la evolución temporal.  
-  
-
-Busco picos, por lo que las magnitudes son interesantes si presentan la linea basal baja, así que calculo la inversa de las que no la tienen.
 """
-# %%% Inversa de algunas magnitudes
-# Inversa de algunas magnitudes
-df["area_inv"] = 1 / df.area
-df["Perim_inv"] = 1 / df.Perim
-df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
-df["Feret_inv"] = 1 / df.Feret
-
-# df['Prueba'] = (df.Circ + df.Round)*df.Solidity # composición de varias magnitudes
 
 # %%% Grafico todas las magnitudes temporales
 df_temp = df[
