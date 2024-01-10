@@ -27,7 +27,7 @@ run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
 setBackgroundColor(0, 0, 0);
 run("Set Measurements...", "mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
-print("Frame;X;Y;Mean-Distance;Time;"); // header of the result file in the Log window
+print("Frame;X;Y;Mean-Distance;Time"); // header of the result file in the Log window
 
 
 // 1 Select the Folder with the files
@@ -167,7 +167,7 @@ for (i=0; i<list.length; i++){
 		selectWindow("Log");
 		saveAs("Text", Results+title+"_Results.csv");
 		print("\\Clear");
-		print("Frame;X;Y;Mean-Distance;Time;");  // header of the result file  in the Log window
+		print("Frame;X;Y;Mean-Distance;Time");  // header of the result file  in the Log window
 		run("Close All");
 		roiManager("delete"); 
 		run("Clear Results");

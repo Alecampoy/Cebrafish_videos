@@ -4,24 +4,27 @@
 
 # %% Intro [md]
 """
-# **Análisis de Movimiento Zebrafish**
+# Tracking Experiment
+# **Análisis del Tracking del Movimiento de Zebrafish en una placa**
 ### Author: Alejandro Campoy Lopez  
 """
-
 
 # %% Librerias
 import pandas as pd
 import re
 import os
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
-from scipy.fft import fft, rfft, fftfreq, rfftfreq
-from scipy.linalg import dft
 
-os.chdir("/home/ale/Documentos/GitHub/Cebrafish_videos/Experiment 1 - Contractions")
-from functions_aux_analysis import *
+os.chdir("/home/ale/Documentos/GitHub/Cebrafish_videos/Experiment 2 - Tracking/")
+
+def get_files_in_folder(folder_path):
+    file_list = glob.glob(folder_path + '/**', recursive=True)
+    files = [file for file in file_list if not os.path.isdir(file)]
+    return files
+
 
 plt.rcParams["figure.figsize"] = (15, 8)
 
@@ -40,37 +43,25 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 
 windows = False
 if windows:
-    folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
+    folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Tracking\\resultados sucios\\"
 else:
     folder_path = (
-        "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/"
+        "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Tracking/resultados sucios/"
     )
 files = get_files_in_folder(folder_path)
 
 df = []
 for f in files:
     if ".csv" in f:
-        csv = pd.read_csv(f, sep=";").drop(
-            [
-                "FeretAngle",
-                "NBranches",
-                "AvgBranchLen",
-                "MaxBranchLen",
-                "BranchLen",
-                "EuclideanDist",
-                "AR",  # this is the inverse of Roundness
-            ],
-            axis=1,
-        )
+        csv = pd.read_csv(f, sep=";")
         csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
-        csv.insert(1, "Fenotype", re.search("_(KO\s?\d*|WT)", f.upper()).group(1))
-        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.lif)", f.lower()).group(1))
+        csv.insert(1, "Fenotype", re.search("(KO\d*|WT)", f.upper()).group(1))
+        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.mp4)", f.lower()).group(1))
         df.append(csv)
         del (csv, f)
 
 df = pd.concat(df)
-# renombro la columna con nombre repetido
-df = df.rename(columns={"XM.1": "YM"})
+
 
 # renombro KO a KO44 para el batch 6 y 7
 df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
@@ -81,8 +72,8 @@ df['Batch'] = pd.Categorical(df['Batch'],
                              categories=['batch 6', 'batch 7', 'batch 8', 'batch 9', 'batch 10', 'batch 11'],
                              ordered=True)
 
-pd.crosstab(index=df.Batch, columns=df.Fenotype)
-
+elements = round(pd.crosstab(index=df.Batch, columns=df.Fenotype) / 4202) # divided by lengh of the video
+print(str(elements).replace('.0', '').replace('],', ']\n'))
 
 # %% NAs [md]
 '''
