@@ -10,6 +10,7 @@
 """
 
 # %% Librerias
+import warnings
 import pandas as pd
 import re
 import os
@@ -28,7 +29,6 @@ def get_files_in_folder(folder_path):
 plt.rcParams["figure.figsize"] = (15, 8)
 
 # %matplotlib inline
-import warnings
 
 warnings.filterwarnings("ignore")
 
@@ -112,7 +112,8 @@ plt.show()
 
 # %%% NA Impute
 
-df = df.interpolate(method="linear")
+df[['X', 'Y', 'Mean-Distance']] = df[['X', 'Y',
+                                      'Mean-Distance']].interpolate(method="linear")
 
 # %%% [md]
 """
@@ -169,67 +170,34 @@ grped_bplot = sns.stripplot(
 handles, labels = grped_bplot.get_legend_handles_labels()
 
 
-grped_bplot.set_title("Distancia Recorrida por el Zebrafish (px)")
+grped_bplot.set_title("Distancia Total Recorrida por el Zebrafish (px)")
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
-# %% Evolución temporal de todas las variables [md]
+# %% Distribución de la posición del Pez [md]
 """ 
-
+# Distribución de la posición del Zebra
+A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima que la posición que mantiene el Zebra es comportamental, por lo que vamos a estudiar que posición mantiene con respecto al borde d=0 hasta el centro d=255. (Dado que existe simetria radial, solo usamos la distancia respecto al borde)
 """
 
-# %%% Grafico todas las magnitudes temporales
+# %%% Histograma 1 Zebra [md]
+"""
+## Histograma de 1 solo Pez
+Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
+Hay que normalizar el histograma
+"""
+# %%% Grafico Histograma 1 Zebra
 df_temp = df[
-    (df.Batch == "batch 11") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
-].melt(
-    id_vars=["Frame"],
-    value_vars=[
-        # "area",
-        "area_inv",
-        # "Perim",
-        "Perim_inv",
-        "Circ",
-        "Round",
-        # "AR",
-        # "LongestShortestPath",
-        "LongestShortestPath_inv",
-        # "Feret",
-        "Feret_inv",
-        # "MinFeret",
-        "Solidity",
-    ],
-)
+    (df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_1")
+]
 
-g = sns.FacetGrid(
-    df_temp,
-    hue="variable",
-    row="variable",
-    sharex="col",
-    sharey=False,
-    height=5,
-    aspect=4,
-    margin_titles=True,
-)
-g.map(sns.lineplot, "Frame", "value")
-g.set_axis_labels(fontsize=20)
-g.fig.suptitle(
-    "Evolución temporal de todas las variables para un pez de ejemplo",
-    fontsize=24,
-    fontdict={"weight": "bold"},
-)
-g.fig.subplots_adjust(top=0.97)
-# sns.set(font_scale=2)
-
+sns.histplot(data=df_temp, x="Mean-Distance")
 plt.show()
 
-# %%% Correlación entre variables
-
-#  Correlación entre variables
-
-# sns.scatterplot(data=df[(df.Batch == "batch 11") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")], x="Round", y="Solidity", hue = "Frame")
-# plt.show()
-
-# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC() o con gringer
+# %%% [md]
+'''
+Se observa como el Zebra se posiciona mayormente a lo largo de la franja centra, como esperable probabilisticamente, sin posicionarse apenas cerca del borde. 
+'''
 
 # %%% [md]
 """
@@ -754,7 +722,7 @@ fft_scaled_WT = pd.DataFrame()
 fft_scaled_WT.insert(0, "Freq", x_scaled)
 fft_scaled_WT = fft_scaled_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         x_temp = df[["Curvatura"]][df.Gusano == g]
         duration_temp = np.int(len(x_temp) / sample_rate)
         N_points = len(x_temp)
@@ -767,7 +735,7 @@ fft_scaled_MUT = pd.DataFrame()
 fft_scaled_MUT.insert(0, "Freq", x_scaled)
 fft_scaled_MUT = fft_scaled_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         x_temp = df[["Curvatura"]][df.Gusano == g]
         duration_temp = np.int(len(x_temp) / sample_rate)
         N_points = len(x_temp)
@@ -828,7 +796,7 @@ fft_WT = pd.DataFrame()
 fft_WT.insert(0, "Freq", x_fft)
 fft_WT = fft_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
         g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
         fft_WT.insert(len(fft_WT.columns), g, np.abs(g_fft))
@@ -837,7 +805,7 @@ fft_MUT = pd.DataFrame()
 fft_MUT.insert(0, "Freq", x_fft)
 fft_MUT = fft_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
         g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
         fft_MUT.insert(len(fft_MUT.columns), g, np.abs(g_fft))
@@ -933,7 +901,7 @@ periodograms_F_WT = pd.DataFrame()
 periodograms_F_WT.insert(0, "Freq", x_fft)
 periodograms_F_WT = periodograms_F_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         x_period, y_period = periodogram(
             g_temp,
@@ -949,7 +917,7 @@ periodograms_F_MUT = pd.DataFrame()
 periodograms_F_MUT.insert(0, "Freq", x_fft)
 periodograms_F_MUT = periodograms_F_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         x_period, y_period = periodogram(
             g_temp,
@@ -1020,7 +988,7 @@ periodograms_LS_WT = pd.DataFrame()
 periodograms_LS_WT.insert(0, "W", f_periodogram_LS)
 periodograms_LS_WT = periodograms_LS_WT.set_index("W")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         t_temp = df["T_seg"][df.Gusano == g]
         temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
@@ -1030,7 +998,7 @@ periodograms_LS_MUT = pd.DataFrame()
 periodograms_LS_MUT.insert(0, "W", f_periodogram_LS)
 periodograms_LS_MUT = periodograms_LS_MUT.set_index("W")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         t_temp = df["T_seg"][df.Gusano == g]
         temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
