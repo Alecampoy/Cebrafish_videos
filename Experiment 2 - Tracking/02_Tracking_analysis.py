@@ -41,7 +41,7 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 
 # %%% Load Files
 
-windows = True
+windows = False
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Tracking\\resultados sucios\\"
 else:
@@ -78,6 +78,13 @@ df["Batch"] = pd.Categorical(
     ordered=True,
 )
 
+# Para evaluar la distancia al centro de 0 a 1
+df["Dist_center"] = df[["Mean-Distance"]] / 255
+
+# Variable auxiliar
+df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
+
+
 elements = round(
     pd.crosstab(index=df.Batch, columns=df.Fenotype) / 4202
 )  # divided by lengh of the video
@@ -112,7 +119,7 @@ plt.show()
 
 # %%% NA Impute
 
-df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
+df[["X", "Y", "Dist_center"]] = df[["X", "Y", "Dist_center"]].interpolate(
     method="linear"
 )
 
@@ -175,9 +182,9 @@ grped_bplot.set_title("Distancia Total Recorrida por el Zebrafish (px)")
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
-# %% Distribución de la posición del Pez [md]
+# %% Posición del Pez sobre el video [md]
 """ 
-# Distribución de la posición del Zebra
+# Posición del Zebra en el Pocillo
 A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima que la posición que mantiene el Zebra es comportamental, por lo que vamos a estudiar que posición mantiene con respecto al borde d=0 hasta el centro d=255. (Dado que existe simetria radial, solo usamos la distancia respecto al borde)
 """
 
@@ -189,9 +196,9 @@ Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posicio
 # %%% Grafico Histograma 1 Zebra
 df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_1")]
 
-sns.histplot(data=df_temp, x="Mean-Distance", stat="percent", bins=20)
+sns.histplot(data=df_temp, x="Dist_center", stat="percent", bins=20)
 plt.show()
-bins.round()
+
 # %%% [md]
 """
 Se observa como el Zebra se posiciona mayormente a lo largo de la franja centra, como esperable probabilisticamente, sin posicionarse apenas cerca del borde. 
@@ -199,14 +206,70 @@ Se observa como el Zebra se posiciona mayormente a lo largo de la franja centra,
 ## El Histograma debe normalizarse y luego lo podremos agrupar
 
 """
+# %%% Histograma por Condición [md]
+"""
+## Histograma Condición 
+Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo acumulando los histogramas. Esto no es un problema ya que como todos los videos duran lo mismo, pueden sumarse los counts y sera equivalente a sumar la densidad de probabilidades. 
 
-# %%% normalización histograma
+"""
+# %%% Dibujado con Histplot por Batch
 
-perc, bins = np.histogram(df_temp["Mean-Distance"], bins=20, density=True)
-plt.bar(bins[:-1], perc, width=np.diff(bins), align="edge")
+
+g = sns.FacetGrid(
+    df,
+    row="Batch",
+    hue="Fenotype",
+    hue_order=["WT", "KO44", "KO179"],
+    palette="pastel",
+    sharex="col",
+    sharey=False,
+    height=5,
+    aspect=4,
+)
+
+# g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+# fontsize=24, fontdict={"weight": "bold"})
+
+g.map_dataframe(
+    sns.histplot,
+    x="Dist_center",
+    element="step",
+    edgecolor="black",
+    binrange=[0, 1],
+    bins=10,
+    stat="density",
+    common_norm=False,
+    kde=True,
+    kde_kws={"bw_adjust": 1},
+)
+g.add_legend()
+g.set_axis_labels(fontsize=20)
+# %%% [md]
+"""
+Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso.
+
+"""
+# %%% Normalización manual histograma
+
+perc, bins = np.histogram(df_temp["Dist_center"], range=[0, 1], bins=10, density=True)
+sns.barplot(x=bins.round(2)[:-1], y=perc, width=1, edgecolor="black", color="lightblue")
 plt.show()
-# %%
-sns.barplot(y=perc, x=bins.round()[:-1], width=0.2, color="blue")
+
+# %%% Generación Data Frame para agregar
+
+a = (
+    df.groupby(["Batch", "Fenotype", "Fish"])
+    .Dist_center.apply(lambda x: np.histogram(x, range=[0, 1], bins=10))
+    .dropna()
+    .reset_index()
+)
+
+a["d"], a["e"] = zip(*a.Dist_center)
+a = a.drop("Dist_center", axis=1)
+
+c = a.explode(list("de"))
+
+
 # %% Análisis Overview[md]
 """
 # Análisis
@@ -635,417 +698,3 @@ intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altur
 El método funciona correctamente, pero hay mucha variabilidad interbatch. 
 Recomiendo repasar las gráficas de los peces comparandolas con las fotos de microscopia y ver que videos contienen defectos. También es necesario aumentar la N
 """
-
-# %% Intro FFT y Periodograma [md]
-"""
-# Fourier Transform & Periodogram
-
-En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
-
-"""
-# %% FFT [md]
-"""
-# Fourier Transform & Periodogram
-
-En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
-
-"""
-
-# %%% FFT Analisis de Frecuencias del movimiento para un Pez Zebra
-# Ajustar al cebra
-# la duracion esta ajustada para cada sample por haber eliminado los NA
-sample_rate = 900 / 60
-duration = np.int(len(x) / sample_rate)
-N_points = len(x)
-
-# usando la función FFT
-g_fft = rfft(detrend(x, axis=0), axis=0, norm="forward")
-# Calculo de las frecuencias pare representar en el eje X
-x_fft = rfftfreq(N_points, 1 / sample_rate)
-
-
-plt.plot(x_fft, np.abs(g_fft))
-plt.title("FFT")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %% CODIGO GUSANOS
-
-
-# %%% FFT
-# la duracion esta ajustada para cada sample por haber eliminado los NA
-sample_rate = 900 / 60
-duration = np.int(len(x) / sample_rate)
-N_points = len(x)
-
-# usando la función FFT
-g_fft = rfft(detrend(x, axis=0), axis=0, norm="forward")
-# Calculo de las frecuencias pare representar en el eje X
-x_fft = rfftfreq(N_points, 1 / sample_rate)
-
-
-plt.plot(x_fft, np.abs(g_fft))
-plt.title("FFT")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-
-# %% Analisis de Frecuencias (FFT) por condición
-# %%% Interpolando FFT
-# Se consigue así que todos tengan la misma longitud
-# %%%% ajuste de un gusano (ejemplo)
-
-x_min = 0
-x_max = max(x_fft)
-n = len(x_fft)
-x_new = np.linspace(0.00, 6, 100)  # parámetro que ajusta
-y = np.abs(g_fft).reshape(-1)
-g_fft_interp = np.interp(x_new, x_fft, y)
-
-plt.plot(x_fft, y, linewidth=0.6, color="blue")
-plt.plot(x_new, g_fft_interp, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# ejemplo escalado
-# x = np.linspace(0, 2 * np.pi, 10)
-# y = np.sin(x)
-# xvals = np.linspace(0, 2 * np.pi, 50)
-# g_fft_interp = np.interp(xvals, x, y)
-
-# %%%% DF para todos los gusanos
-
-sample_rate = 900 / 60
-max_freq = 6
-rate_N = 500
-x_scaled = np.linspace(0.00, max_freq, rate_N)
-
-# WT
-fft_scaled_WT = pd.DataFrame()
-fft_scaled_WT.insert(0, "Freq", x_scaled)
-fft_scaled_WT = fft_scaled_WT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        x_temp = df[["Curvatura"]][df.Gusano == g]
-        duration_temp = np.int(len(x_temp) / sample_rate)
-        N_points = len(x_temp)
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        x_fft = rfftfreq(N_points, 1 / sample_rate)
-        g_fft_interp = np.interp(x_scaled, x_fft, np.abs(g_fft).reshape(-1), right=99)
-        fft_scaled_WT.insert(len(fft_scaled_WT.columns), g, g_fft_interp)
-# MUT
-fft_scaled_MUT = pd.DataFrame()
-fft_scaled_MUT.insert(0, "Freq", x_scaled)
-fft_scaled_MUT = fft_scaled_MUT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        x_temp = df[["Curvatura"]][df.Gusano == g]
-        duration_temp = np.int(len(x_temp) / sample_rate)
-        N_points = len(x_temp)
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        x_fft = rfftfreq(N_points, 1 / sample_rate)
-        g_fft_interp = np.interp(x_scaled, x_fft, np.abs(g_fft).reshape(-1), right=99)
-        fft_scaled_MUT.insert(len(fft_scaled_MUT.columns), g, g_fft_interp)
-funciones_analisis.agrupamiento_gusanos_fft(fft_scaled_MUT, "MUT")
-funciones_analisis.agrupamiento_gusanos_fft(fft_scaled_WT, "CONTROL")
-
-
-# %%%% plot Medias
-
-plt.plot(x_scaled, fft_scaled_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
-    x_scaled,
-    (fft_scaled_WT.Media - fft_scaled_WT.SEM),
-    (fft_scaled_WT.Media + fft_scaled_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(x_scaled, fft_scaled_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    x_scaled,
-    (fft_scaled_MUT.Media - fft_scaled_MUT.SEM),
-    (fft_scaled_MUT.Media + fft_scaled_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
-)
-
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Suma
-
-plt.plot(x_scaled, fft_scaled_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(x_scaled, fft_scaled_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Max
-
-plt.plot(x_scaled, fft_scaled_WT.Max, linewidth=0.8, color="blue")
-plt.plot(x_scaled, fft_scaled_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%% Ajustando la longitud de entrada a la FFT a un número comun de frames
-
-# %%%% DF generado
-limite_t = N_points = 300
-x_fft = rfftfreq(N_points, 1 / sample_rate)
-
-# WT
-fft_WT = pd.DataFrame()
-fft_WT.insert(0, "Freq", x_fft)
-fft_WT = fft_WT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        fft_WT.insert(len(fft_WT.columns), g, np.abs(g_fft))
-# MUT
-fft_MUT = pd.DataFrame()
-fft_MUT.insert(0, "Freq", x_fft)
-fft_MUT = fft_MUT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        fft_MUT.insert(len(fft_MUT.columns), g, np.abs(g_fft))
-funciones_analisis.agrupamiento_gusanos_fft(fft_WT, "CONTROL")
-funciones_analisis.agrupamiento_gusanos_fft(fft_MUT, "MUT")
-
-# %%%% plot Medias
-
-plt.plot(x_fft, fft_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
-    x_fft,
-    (fft_WT.Media - fft_WT.SEM),
-    (fft_WT.Media + fft_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(x_fft, fft_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    x_fft,
-    (fft_MUT.Media - fft_MUT.SEM),
-    (fft_MUT.Media + fft_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
-)
-
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Suma
-
-plt.plot(x_fft, fft_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(x_fft, fft_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Max
-
-plt.plot(x_fft, fft_WT.Max, linewidth=0.8, color="blue")
-plt.plot(x_fft, fft_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %% Periodograma gusano y 'Curvatura'
-# %%% funcion periodogram (usa FFT)
-# Creo que no interesa de este modo ya que tenemos la FFT calculada antes
-
-ventanas = ["boxcar", "blackman", "hann", "flattop", "nuttall"]
-
-
-for ventana in ventanas:
-    x_period, y_period = periodogram(
-        detrend(x, axis=0),
-        fs=sample_rate,
-        nfft=300,
-        axis=0,
-        window=ventana,
-        scaling="spectrum",
-    )
-
-    plt.plot(x_period, y_period)
-    plt.xlabel("Frecuency (Hz)")
-    plt.title("Función periodograma (usa FFT) y una ventana " + ventana)
-    plt.show()
-# %%% Lomb-Scargle Periodogram
-periods = np.linspace(0.00001, 10, 1000)
-f_periodogram = 2 * np.pi / periods
-y_periodogram = lombscargle(
-    t, detrend(x.Curvatura, axis=0), f_periodogram, normalize=True
-)
-
-plt.plot(periods, y_periodogram)
-plt.xlabel("Period (Seg)")
-plt.title("Función lombscargle -> ajusta por LSE")
-plt.show()
-
-# hacer para todos los gusanos y sumar
-
-# %% Periodogramas por condición
-# %%% Funcion periodogram conteniendo todos los gusano
-
-# ventanas = ["boxcar","blackman","hann","flattop","nuttall"]
-
-ventana = "flattop"
-N_points = 500
-x_fft = rfftfreq(N_points, 1 / sample_rate)
-
-# generación de un df para todos los WT y otro para todos los mutantes
-# en el que cada columna es periodograma de ese gusano en concreto
-# WT
-periodograms_F_WT = pd.DataFrame()
-periodograms_F_WT.insert(0, "Freq", x_fft)
-periodograms_F_WT = periodograms_F_WT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        x_period, y_period = periodogram(
-            g_temp,
-            fs=sample_rate,
-            nfft=N_points,
-            axis=0,
-            window=ventana,
-            scaling="density",
-        )
-        periodograms_F_WT.insert(len(periodograms_F_WT.columns), g, y_period)
-# MUT
-periodograms_F_MUT = pd.DataFrame()
-periodograms_F_MUT.insert(0, "Freq", x_fft)
-periodograms_F_MUT = periodograms_F_MUT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        x_period, y_period = periodogram(
-            g_temp,
-            fs=sample_rate,
-            nfft=N_points,
-            axis=0,
-            window=ventana,
-            scaling="density",
-        )
-        periodograms_F_MUT.insert(len(periodograms_F_MUT.columns), g, y_period)
-# agrupamiento de las las funciones según
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_F_WT, "CONTROL")
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_F_MUT, "MUT")
-
-
-# %%%% plot Medias
-
-plt.plot(x_fft, periodograms_F_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
-    x_fft,
-    (periodograms_F_WT.Media - periodograms_F_WT.SEM),
-    (periodograms_F_WT.Media + periodograms_F_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(x_fft, periodograms_F_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    x_fft,
-    (periodograms_F_MUT.Media - periodograms_F_MUT.SEM),
-    (periodograms_F_MUT.Media + periodograms_F_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
-)
-
-plt.xlabel("Period (Seg)")
-plt.show()
-
-# %%%% plot Suma
-
-plt.plot(x_fft, periodograms_F_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(x_fft, periodograms_F_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
-
-# %%%% plot Max
-
-plt.plot(x_fft, periodograms_F_WT.Max, linewidth=0.8, color="blue")
-plt.plot(x_fft, periodograms_F_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
-
-
-# %%% Lomb-Scargle Periodograma conteniendo todos los gusanos
-
-# Periodos a explorar con lombscargle, el segundo parámetro es el valor máximo
-periods = np.linspace(
-    2 / sample_rate, 10, 5000
-)  # el valor minimo viene dado de modo que
-# el valor maximo de la frecuencia cumpla el teorema de Nyquist -> Sample_rate = 2*freq_max
-f_periodogram_LS = 2 * np.pi / periods
-
-# generación de un df para todos los WT y otro para todos los mutantes
-# en el que cada columna es periodograma de ese gusano en concreto
-# WT
-periodograms_LS_WT = pd.DataFrame()
-periodograms_LS_WT.insert(0, "W", f_periodogram_LS)
-periodograms_LS_WT = periodograms_LS_WT.set_index("W")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        t_temp = df["T_seg"][df.Gusano == g]
-        temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
-        periodograms_LS_WT.insert(len(periodograms_LS_WT.columns), g, temp_LS)
-# MUT
-periodograms_LS_MUT = pd.DataFrame()
-periodograms_LS_MUT.insert(0, "W", f_periodogram_LS)
-periodograms_LS_MUT = periodograms_LS_MUT.set_index("W")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        t_temp = df["T_seg"][df.Gusano == g]
-        temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
-        periodograms_LS_MUT.insert(len(periodograms_LS_MUT.columns), g, temp_LS)
-# agrupamiento de las las funciones según
-
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_LS_WT, "CONTROL")
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_LS_MUT, "MUT")
-
-
-# %%%% plot Medias
-
-plt.plot(periods, periodograms_LS_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
-    periods,
-    (periodograms_LS_WT.Media - periodograms_LS_WT.SEM),
-    (periodograms_LS_WT.Media + periodograms_LS_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(periods, periodograms_LS_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    periods,
-    (periodograms_LS_MUT.Media - periodograms_LS_MUT.SEM),
-    (periodograms_LS_MUT.Media + periodograms_LS_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
-)
-
-plt.xlabel("Period (Seg)")
-plt.show()
-
-# %%%% plot Suma
-
-plt.plot(periods, periodograms_LS_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(periods, periodograms_LS_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
-
-# %%%% plot Max
-
-plt.plot(periods, periodograms_LS_WT.Max, linewidth=0.8, color="blue")
-plt.plot(periods, periodograms_LS_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
