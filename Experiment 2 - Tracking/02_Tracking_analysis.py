@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# %%
-# Spyder Editor
 
 # %% Intro [md]
 """
@@ -10,7 +8,7 @@
 """
 
 # %% Librerias
-import warnings
+import warnings, math
 import pandas as pd
 import re
 import os
@@ -18,6 +16,7 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.stats as st
 
 
 def get_files_in_folder(folder_path):
@@ -41,7 +40,7 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 
 # %%% Load Files
 
-windows = False
+windows = True
 if windows:
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Tracking\\resultados sucios\\"
 else:
@@ -196,7 +195,7 @@ Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posicio
 # %%% Grafico Histograma 1 Zebra
 df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_1")]
 
-sns.histplot(data=df_temp, x="Dist_center", stat="percent", bins=20)
+sns.histplot(data=df_temp, x="Dist_center", stat="density", binrange=[0, 1], bins=12)
 plt.show()
 
 # %%% [md]
@@ -244,57 +243,146 @@ g.map_dataframe(
 )
 g.add_legend()
 g.set_axis_labels(fontsize=20)
+plt.show()
 # %%% [md]
 """
 Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso.
 
+En los casos en los que la distribución de una condición es significativamente diferente a las otras habria que estudiar que la contribución individual de cada Zebra sea razonablemente similar, y no que un solo Zebra sea el que produce la desviacion del histograma o PDF. Lo vemos
 """
-# %%% Normalización manual histograma
 
+# %%% Histograma acumulado por Zebra
+# La clave de estos histogramas es que cada sns.hisplot es una capa independiente
+
+df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT")]
+df_temp2 = df[(df.Batch == "batch 7") & (df.Fenotype == "KO44")]
+
+sns.histplot(
+    data=df_temp,
+    x="Dist_center",
+    hue="Fish",
+    multiple="stack",
+    common_norm=True,
+    element="poly",
+    stat="density",
+    binrange=[0, 1],
+    bins=12,
+    palette="Reds",
+    alpha=0.4,
+)
+
+sns.histplot(
+    data=df_temp2,
+    x="Dist_center",
+    hue="Fish",
+    multiple="stack",
+    element="step",
+    common_norm=True,
+    stat="density",
+    binrange=[0, 1],
+    bins=12,
+    palette="Greens",
+    alpha=0.3,
+)
+plt.show()
+
+# %%% [md]
+"""
+Resulta un plot bastante sucio. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que no se debe a un Zebra Oulier, sino que son razonablemente homogeneos.
+
+### Normalización manual histograma
+Otra alternativa es generar manualmente el histograma y representarlo con barras de error.
+
+Nota a posteriori: lo siguiente podría realizarse usando un Kernel Estimator
+"""
+
+# %%% Normalización manual histograma
+# Plot a usar
 perc, bins = np.histogram(df_temp["Dist_center"], range=[0, 1], bins=10, density=True)
 sns.barplot(x=bins.round(2)[:-1], y=perc, width=1, edgecolor="black", color="lightblue")
 plt.show()
 
-# %%% Generación Data Frame para agregar
+# %%% Generación Data Frame y agregación de histogramas
 
-a = (
-    df.groupby(["Batch", "Fenotype", "Fish"])
-    .Dist_center.apply(lambda x: np.histogram(x, range=[0, 1], bins=10))
+nbins = int(round(math.log(4200, 2), 1))  # Numero de Bins siguiendo regla
+
+distribution_df = (
+    df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)
+    .Dist_center.apply(
+        lambda x: np.histogram(x, range=[0, 1], bins=nbins, density=True)
+    )
     .dropna()
-    .reset_index()
 )
 
-a["d"], a["e"] = zip(*a.Dist_center)
-a = a.drop("Dist_center", axis=1)
+distribution_df["hist"], distribution_df["bins"] = zip(*distribution_df.Dist_center)
 
-c = a.explode(list("de"))
+distribution_df["bins"] = distribution_df["bins"].apply(
+    lambda x: x[:-1]
+)  # Para que tenga el mismo numero de elementos que 'hist'
+distribution_df = distribution_df.drop("Dist_center", axis=1)
+distribution_df = distribution_df.explode(["hist", "bins"])
 
 
-# %% Análisis Overview[md]
+distribution_df_agg = (
+    distribution_df.groupby(["Batch", "Fenotype", "bins"])
+    .agg(
+        mean_hist=("hist", np.mean),
+        sd_hist=("hist", np.std),
+        confid_int=(
+            "hist",
+            lambda x: np.ptp(
+                st.t.interval(
+                    alpha=0.95, df=len(x) - 1, loc=np.mean(x), scale=st.sem(x)
+                )
+            ),
+        ),
+    )
+    .reset_index()
+    .dropna()
+)
+
+# %%% Plot del histograma
+# Lo represento como una linea para ver los errores
+
+g = sns.FacetGrid(
+    distribution_df,
+    hue="Fenotype",
+    hue_order=["WT", "KO44", "KO179"],
+    row="Batch",
+    palette="pastel",
+    sharex="col",
+    sharey=False,
+    height=4,
+    aspect=3,
+)
+
+# g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+# fontsize=24, fontdict={"weight": "bold"})
+
+g.map_dataframe(
+    sns.lineplot,
+    estimator="mean",
+    x="bins",
+    y="hist",
+    errorbar=("ci", 95),
+)
+
+g.add_legend()
+g.set_axis_labels(fontsize=20)
+
+plt.show()
+
+# %%% [md]
 """
-# Análisis
-
-Para modelar el comportamiento del pez voy a realizar 3 aproximaciones:
-
-## - Tiempo que pasa replegado
-Dado que observamos picos, se puede evaluar el tiempo total que pasa replegado usando un threshold. 
-Se asocia el tiempo total replegado a todo el tiempo que el valor esta por encima del threshold.
-  
-## - Contado de picos
-Usando la función Peak Finder detectamos picos en las señales, que se pueden tanto contar como cuantificar con parámetros
-como altura (no de interes) o anchura
-
-## - Periodograma
-Usando la FFT ver las frecuencias intrinsicas de cada uno de los peces. (puede ser interesante buscar la baseline)
+Espero de este gráfico encontrar diferencias consistentes
+"""
+# %%% Porcentaje de tiempo pegado al borde [md]
+"""
+###  Porcentaje de tiempo pegado al borde
+Por último, voy a realizar un análisis del tiempo que pasa cercano al borde. Para ello hay que definir un threshold de cercania, así que estudiaremos la evolución del resultado con respecto a la distancia que consideramos.
 """
 
-# %% Tiempo replegado [md]
-"""
-# Tiempo Replegado
-
-Usando la Solidity = area/convex area, si su valor es superior al Threshold, 
-indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1 
-"""
+# A partir de aqui reusar el codigo de los coletazos
 
 # %%% Plot Ejemplo threshold
 
