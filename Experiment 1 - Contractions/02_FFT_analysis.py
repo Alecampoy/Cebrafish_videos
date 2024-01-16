@@ -12,7 +12,7 @@
 # %% Librerias
 import pandas as pd
 import re
-import os
+import os, platform
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -27,19 +27,19 @@ plt.rcParams["figure.figsize"] = (15, 8)
 
 # %matplotlib inline
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # %% Lectura Archivos [md]
-'''
+"""
 # Lectura de Archivos
 Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
-'''
+"""
 
 # %%% Load Files
 
-windows = False
-if windows:
+if platform.system() == "Windows":
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
 else:
     folder_path = (
@@ -77,18 +77,20 @@ df.loc[df.Fenotype == "KO", "Fenotype"] = "KO44"
 df.loc[df.Fenotype == "KO 44", "Fenotype"] = "KO44"
 df.loc[df.Fenotype == "KO 179", "Fenotype"] = "KO179"
 
-df['Batch'] = pd.Categorical(df['Batch'],
-                             categories=['batch 6', 'batch 7', 'batch 8', 'batch 9', 'batch 10', 'batch 11'],
-                             ordered=True)
+df["Batch"] = pd.Categorical(
+    df["Batch"],
+    categories=["batch 6", "batch 7", "batch 8", "batch 9", "batch 10", "batch 11"],
+    ordered=True,
+)
 
 pd.crosstab(index=df.Batch, columns=df.Fenotype)
 
 
 # %% NAs [md]
-'''
+"""
 ## Número de NAs por ZebraF
 Visualizamos el número de Frames no segmentados apropiadamente por pez. Dado que no son demasiados, los imputo mediante interpolación Lineal.
-'''
+"""
 
 # %%% NAs Plot
 NAs = (
@@ -103,26 +105,35 @@ NAs = (
 # plt.show()
 
 NAs_barplot = sns.catplot(
-    kind="bar", data=NAs.reset_index(), x="Fish", y="NAs", col="Fenotype", row="Batch", legend=True
+    kind="bar",
+    data=NAs.reset_index(),
+    x="Fish",
+    y="NAs",
+    col="Fenotype",
+    row="Batch",
+    legend=True,
 )
 
-NAs_barplot.set_xticklabels(rotation = 45, size = 333)
-NAs_barplot.set_xlabels('Fish', fontsize=15)
+NAs_barplot.set_xticklabels(rotation=45, size=333)
+NAs_barplot.set_xlabels("Fish", fontsize=15)
 plt.show()
 
 # %%% NA Impute
-
-df = df.interpolate(method="linear")
+# df._get_numeric_data().columns
+# Only numeric columns
+df[df.select_dtypes(include=np.number).columns] = df[
+    df.select_dtypes(include=np.number).columns
+].interpolate(method="linear")
 
 # %%% [md]
 # El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs
 # El Zebra WT 1 tiene un video de la mitad de frames. Como esta totalmente quieto, se duplican sus datos para que se ajuste a la misma longitud de los demas
 
 # %% Distancia Recorrida [md]
-'''
+"""
 ## Distancia Recorrida
 Se calcula la distancia que recorre el pez a lo largo del video y se gráfica por batch
-'''
+"""
 
 # %%% Calculo de la distancia
 
@@ -131,7 +142,12 @@ df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).YM.diff())
 df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
-Dist = df.dropna().groupby(["Batch", "Fenotype", "Fish"], as_index=False).dist.sum(min_count=1).round()#.reset_index()
+Dist = (
+    df.dropna()
+    .groupby(["Batch", "Fenotype", "Fish"], as_index=False)
+    .dist.sum(min_count=1)
+    .round()
+)  # .reset_index()
 
 
 # %%% Box-plot por batch
@@ -146,7 +162,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=Dist,
-    hue_order = ["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -159,7 +175,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=Dist,
-    hue_order = ["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
@@ -169,7 +185,7 @@ plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %% Evolución temporal de todas las variables [md]
-''' 
+""" 
 ## Evolución temporal de las variables
 
 Dado que buscamos evaluar el comportamiento de los peces, vamos a representar
@@ -181,7 +197,7 @@ Las contracciones que esperamos, se reflejaran como picos en la evolución tempo
   
 
 Busco picos, por lo que las magnitudes son interesantes si presentan la linea basal baja, así que calculo la inversa de las que no la tienen.
-'''
+"""
 # %%% Inversa de algunas magnitudes
 # Inversa de algunas magnitudes
 df["area_inv"] = 1 / df.area
@@ -211,7 +227,7 @@ df_temp = df[
         # "MinFeret",
         "Solidity",
     ],
-)  
+)
 
 g = sns.FacetGrid(
     df_temp,
@@ -225,8 +241,11 @@ g = sns.FacetGrid(
 )
 g.map(sns.lineplot, "Frame", "value")
 g.set_axis_labels(fontsize=20)
-g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
-              fontsize=24, fontdict={"weight": "bold"})
+g.fig.suptitle(
+    "Evolución temporal de todas las variables para un pez de ejemplo",
+    fontsize=24,
+    fontdict={"weight": "bold"},
+)
 g.fig.subplots_adjust(top=0.97)
 # sns.set(font_scale=2)
 
@@ -239,15 +258,15 @@ plt.show()
 # sns.scatterplot(data=df[(df.Batch == "batch 11") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")], x="Round", y="Solidity", hue = "Frame")
 # plt.show()
 
-# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC() o con gringer 
+# Todas las señales correlacionan altamente, esto se podrá comprobar con AFC() o con gringer
 
 # %%% [md]
-'''
+"""
 Los picos en las señales correlacionan altamente, se ejecuta el análisis solamente sobre una única.
-'''
+"""
 
 # %% Análisis Overview[md]
-'''
+"""
 # Análisis
 
 Para modelar el comportamiento del pez voy a realizar 3 aproximaciones:
@@ -262,15 +281,15 @@ como altura (no de interes) o anchura
 
 ## - Periodograma
 Usando la FFT ver las frecuencias intrinsicas de cada uno de los peces. (puede ser interesante buscar la baseline)
-'''
+"""
 
 # %% Tiempo replegado [md]
-'''
+"""
 # Tiempo Replegado
 
 Usando la Solidity = area/convex area, si su valor es superior al Threshold, 
 indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1 
-'''
+"""
 
 # %%% Plot Ejemplo threshold
 
@@ -278,15 +297,15 @@ df_temp = df[
     (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
 ]
 
-g = sns.lineplot(data = df_temp, x = "Time", y = "Solidity")
-g.axhline(0.88, color = "red")
-g.set_title("Threshold on Solidity", size = 25)
+g = sns.lineplot(data=df_temp, x="Time", y="Solidity")
+g.axhline(0.88, color="red")
+g.set_title("Threshold on Solidity", size=25)
 plt.show()
 
 # %%% [md]
-'''
+"""
 Contando para cada gusano el total del tiempo que pasa sobre el Threshold, obtenemos
-'''
+"""
 
 
 # %%% Comparación usando un threshold fijo
@@ -310,44 +329,71 @@ time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
 # plt.show()
 
 grped_bplot = sns.catplot(
-    x="Batch", y="contracted_perc", data=time_over_Thr,
+    x="Batch",
+    y="contracted_perc",
+    data=time_over_Thr,
     hue="Fenotype",
     kind="box",
     legend=False,
     showfliers=False,
     height=6,
     aspect=1.9,
-    hue_order = ["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
-    x="Batch", y="contracted_perc", data=time_over_Thr,
+    x="Batch",
+    y="contracted_perc",
+    data=time_over_Thr,
     hue="Fenotype",
     jitter=True,
     dodge=True,
     marker="o",
     color="black",
     # palette="Set2",
-    hue_order = ["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
-grped_bplot.set_title("Porcentaje del tiempo que pasa el gusano replegado - sobre el Threshold = "+str(threshold), size =20)
+grped_bplot.set_title(
+    "Porcentaje del tiempo que pasa el gusano replegado - sobre el Threshold = "
+    + str(threshold),
+    size=20,
+)
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 
-
-
-
 # %%% Evolución del resultado con el threshold [md]
-'''
+"""
 ## Evolución del resultado con el threshold
 Dado que este resultado es sensible al Threshold, vamos a ver como cambia el resultado con el Threshold
 elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa replegado el KO con respecto a su mutante. 
 (Este resultado puede ser sensible a la normalización de la señal que queda aún pendiente.)
 
 ### Solidity Plot
-'''
+"""
+
+
+# %%% plot del threshold para Solidity NUEVO CODIGO
+def median_difference(s):
+    output = {}
+    output["Delta_KO44"] = (
+        s[s["Fenotype"] == "WT"].median() - s[s["Fenotype"] == "KO44"].median()
+    )
+    return pd.Series(output, index=["Delta_KO44"])
+
+
+thr = 0.6
+
+time_over_Thr = (
+    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+    .apply(lambda x: (x > thr).sum())
+    .reset_index()
+    .rename(columns={Variable_plot: "contracted"})
+)
+time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
+
+a = time_over_Thr.groupby(["Batch", "Fenotype"]).apply(median_difference)
 
 # %%% plot del threshold para Solidity
 threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
@@ -362,35 +408,35 @@ for thr in np.arange(0.1, 1.01, 0.01):
         .rename(columns={Variable_plot: "contracted"})
     )
     time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-    
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])["contracted_perc"].median()
+
+    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
+        "contracted_perc"
+    ].median()
+
     threshold_result.loc[i] = [
         thr,
         "batch 6",
-        df_temp_median["batch 6","WT"] - df_temp_median["batch 6","KO44"],
-        np.nan
-        ]
-    threshold_result.loc[i+1] = [
+        df_temp_median["batch 6", "WT"] - df_temp_median["batch 6", "KO44"],
+        np.nan,
+    ]
+    threshold_result.loc[i + 1] = [
         thr,
         "batch 7",
-        df_temp_median["batch 7","WT"] - df_temp_median["batch 7","KO44"],
-        np.nan
-        ]
-    threshold_result.loc[i+2] = [
+        df_temp_median["batch 7", "WT"] - df_temp_median["batch 7", "KO44"],
+        np.nan,
+    ]
+    threshold_result.loc[i + 2] = [
         thr,
         "batch 8",
-        df_temp_median["batch 8","WT"] - df_temp_median["batch 8","KO44"],
-        df_temp_median["batch 8","WT"] - df_temp_median["batch 8","KO179"]
-        ]
+        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO44"],
+        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO179"],
+    ]
     i = i + 3
-    
+
 
 df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
 df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data = df_temp, 
-             x = "Threshold",
-             y = "value",
-             hue = "hue")
+g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
 g.set_title("Diference of Solidity Batch Median values with Threshold")
 plt.show()
 
@@ -407,45 +453,44 @@ for thr in np.arange(0.1, 1.01, 0.01):
         .rename(columns={Variable_plot: "contracted"})
     )
     time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-    
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])["contracted_perc"].median()
+
+    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
+        "contracted_perc"
+    ].median()
     threshold_result.loc[i] = [
         thr,
         "batch 9",
-        df_temp_median["batch 9","WT"] - df_temp_median["batch 9","KO44"],
-        df_temp_median["batch 9","WT"] - df_temp_median["batch 9","KO179"]
-        ]    
-    threshold_result.loc[i+1] = [
+        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO44"],
+        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO179"],
+    ]
+    threshold_result.loc[i + 1] = [
         thr,
         "batch 10",
         np.nan,
-        df_temp_median["batch 10","WT"] - df_temp_median["batch 10","KO179"]
-        ]
-    threshold_result.loc[i+2] = [
+        df_temp_median["batch 10", "WT"] - df_temp_median["batch 10", "KO179"],
+    ]
+    threshold_result.loc[i + 2] = [
         thr,
         "batch 11",
-        df_temp_median["batch 11","WT"] - df_temp_median["batch 11","KO44"],
-        df_temp_median["batch 11","WT"] - df_temp_median["batch 11","KO179"]
-        ]    
+        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO44"],
+        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO179"],
+    ]
     i = i + 3
-    
+
 
 df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
 df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data = df_temp, 
-             x = "Threshold",
-             y = "value",
-             hue = "hue")
+g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
 g.set_title("Diference of Solidity Batch Median values with Threshold 2")
 plt.show()
 
 # %%% [md]
-'''
+"""
 Parece que el KO44 y el KO179 se comportan igual en el batch 8, pero los batches 6 y 7 tiene el KO44 un comportamiento opuesto
 
 ### Circularity plot
 Lo mismo para la circularity
-'''
+"""
 
 # %%% plot del threshold para Circularity
 threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
@@ -460,36 +505,35 @@ for thr in np.arange(0.2, 1.01, 0.01):
         .rename(columns={Variable_plot: "contracted"})
     )
     time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-    
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])["contracted_perc"].median()
+
+    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
+        "contracted_perc"
+    ].median()
     threshold_result.loc[i] = [
         thr,
         "batch 6",
-        df_temp_median["batch 6","WT"] - df_temp_median["batch 6","KO44"],
-        np.nan
-        ]
-    threshold_result.loc[i+1] = [
+        df_temp_median["batch 6", "WT"] - df_temp_median["batch 6", "KO44"],
+        np.nan,
+    ]
+    threshold_result.loc[i + 1] = [
         thr,
         "batch 7",
-        df_temp_median["batch 7","WT"] - df_temp_median["batch 7","KO44"],
-        np.nan
-        ]
-    threshold_result.loc[i+2] = [
+        df_temp_median["batch 7", "WT"] - df_temp_median["batch 7", "KO44"],
+        np.nan,
+    ]
+    threshold_result.loc[i + 2] = [
         thr,
         "batch 8",
-        df_temp_median["batch 8","WT"] - df_temp_median["batch 8","KO44"],
-        df_temp_median["batch 8","WT"] - df_temp_median["batch 8","KO179"]
-        ]    
+        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO44"],
+        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO179"],
+    ]
     i = i + 3
-    
+
 
 df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
 df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data = df_temp, 
-             x = "Threshold",
-             y = "value",
-             hue = "hue")
-g.set_title("Diference of "+Variable_plot+"Batch Median values with Threshold")
+g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
+g.set_title("Diference of " + Variable_plot + "Batch Median values with Threshold")
 plt.show()
 
 # %%% plot del threshold para Circularity 2
@@ -505,53 +549,52 @@ for thr in np.arange(0.2, 1.01, 0.01):
         .rename(columns={Variable_plot: "contracted"})
     )
     time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-    
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])["contracted_perc"].median()
+
+    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
+        "contracted_perc"
+    ].median()
     threshold_result.loc[i] = [
         thr,
         "batch 9",
-        df_temp_median["batch 9","WT"] - df_temp_median["batch 9","KO44"],
-        df_temp_median["batch 9","WT"] - df_temp_median["batch 9","KO179"]
-        ]    
-    threshold_result.loc[i+1] = [
+        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO44"],
+        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO179"],
+    ]
+    threshold_result.loc[i + 1] = [
         thr,
         "batch 10",
         np.nan,
-        df_temp_median["batch 10","WT"] - df_temp_median["batch 10","KO179"]
-        ]
-    threshold_result.loc[i+2] = [
+        df_temp_median["batch 10", "WT"] - df_temp_median["batch 10", "KO179"],
+    ]
+    threshold_result.loc[i + 2] = [
         thr,
         "batch 11",
-        df_temp_median["batch 11","WT"] - df_temp_median["batch 11","KO44"],
-        df_temp_median["batch 11","WT"] - df_temp_median["batch 11","KO179"]
-        ]    
+        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO44"],
+        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO179"],
+    ]
     i = i + 3
-    
+
 
 df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
 df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data = df_temp, 
-             x = "Threshold",
-             y = "value",
-             hue = "hue")
-g.set_title("Diference of "+Variable_plot+"Batch Median values with Threshold 2")
+g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
+g.set_title("Diference of " + Variable_plot + "Batch Median values with Threshold 2")
 plt.show()
 
 # %%% [md]
-'''
+"""
 Como es de esperar, y debido a la alta correlación entre variables, el efecto es el mismo
 
-'''
+"""
 
 # %% Peaks - Numero de coletazos [md]
-'''
+"""
 # Peaks - Numero de coletazos
 
 Contando el número de picos de las señales anteriores se evalua el número de coletazos que ejecuta el pez en el tiempo del video.
 Para ello usamos la funcion peak finder sobre la magnitud que parece que muestra un mayor rango o SNR, Roundness
 
 ### Ejemplo de Peak Finder sobre un pez
-'''
+"""
 
 # %%% Mediante Peak Finder
 df_temp = df[
@@ -565,17 +608,19 @@ peaks, _ = find_peaks(
 
 plt.plot(df_temp)
 plt.plot(peaks, df_temp[peaks], "2", markersize=24)
-plt.title("Picos encontrados sobre la Roundness", size = 20)
+plt.title("Picos encontrados sobre la Roundness", size=20)
 plt.show()
 
 # %%% [md]
-'''
+"""
 Es interesante ver como funciona sobre todos los gusanos
-'''
+"""
 
 # %%% Peak finder en todos los gusanos
 
-df["unique_fish"] = df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
+df["unique_fish"] = (
+    df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
+)
 
 # Filtro para ver por batch
 # dfa = df[df.Batch == "batch 6"]
@@ -596,7 +641,7 @@ for f in sorted(set(df.unique_fish)):
 # Aplicar un filtro No es necesario, pues los peaks estan bien encontrados
 
 # %%% [md]
-'''
+"""
 ## Número de picos por condición
 
 Represento el número de picos por condición y batch. Dado que todos los videos duran el mismo tiempo, se puede asociar a la frecuencia.
@@ -604,7 +649,7 @@ Represento el número de picos por condición y batch. Dado que todos los videos
 ### Circularity
 
 Usando la circularity
-'''
+"""
 
 # %%% Por condición
 
@@ -615,13 +660,18 @@ peaks_df = (
         lambda x: len(
             find_peaks(
                 # x, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1 # para magnitudes 0-1
-                x, height=0.005, prominence=0.002, threshold=0.0, distance=2, width=1 # para perimetro_inv
+                x,
+                height=0.005,
+                prominence=0.002,
+                threshold=0.0,
+                distance=2,
+                width=1,  # para perimetro_inv
             )[0]
         )
     )
     .reset_index()
     .rename(columns={Variable_plot: "N_peaks"})
-) 
+)
 
 grped_bplot = sns.catplot(
     x="Batch",
@@ -633,7 +683,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=peaks_df,
-    hue_order = ["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -646,11 +696,11 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=peaks_df,
-    hue_order = ["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 l = plt.legend(handles[0:3], labels[0:3])
-grped_bplot.set_title("Number of peaks using "+Variable_plot)
+grped_bplot.set_title("Number of peaks using " + Variable_plot)
 # plt.figure(figsize=(19,8))
 plt.show()
 
@@ -668,19 +718,19 @@ Recomiendo repasar las gráficas de los peces comparandolas con las fotos de mic
 """
 
 # %% Intro FFT y Periodograma [md]
-'''
+"""
 # Fourier Transform & Periodogram
 
 En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
 
-'''
+"""
 # %% FFT [md]
-'''
+"""
 # Fourier Transform & Periodogram
 
 En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
 
-'''
+"""
 
 # %%% FFT Analisis de Frecuencias del movimiento para un Pez Zebra
 # Ajustar al cebra
@@ -719,8 +769,6 @@ plt.plot(x_fft, np.abs(g_fft))
 plt.title("FFT")
 plt.xlabel("Frecuency (Hz)")
 plt.show()
-
-
 
 
 # %% Analisis de Frecuencias (FFT) por condición
