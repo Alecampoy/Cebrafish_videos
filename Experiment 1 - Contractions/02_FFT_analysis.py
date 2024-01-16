@@ -16,11 +16,12 @@ import os, platform
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import statsmodels.stats.api as sms
 from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
 from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
 
-os.chdir("/home/ale/Documentos/GitHub/Cebrafish_videos/Experiment 1 - Contractions")
+# os.chdir("/home/ale/Documentos/GitHub/Cebrafish_videos/Experiment 1 - Contractions")
 from functions_aux_analysis import *
 
 plt.rcParams["figure.figsize"] = (15, 8)
@@ -383,7 +384,12 @@ def median_difference(s):
     return pd.Series(output, index=["Delta_KO44"])
 
 
-thr = 0.6
+def mean_diff_CI(s):
+    cm = sms.CompareMeans(sms.DescrStatsW(s.WT), sms.DescrStatsW(s.KO44))
+    return np.ptp((cm.tconfint_diff(usevar="unequal")))
+
+
+thr = 0.84
 
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
@@ -393,7 +399,16 @@ time_over_Thr = (
 )
 time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
 
-a = time_over_Thr.groupby(["Batch", "Fenotype"]).apply(median_difference)
+b = time_over_Thr[(time_over_Thr.Batch == "batch 8")].dropna().drop("Batch", axis=1)
+# Probar https://stackoverflow.com/questions/47658578/how-to-use-groupby-and-take-the-difference-between-the-two-groups
+time_over_Thr.drop("Fish", axis=1).pivot_table(
+    index="Fenotype", columns="Fenotype", aggfunc="mean_diff_CI"
+)
+
+b.groupby("Fenotype").contracted.mean()
+
+a = time_over_Thr.groupby(["Batch", "Fenotype"]).contracted.diff()
+a = time_over_Thr.pivot_table
 
 # %%% plot del threshold para Solidity
 threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
