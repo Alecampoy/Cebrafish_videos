@@ -375,7 +375,7 @@ elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa
 """
 
 
-# %%% plot del threshold para Solidity NUEVO CODIGO
+# %%% plot del threshold para Solidity NUEVO CODIGO incompleto
 def median_difference(s):
     output = {}
     output["Delta_KO44"] = (
@@ -384,32 +384,51 @@ def median_difference(s):
     return pd.Series(output, index=["Delta_KO44"])
 
 
-def mean_diff_CI(s):
-    cm = sms.CompareMeans(sms.DescrStatsW(s.WT), sms.DescrStatsW(s.KO44))
-    return np.ptp((cm.tconfint_diff(usevar="unequal")))
+def mean_diff_CI(X1, X2):
+    if not X1 or X2:
+        return np.nan
+    else:
+        cm = sms.CompareMeans(sms.DescrStatsW(X1), sms.DescrStatsW(X2))
+        return np.ptp((cm.tconfint_diff(usevar="unequal")))
 
 
 thr = 0.84
 
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-    .apply(lambda x: (x > thr).sum())
+    .apply(contracted=lambda x: (x > thr).sum())
     .reset_index()
     .rename(columns={Variable_plot: "contracted"})
-)
+).dropna()
 time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
+time_over_Thr["Batch"] = time_over_Thr["Batch"].cat.remove_unused_categories()
 
-b = time_over_Thr[(time_over_Thr.Batch == "batch 8")].dropna().drop("Batch", axis=1)
-# Probar https://stackoverflow.com/questions/47658578/how-to-use-groupby-and-take-the-difference-between-the-two-groups
-time_over_Thr.drop("Fish", axis=1).pivot_table(
-    index="Fenotype", columns="Fenotype", aggfunc="mean_diff_CI"
+# %%
+threshold_result = pd.DataFrame(
+    columns=["Threshold", "Batch", "Diff_KO44", "CI_KO44", "Diff_KO179", "CI_KO179"]
 )
 
-b.groupby("Fenotype").contracted.mean()
 
-a = time_over_Thr.groupby(["Batch", "Fenotype"]).contracted.diff()
-a = time_over_Thr.pivot_table
+for batch, group in time_over_Thr.groupby("Batch"):
+    grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
+    for fenotype, group in grouped_batch:
+        if fenotype == "WT":
+            ref = group.contracted_perc
+        if fenotype == "KO44":
+            ko44 = group.contracted_perc
+        if fenotype == "KO179":
+            ko179 = group.contracted_perc
+    new_row = {
+        "Threshold": 1,
+        "Batch": batch,
+        "Diff_KO44": np.mean(ref) - np.mean(ko44),
+        "CI_KO44": 22,
+        "Diff_KO179": np.mean(ref) - np.mean(ko179),
+        "CI_KO179": 22,
+    }
 
+
+new_row
 # %%% plot del threshold para Solidity
 threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
 
