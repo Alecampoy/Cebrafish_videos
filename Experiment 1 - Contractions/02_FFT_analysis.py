@@ -11,12 +11,13 @@
 
 # %% Librerias
 import pandas as pd
+import numpy as np
 import re
 import os, platform
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import statsmodels.stats.api as sms
+from scipy import stats
 from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
 from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
@@ -376,16 +377,10 @@ elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa
 
 
 # %%% plot del threshold para Solidity NUEVO CODIGO incompleto
-def median_difference(s):
-    output = {}
-    output["Delta_KO44"] = (
-        s[s["Fenotype"] == "WT"].median() - s[s["Fenotype"] == "KO44"].median()
-    )
-    return pd.Series(output, index=["Delta_KO44"])
 
 
-def mean_diff_CI(X1, X2):
-    if not X1 or X2:
+def mean_diff_CI(X1=np.nan, X2=np.nan):
+    if X1 is np.nan or X2 is np.nan:
         return np.nan
     else:
         cm = sms.CompareMeans(sms.DescrStatsW(X1), sms.DescrStatsW(X2))
@@ -422,13 +417,16 @@ for batch, group in time_over_Thr.groupby("Batch"):
         "Threshold": 1,
         "Batch": batch,
         "Diff_KO44": np.mean(ref) - np.mean(ko44),
-        "CI_KO44": 22,
+        "CI_KO44": mean_diff_CI(ref, ko44),
         "Diff_KO179": np.mean(ref) - np.mean(ko179),
-        "CI_KO179": 22,
+        "CI_KO179": mean_diff_CI(ref, ko179),
     }
+    threshold_result.loc[len(threshold_result)] = new_row
+    ref = ko44 = ko179 = np.nan
 
 
-new_row
+stats.ttest_ind(X1, X2).confidence_interval(confidence_level=0.90)
+
 # %%% plot del threshold para Solidity
 threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
 
