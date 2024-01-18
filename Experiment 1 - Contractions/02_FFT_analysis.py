@@ -5,7 +5,7 @@
 # %% Intro [md]
 """
 # **Análisis de Movimiento Zebrafish**
-### Author: Alejandro Campoy Lopez  
+### Author: Alejandro Campoy Lopez
 """
 
 
@@ -188,16 +188,16 @@ plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %% Evolución temporal de todas las variables [md]
-""" 
+"""
 ## Evolución temporal de las variables
 
 Dado que buscamos evaluar el comportamiento de los peces, vamos a representar
 las variables que hemos extraido del análisis de los videos con el tiempo.
-  
+
 
 El estado basal del pez se considera estirado, así, cuando el pez realiza alguna acción, se reflejará como un cambios en las variables.
-Las contracciones que esperamos, se reflejaran como picos en la evolución temporal.  
-  
+Las contracciones que esperamos, se reflejaran como picos en la evolución temporal.
+
 
 Busco picos, por lo que las magnitudes son interesantes si presentan la linea basal baja, así que calculo la inversa de las que no la tienen.
 """
@@ -275,9 +275,9 @@ Los picos en las señales correlacionan altamente, se ejecuta el análisis solam
 Para modelar el comportamiento del pez voy a realizar 3 aproximaciones:
 
 ## - Tiempo que pasa replegado
-Dado que observamos picos, se puede evaluar el tiempo total que pasa replegado usando un threshold. 
+Dado que observamos picos, se puede evaluar el tiempo total que pasa replegado usando un threshold.
 Se asocia el tiempo total replegado a todo el tiempo que el valor esta por encima del threshold.
-  
+
 ## - Contado de picos
 Usando la función Peak Finder detectamos picos en las señales, que se pueden tanto contar como cuantificar con parámetros
 como altura (no de interes) o anchura
@@ -290,8 +290,8 @@ Usando la FFT ver las frecuencias intrinsicas de cada uno de los peces. (puede s
 """
 # Tiempo Replegado
 
-Usando la Solidity = area/convex area, si su valor es superior al Threshold, 
-indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1 
+Usando la Solidity = area/convex area, si su valor es superior al Threshold,
+indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1
 """
 
 # %%% Plot Ejemplo threshold
@@ -370,147 +370,148 @@ plt.show()
 """
 ## Evolución del resultado con el threshold
 Dado que este resultado es sensible al Threshold, vamos a ver como cambia el resultado con el Threshold
-elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa replegado el KO con respecto a su mutante. 
+elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa replegado el KO con respecto a su mutante.
 (Este resultado puede ser sensible a la normalización de la señal que queda aún pendiente.)
 
 ### Solidity Plot
 """
 
 
-# %%% plot del threshold para Solidity NUEVO CODIGO incompleto
+# %%% Construcción del DF de evolución del resultado con el threshold NUEVO CODIGO
 
-thr = 0.84
+Variable_plot = "Solidity"
 
-a = df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot].apply(lambda x: pd.Series({
-    'contracted': (x > thr).sum(),
-    'contracted test': 100 * (x > thr).sum() / 1550,
-    'contracted test': 100 * (x > thr).sum() / len(x)
-})).reset_index()
-
-a = df.groupby(["Batch", "Fenotype", "Fish"]).apply(lambda x: pd.Series({
-    'contracted': (x[Variable_plot] > thr).sum(),
-    'contracted test': 100 * (x[Variable_plot] > thr).sum() / 1550,
-    'contracted test': 100 * (x[Variable_plot] > thr).sum() / len(x)
-})).reset_index()
-
-
-# %%
 threshold_result = pd.DataFrame(
     columns=["Threshold", "Batch", "Diff_KO44", "CI_KO44", "Diff_KO179", "CI_KO179"]
 )
+ref = ko44 = ko179 = np.nan
+
+for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
+
+    # data frame con los valores para ese threshold
+    time_over_Thr = df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot].agg(
+        contracted=lambda x: (x > thr).sum(),
+        contracted_perc=lambda x: 100 * (x > thr).sum() / len(x)
+    ).reset_index().dropna()
+
+    # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
+    for batch, group in time_over_Thr.groupby("Batch"):
+        grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
+        for fenotype, group in grouped_batch:
+            if fenotype == "WT":
+                ref = group.contracted_perc
+            if fenotype == "KO44":
+                ko44 = group.contracted_perc
+            if fenotype == "KO179":
+                ko179 = group.contracted_perc
+        new_row = {
+            "Threshold": thr,
+            "Batch": batch,
+            "Diff_KO44": np.mean(ref) - np.mean(ko44),
+            "CI_KO44": np.ptp(stats.ttest_ind(ref, ko44).confidence_interval(confidence_level=0.90))/2,
+            "Diff_KO179": np.mean(ref) - np.mean(ko179),
+            "CI_KO179":  np.ptp(stats.ttest_ind(ref, ko179).confidence_interval(confidence_level=0.90))/2,
+        }
+        threshold_result.loc[len(threshold_result)] = new_row
+        ref = ko44 = ko179 = np.nan
 
 
-for batch, group in time_over_Thr.groupby("Batch"):
-    grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
-    for fenotype, group in grouped_batch:
-        if fenotype == "WT":
-            ref = group.contracted_perc
-        if fenotype == "KO44":
-            ko44 = group.contracted_perc
-        if fenotype == "KO179":
-            ko179 = group.contracted_perc
-    new_row = {
-        "Threshold": 1,
-        "Batch": batch,
-        "Diff_KO44": np.mean(ref) - np.mean(ko44),
-        "CI_KO44": mean_diff_CI(ref, ko44),
-        "Diff_KO179": np.mean(ref) - np.mean(ko179),
-        "CI_KO179": mean_diff_CI(ref, ko179),
-    }
-    threshold_result.loc[len(threshold_result)] = new_row
-    ref = ko44 = ko179 = np.nan
+# %%% Construcción del DF de evolución del resultado con el threshold NUEVO CODIGO
 
-
-stats.ttest_ind(X1, X2).confidence_interval(confidence_level=0.90)
-
-# %%% plot del threshold para Solidity
-threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
-
-i = 0
 Variable_plot = "Solidity"
-for thr in np.arange(0.1, 1.01, 0.01):
-    time_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-        .apply(lambda x: (x > thr).sum())
-        .reset_index()
-        .rename(columns={Variable_plot: "contracted"})
-    )
-    time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
 
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
-        "contracted_perc"
-    ].median()
+threshold_result = pd.DataFrame(
+    columns=["Threshold", "Batch", 'Fenotype', "Mean_diff", "CI"]
+)
+ref = ko44 = ko179 = np.nan
 
-    threshold_result.loc[i] = [
-        thr,
-        "batch 6",
-        df_temp_median["batch 6", "WT"] - df_temp_median["batch 6", "KO44"],
-        np.nan,
-    ]
-    threshold_result.loc[i + 1] = [
-        thr,
-        "batch 7",
-        df_temp_median["batch 7", "WT"] - df_temp_median["batch 7", "KO44"],
-        np.nan,
-    ]
-    threshold_result.loc[i + 2] = [
-        thr,
-        "batch 8",
-        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO44"],
-        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO179"],
-    ]
-    i = i + 3
+for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
+
+    # data frame con los valores para ese threshold
+    time_over_Thr = df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot].agg(
+        contracted=lambda x: (x > thr).sum(),
+        contracted_perc=lambda x: 100 * (x > thr).sum() / len(x)
+    ).reset_index().dropna()
+
+    # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
+    for batch, group in time_over_Thr.groupby("Batch"):
+        group_WT = group.dropna().drop(
+            "Batch", axis=1).loc[group.Fenotype == 'WT'].contracted_perc
+        grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
+        for fenotype, group in grouped_batch:  # loop over each possible fenotype
+            if fenotype != "WT":
+                mut = group.contracted_perc
+                new_row = {
+                    "Threshold": thr,
+                    "Batch": batch,
+                    "Fenotype": fenotype,
+                    "Mean_diff": np.mean(group_WT) - np.mean(mut),
+                    "CI": np.ptp(stats.ttest_ind(group_WT, mut).confidence_interval(confidence_level=0.90))/2,
+                }
+                threshold_result.loc[len(threshold_result)] = new_row
 
 
-df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
-df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
-g.set_title("Diference of Solidity Batch Median values with Threshold")
+# para filtrar por algunos batches usar:
+# df[df['team'].isin(['A', 'B', 'D'])]
+
+# %%% Plot del resultado frente al threshold
+
+threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
+
+
+# para filtrar por algunos batches usar:
+# df[df['team'].isin(['A', 'B', 'D'])]
+
+g = sns.lineplot(data=threshold_result, x="Threshold", y="Mean_diff", hue="hue")
+g.set_title("Diference of Solidity Batch Mean values with Threshold")
 plt.show()
 
-# %%% plot del threshold para Solidity, más batches
-threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
+ax = lineplot(data=dataset, x=dataset.index, y="mean", ci=None)
+ax.fill_between(dataset.index, dataset.lower, dataset.upper, alpha=0.2)
 
-i = 0
-Variable_plot = "Solidity"
-for thr in np.arange(0.1, 1.01, 0.01):
-    time_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-        .apply(lambda x: (x > thr).sum())
-        .reset_index()
-        .rename(columns={Variable_plot: "contracted"})
-    )
-    time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
+# %%%% plot del threshold para Solidity, código antiguo.
+# threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
 
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
-        "contracted_perc"
-    ].median()
-    threshold_result.loc[i] = [
-        thr,
-        "batch 9",
-        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO44"],
-        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO179"],
-    ]
-    threshold_result.loc[i + 1] = [
-        thr,
-        "batch 10",
-        np.nan,
-        df_temp_median["batch 10", "WT"] - df_temp_median["batch 10", "KO179"],
-    ]
-    threshold_result.loc[i + 2] = [
-        thr,
-        "batch 11",
-        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO44"],
-        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO179"],
-    ]
-    i = i + 3
+# i = 0
+# Variable_plot = "Solidity"
+# for thr in np.arange(0.1, 1.01, 0.01):
+#     time_over_Thr = (
+#         df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+#         .apply(lambda x: (x > thr).sum())
+#         .reset_index()
+#         .rename(columns={Variable_plot: "contracted"})
+#     )
+#     time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
+
+#     df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
+#         "contracted_perc"
+#     ].mean()
+#     threshold_result.loc[i] = [
+#         thr,
+#         "batch 9",
+#         df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO44"],
+#         df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO179"],
+#     ]
+#     threshold_result.loc[i + 1] = [
+#         thr,
+#         "batch 10",
+#         np.nan,
+#         df_temp_median["batch 10", "WT"] - df_temp_median["batch 10", "KO179"],
+#     ]
+#     threshold_result.loc[i + 2] = [
+#         thr,
+#         "batch 11",
+#         df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO44"],
+#         df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO179"],
+#     ]
+#     i = i + 3
 
 
-df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
-df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
-g.set_title("Diference of Solidity Batch Median values with Threshold 2")
-plt.show()
+# df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
+# df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
+# g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
+# g.set_title("Diference of Solidity Batch Median values with Threshold 2")
+# plt.show()
 
 # %%% [md]
 """
@@ -519,98 +520,12 @@ Parece que el KO44 y el KO179 se comportan igual en el batch 8, pero los batches
 ### Circularity plot
 Lo mismo para la circularity
 """
+# %%%
 
-# %%% plot del threshold para Circularity
-threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
-
-i = 0
-Variable_plot = "Circ"
-for thr in np.arange(0.2, 1.01, 0.01):
-    time_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-        .apply(lambda x: (x > thr).sum())
-        .reset_index()
-        .rename(columns={Variable_plot: "contracted"})
-    )
-    time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
-        "contracted_perc"
-    ].median()
-    threshold_result.loc[i] = [
-        thr,
-        "batch 6",
-        df_temp_median["batch 6", "WT"] - df_temp_median["batch 6", "KO44"],
-        np.nan,
-    ]
-    threshold_result.loc[i + 1] = [
-        thr,
-        "batch 7",
-        df_temp_median["batch 7", "WT"] - df_temp_median["batch 7", "KO44"],
-        np.nan,
-    ]
-    threshold_result.loc[i + 2] = [
-        thr,
-        "batch 8",
-        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO44"],
-        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO179"],
-    ]
-    i = i + 3
-
-
-df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
-df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
-g.set_title("Diference of " + Variable_plot + "Batch Median values with Threshold")
-plt.show()
-
-# %%% plot del threshold para Circularity 2
-threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
-
-i = 0
-Variable_plot = "Circ"
-for thr in np.arange(0.2, 1.01, 0.01):
-    time_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-        .apply(lambda x: (x > thr).sum())
-        .reset_index()
-        .rename(columns={Variable_plot: "contracted"})
-    )
-    time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
-        "contracted_perc"
-    ].median()
-    threshold_result.loc[i] = [
-        thr,
-        "batch 9",
-        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO44"],
-        df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO179"],
-    ]
-    threshold_result.loc[i + 1] = [
-        thr,
-        "batch 10",
-        np.nan,
-        df_temp_median["batch 10", "WT"] - df_temp_median["batch 10", "KO179"],
-    ]
-    threshold_result.loc[i + 2] = [
-        thr,
-        "batch 11",
-        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO44"],
-        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO179"],
-    ]
-    i = i + 3
-
-
-df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
-df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
-g.set_title("Diference of " + Variable_plot + "Batch Median values with Threshold 2")
-plt.show()
 
 # %%% [md]
 """
-Como es de esperar, y debido a la alta correlación entre variables, el efecto es el mismo
+Como es de esperar para la circularity, y debido a la alta correlación entre variables, el efecto es el mismo
 
 """
 
@@ -735,13 +650,13 @@ plt.show()
 
 # %%% [md]
 """
-He visualizado la gráfica anterior cambiando el valor de `height` en el intervalo 0.1-0.9 y 
-no cambia hasta 0.8, el cual es ya un valor extremo para Roundness. Lo mismo con `prominence`en el 
+He visualizado la gráfica anterior cambiando el valor de `height` en el intervalo 0.1-0.9 y
+no cambia hasta 0.8, el cual es ya un valor extremo para Roundness. Lo mismo con `prominence`en el
 intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altura del pico)
 
 ### Conclusión
 
-El método funciona correctamente, pero hay mucha variabilidad interbatch. 
+El método funciona correctamente, pero hay mucha variabilidad interbatch.
 Recomiendo repasar las gráficas de los peces comparandolas con las fotos de microscopia y ver que videos contienen defectos. También es necesario aumentar la N
 """
 
