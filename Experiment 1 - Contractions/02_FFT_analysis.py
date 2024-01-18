@@ -10,10 +10,12 @@
 
 
 # %% Librerias
+import warnings
 import pandas as pd
 import numpy as np
 import re
-import os, platform
+import os
+import platform
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -28,7 +30,6 @@ from functions_aux_analysis import *
 plt.rcParams["figure.figsize"] = (15, 8)
 
 # %matplotlib inline
-import warnings
 
 warnings.filterwarnings("ignore")
 
@@ -378,25 +379,20 @@ elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa
 
 # %%% plot del threshold para Solidity NUEVO CODIGO incompleto
 
-
-def mean_diff_CI(X1=np.nan, X2=np.nan):
-    if X1 is np.nan or X2 is np.nan:
-        return np.nan
-    else:
-        cm = sms.CompareMeans(sms.DescrStatsW(X1), sms.DescrStatsW(X2))
-        return np.ptp((cm.tconfint_diff(usevar="unequal")))
-
-
 thr = 0.84
 
-time_over_Thr = (
-    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-    .apply(contracted=lambda x: (x > thr).sum())
-    .reset_index()
-    .rename(columns={Variable_plot: "contracted"})
-).dropna()
-time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-time_over_Thr["Batch"] = time_over_Thr["Batch"].cat.remove_unused_categories()
+a = df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot].apply(lambda x: pd.Series({
+    'contracted': (x > thr).sum(),
+    'contracted test': 100 * (x > thr).sum() / 1550,
+    'contracted test': 100 * (x > thr).sum() / len(x)
+})).reset_index()
+
+a = df.groupby(["Batch", "Fenotype", "Fish"]).apply(lambda x: pd.Series({
+    'contracted': (x[Variable_plot] > thr).sum(),
+    'contracted test': 100 * (x[Variable_plot] > thr).sum() / 1550,
+    'contracted test': 100 * (x[Variable_plot] > thr).sum() / len(x)
+})).reset_index()
+
 
 # %%
 threshold_result = pd.DataFrame(
@@ -838,7 +834,7 @@ fft_scaled_WT = pd.DataFrame()
 fft_scaled_WT.insert(0, "Freq", x_scaled)
 fft_scaled_WT = fft_scaled_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         x_temp = df[["Curvatura"]][df.Gusano == g]
         duration_temp = np.int(len(x_temp) / sample_rate)
         N_points = len(x_temp)
@@ -851,7 +847,7 @@ fft_scaled_MUT = pd.DataFrame()
 fft_scaled_MUT.insert(0, "Freq", x_scaled)
 fft_scaled_MUT = fft_scaled_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         x_temp = df[["Curvatura"]][df.Gusano == g]
         duration_temp = np.int(len(x_temp) / sample_rate)
         N_points = len(x_temp)
@@ -912,7 +908,7 @@ fft_WT = pd.DataFrame()
 fft_WT.insert(0, "Freq", x_fft)
 fft_WT = fft_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
         g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
         fft_WT.insert(len(fft_WT.columns), g, np.abs(g_fft))
@@ -921,7 +917,7 @@ fft_MUT = pd.DataFrame()
 fft_MUT.insert(0, "Freq", x_fft)
 fft_MUT = fft_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
         g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
         fft_MUT.insert(len(fft_MUT.columns), g, np.abs(g_fft))
@@ -1017,7 +1013,7 @@ periodograms_F_WT = pd.DataFrame()
 periodograms_F_WT.insert(0, "Freq", x_fft)
 periodograms_F_WT = periodograms_F_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         x_period, y_period = periodogram(
             g_temp,
@@ -1033,7 +1029,7 @@ periodograms_F_MUT = pd.DataFrame()
 periodograms_F_MUT.insert(0, "Freq", x_fft)
 periodograms_F_MUT = periodograms_F_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         x_period, y_period = periodogram(
             g_temp,
@@ -1104,7 +1100,7 @@ periodograms_LS_WT = pd.DataFrame()
 periodograms_LS_WT.insert(0, "W", f_periodogram_LS)
 periodograms_LS_WT = periodograms_LS_WT.set_index("W")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
+    if g[0: g.index(" ")] == "CONTROL":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         t_temp = df["T_seg"][df.Gusano == g]
         temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
@@ -1114,7 +1110,7 @@ periodograms_LS_MUT = pd.DataFrame()
 periodograms_LS_MUT.insert(0, "W", f_periodogram_LS)
 periodograms_LS_MUT = periodograms_LS_MUT.set_index("W")
 for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
+    if g[0: g.index(" ")] == "MUT":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         t_temp = df["T_seg"][df.Gusano == g]
         temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)

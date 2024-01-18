@@ -7,7 +7,7 @@ Created on Wed Jan 17 14:24:01 2024
 
 import numpy as np
 from scipy import stats
-from pingouin import ttest
+# from pingouin import ttest
 import statsmodels.stats.api as sms
 
 
