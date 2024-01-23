@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.stats as st
+from scipy import stats
 
 
 def get_files_in_folder(folder_path):
@@ -125,6 +126,10 @@ df[["X", "Y", "Dist_center"]] = df[["X", "Y", "Dist_center"]].interpolate(
 """
 No hay NAs
 """
+# %% TO DO Filtrado de datos [md]
+"""
+
+"""
 # %% Distancia Recorrida [md]
 """
 ## Distancia Recorrida
@@ -145,7 +150,9 @@ Dist = (
     .round()
 )  # .reset_index()
 
-Dist = Dist.loc[Dist.dist != 0]
+Dist = Dist.loc[
+    Dist.dist != 0
+]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos
 # %%% Box-plot por batch
 
 grped_bplot = sns.catplot(
@@ -293,7 +300,7 @@ Resulta un plot bastante sucio. Creo que una mejor alternativa será representar
 ### Normalización manual histograma
 Otra alternativa es generar manualmente el histograma y representarlo con barras de error.
 
-Nota a posteriori: lo siguiente podría realizarse usando un Kernel Estimator
+Nota a posteriori: lo siguiente podría realizarse usando un Density Kernel Estimator, que calcule la distribución y sumar las distribuciones.
 """
 
 # %%% Normalización manual histograma
@@ -329,7 +336,12 @@ distribution_df_agg = (
             "hist",
             lambda x: np.ptp(
                 st.t.interval(
-                    confidence=0.95, df=len(x) - 1, loc=np.mean(x), scale=st.sem(x)
+                    confidence=0.95,
+                    df=len(x) - 1,
+                    loc=np.mean(x),
+                    scale=st.sem(
+                        x
+                    ),  # scale = 1 significa usar la media en luygar de la sem
                 )
             ),
         ),
@@ -389,7 +401,7 @@ df_temp = df[
 
 g = sns.lineplot(data=df_temp, x="Time", y="Dist_center")
 g.axhline(0.2, color="red")
-g.set_title("Tiempo en el borde Dist=0", size=25)
+g.set_title("Tiempo en el borde - Dist = 0", size=25)
 plt.show()
 
 # %%%% [md]
@@ -406,7 +418,7 @@ time_over_Thr = (
     .apply(lambda x: (x < threshold).sum())
     .reset_index()
     .rename(columns={Variable_plot: "boder_time"})
-)
+).dropna()
 
 time_over_Thr["boder_time_cent"] = (
     100 * time_over_Thr.boder_time / 4202
@@ -461,59 +473,84 @@ Dado que este resultado es sensible al Threshold, vamos a ver como evoluciona el
 elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa replegado el KO con respecto a su mutante. 
 """
 
-# %%%% plot del threshold
-threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
+# %%%% Construcción del DF de evolución del resultado con el threshold
 
-i = 0
 Variable_plot = "Dist_center"
-for thr in np.arange(0, 0.51, 0.01):
+
+threshold_result = pd.DataFrame(
+    columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
+)
+ref = ko44 = ko179 = np.nan
+
+for thr in np.arange(0.0, 0.15, 0.01):  # iteración sobre el threshold
+    # data frame con los valores para ese threshold
     time_over_Thr = (
         df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-        .apply(lambda x: (x < thr).sum())
+        .agg(
+            contracted=lambda x: (x < thr).sum(),
+            contracted_perc=lambda x: 100 * (x < thr).sum() / len(x),
+        )
         .reset_index()
-        .rename(columns={Variable_plot: "boder_time"})
+        .dropna()
     )
-    time_over_Thr["boder_time_perc"] = 100 * time_over_Thr.boder_time / 4200
 
-    df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
-        "boder_time_perc"
-    ].median()
+    # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
+    for batch, group in time_over_Thr.groupby("Batch"):
+        WT = (
+            group.dropna()
+            .drop("Batch", axis=1)
+            .loc[group.Fenotype == "WT"]
+            .contracted_perc
+        )  # los valores de los WT
 
-    threshold_result.loc[i] = [
-        thr,
-        "batch 6",
-        df_temp_median["batch 6", "WT"] - df_temp_median["batch 6", "KO44"],
-        np.nan,
-    ]
-    threshold_result.loc[i + 1] = [
-        thr,
-        "batch 7",
-        df_temp_median["batch 7", "WT"] - df_temp_median["batch 7", "KO44"],
-        np.nan,
-    ]
-    threshold_result.loc[i + 2] = [
-        thr,
-        "batch 8",
-        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO44"],
-        df_temp_median["batch 8", "WT"] - df_temp_median["batch 8", "KO179"],
-    ]
-    threshold_result.loc[i + 3] = [
-        thr,
-        "batch 11",
-        df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO44"],
-        np.nan,
-    ]
-    i = i + 4
+        grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
+        for fenotype, group in grouped_batch:  # loop over each possible fenotype
+            if fenotype != "WT":
+                mut = group.contracted_perc
+                new_row = {
+                    "Threshold": thr,
+                    "Batch": batch,
+                    "Fenotype": fenotype,
+                    "Mean_diff": np.mean(WT) - np.mean(mut),
+                    "CI": np.ptp(
+                        stats.ttest_ind(WT, mut).confidence_interval(
+                            confidence_level=0.80
+                        )
+                    )
+                    / 2,
+                }
+                threshold_result.loc[len(threshold_result)] = new_row
 
 
-df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
-df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
-g.set_title("Evolution of difference of medians along with threshold")
+# %%% Plot del resultado frente al threshold con Intervalos de confianza
+
+threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
+
+df_plot = threshold_result
+# [
+#     threshold_result["Fenotype"].isin(["KO179"])
+# ]  # filtro para lo que se quiere repesentar
+df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
+df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
+
+g = sns.lineplot(
+    data=df_plot,
+    x="Threshold",
+    y="Mean_diff",
+    hue="hue",
+)
+g.set_title("Diference of Distance to Border Batch Mean values vs Threshold")
+
+for hue in df_plot.hue.unique():
+    g.fill_between(
+        x="Threshold",
+        y1="CI_up",
+        y2="CI_down",
+        alpha=0.1,
+        data=df_plot[df_plot.hue == hue],
+    )
 plt.show()
 
-# https://stackoverflow.com/questions/14529838/apply-multiple-functions-to-multiple-groupby-columns Posiblemente hay una mejor manera de escribir este código basandose en ese post o el siguiente
-# https://galea.medium.com/pandas-groupby-with-multiple-columns-c7a94ef0be86
 
 # %%%% [md]
 """

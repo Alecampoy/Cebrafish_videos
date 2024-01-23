@@ -129,8 +129,9 @@ df[df.select_dtypes(include=np.number).columns] = df[
 ].interpolate(method="linear")
 
 # %%% [md]
-# El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs
-# El Zebra WT 1 tiene un video de la mitad de frames. Como esta totalmente quieto, se duplican sus datos para que se ajuste a la misma longitud de los demas
+"""
+El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs
+El Zebra WT 1 tiene un video de la mitad de frames. Como esta totalmente quieto, se duplican sus datos para que se ajuste a la misma longitud de los demas"""
 
 # %% Distancia Recorrida [md]
 """
@@ -150,8 +151,10 @@ Dist = (
     .groupby(["Batch", "Fenotype", "Fish"], as_index=False)
     .dist.sum(min_count=1)
     .round()
-)  # .reset_index()
-
+)
+Dist = Dist.loc[
+    Dist.dist != 0
+]  # Aparecen como 0 las categorias para las que no hay datos, pero tambien hay zebra que no se mueven
 
 # %%% Box-plot por batch
 
@@ -314,7 +317,7 @@ Contando para cada gusano el total del tiempo que pasa sobre el Threshold, obten
 # %%% Comparación usando un threshold fijo
 
 Variable_plot = "Solidity"
-threshold = 0.88
+threshold = 0.72
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x > threshold).sum())
@@ -382,61 +385,30 @@ elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa
 Variable_plot = "Solidity"
 
 threshold_result = pd.DataFrame(
-    columns=["Threshold", "Batch", "Diff_KO44", "CI_KO44", "Diff_KO179", "CI_KO179"]
+    columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
 )
 ref = ko44 = ko179 = np.nan
 
 for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
-
     # data frame con los valores para ese threshold
-    time_over_Thr = df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot].agg(
-        contracted=lambda x: (x > thr).sum(),
-        contracted_perc=lambda x: 100 * (x > thr).sum() / len(x)
-    ).reset_index().dropna()
+    time_over_Thr = (
+        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+        .agg(
+            contracted=lambda x: (x > thr).sum(),
+            contracted_perc=lambda x: 100 * (x > thr).sum() / len(x),
+        )
+        .reset_index()
+        .dropna()
+    )
 
     # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
     for batch, group in time_over_Thr.groupby("Batch"):
-        grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
-        for fenotype, group in grouped_batch:
-            if fenotype == "WT":
-                ref = group.contracted_perc
-            if fenotype == "KO44":
-                ko44 = group.contracted_perc
-            if fenotype == "KO179":
-                ko179 = group.contracted_perc
-        new_row = {
-            "Threshold": thr,
-            "Batch": batch,
-            "Diff_KO44": np.mean(ref) - np.mean(ko44),
-            "CI_KO44": np.ptp(stats.ttest_ind(ref, ko44).confidence_interval(confidence_level=0.90))/2,
-            "Diff_KO179": np.mean(ref) - np.mean(ko179),
-            "CI_KO179":  np.ptp(stats.ttest_ind(ref, ko179).confidence_interval(confidence_level=0.90))/2,
-        }
-        threshold_result.loc[len(threshold_result)] = new_row
-        ref = ko44 = ko179 = np.nan
-
-
-# %%% Construcción del DF de evolución del resultado con el threshold NUEVO CODIGO
-
-Variable_plot = "Solidity"
-
-threshold_result = pd.DataFrame(
-    columns=["Threshold", "Batch", 'Fenotype', "Mean_diff", "CI"]
-)
-ref = ko44 = ko179 = np.nan
-
-for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
-
-    # data frame con los valores para ese threshold
-    time_over_Thr = df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot].agg(
-        contracted=lambda x: (x > thr).sum(),
-        contracted_perc=lambda x: 100 * (x > thr).sum() / len(x)
-    ).reset_index().dropna()
-
-    # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
-    for batch, group in time_over_Thr.groupby("Batch"):
-        group_WT = group.dropna().drop(
-            "Batch", axis=1).loc[group.Fenotype == 'WT'].contracted_perc
+        WT = (
+            group.dropna()
+            .drop("Batch", axis=1)
+            .loc[group.Fenotype == "WT"]
+            .contracted_perc
+        )
         grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
         for fenotype, group in grouped_batch:  # loop over each possible fenotype
             if fenotype != "WT":
@@ -445,87 +417,115 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
                     "Threshold": thr,
                     "Batch": batch,
                     "Fenotype": fenotype,
-                    "Mean_diff": np.mean(group_WT) - np.mean(mut),
-                    "CI": np.ptp(stats.ttest_ind(group_WT, mut).confidence_interval(confidence_level=0.90))/2,
+                    "Mean_diff": np.mean(WT) - np.mean(mut),
+                    "CI": np.ptp(
+                        stats.ttest_ind(WT, mut).confidence_interval(
+                            confidence_level=0.80
+                        )
+                    )
+                    / 2,
                 }
                 threshold_result.loc[len(threshold_result)] = new_row
 
 
-# para filtrar por algunos batches usar:
-# df[df['team'].isin(['A', 'B', 'D'])]
 
-# %%% Plot del resultado frente al threshold
+# %%% Plot del resultado frente al threshold con Intervalos de confianza
 
 threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
 
+df_plot = threshold_result[threshold_result["Fenotype"].isin(["KO179"])] #filtro para lo que se quiere repesentar
+df_plot['CI_up'] = df_plot.Mean_diff + df_plot.CI
+df_plot['CI_down'] = df_plot.Mean_diff - df_plot.CI
 
-# para filtrar por algunos batches usar:
-# df[df['team'].isin(['A', 'B', 'D'])]
-
-g = sns.lineplot(data=threshold_result, x="Threshold", y="Mean_diff", hue="hue")
+g = sns.lineplot(
+    data=df_plot,
+    x="Threshold",
+    y="Mean_diff",
+    hue="hue",
+)
 g.set_title("Diference of Solidity Batch Mean values with Threshold")
+
+for hue in df_plot.hue.unique():
+    g.fill_between(x='Threshold', y1 = 'CI_up', y2 = 'CI_down',  alpha=0.1, data = df_plot[df_plot.hue == hue])
 plt.show()
 
-ax = lineplot(data=dataset, x=dataset.index, y="mean", ci=None)
-ax.fill_between(dataset.index, dataset.lower, dataset.upper, alpha=0.2)
 
-# %%%% plot del threshold para Solidity, código antiguo.
-# threshold_result = pd.DataFrame(columns=["Threshold", "Batch", "KO44", "KO179"])
-
-# i = 0
-# Variable_plot = "Solidity"
-# for thr in np.arange(0.1, 1.01, 0.01):
-#     time_over_Thr = (
-#         df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-#         .apply(lambda x: (x > thr).sum())
-#         .reset_index()
-#         .rename(columns={Variable_plot: "contracted"})
-#     )
-#     time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-
-#     df_temp_median = time_over_Thr.groupby(["Batch", "Fenotype"])[
-#         "contracted_perc"
-#     ].mean()
-#     threshold_result.loc[i] = [
-#         thr,
-#         "batch 9",
-#         df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO44"],
-#         df_temp_median["batch 9", "WT"] - df_temp_median["batch 9", "KO179"],
-#     ]
-#     threshold_result.loc[i + 1] = [
-#         thr,
-#         "batch 10",
-#         np.nan,
-#         df_temp_median["batch 10", "WT"] - df_temp_median["batch 10", "KO179"],
-#     ]
-#     threshold_result.loc[i + 2] = [
-#         thr,
-#         "batch 11",
-#         df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO44"],
-#         df_temp_median["batch 11", "WT"] - df_temp_median["batch 11", "KO179"],
-#     ]
-#     i = i + 3
-
-
-# df_temp = threshold_result.melt(id_vars=["Threshold", "Batch"]).dropna()
-# df_temp["hue"] = df_temp.Batch + " - " + df_temp.variable
-# g = sns.lineplot(data=df_temp, x="Threshold", y="value", hue="hue")
-# g.set_title("Diference of Solidity Batch Median values with Threshold 2")
-# plt.show()
-
-# %%% [md]
+# %%%  Circularity vs Threshold Plot [md]
 """
-Parece que el KO44 y el KO179 se comportan igual en el batch 8, pero los batches 6 y 7 tiene el KO44 un comportamiento opuesto
-
 ### Circularity plot
 Lo mismo para la circularity
 """
-# %%%
+
+# %%% Construcción del DF 
+
+Variable_plot = "Circ"
+
+threshold_result = pd.DataFrame(
+    columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
+)
+ref = ko44 = ko179 = np.nan
+
+for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
+    # data frame con los valores para ese threshold
+    time_over_Thr = (
+        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+        .agg(
+            contracted=lambda x: (x > thr).sum(),
+            contracted_perc=lambda x: 100 * (x > thr).sum() / len(x),
+        )
+        .reset_index()
+        .dropna()
+    )
+
+    # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
+    for batch, group in time_over_Thr.groupby("Batch"):
+        WT = (
+            group.dropna()
+            .drop("Batch", axis=1)
+            .loc[group.Fenotype == "WT"]
+            .contracted_perc
+        )
+        grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
+        for fenotype, group in grouped_batch:  # loop over each possible fenotype
+            if fenotype != "WT":
+                mut = group.contracted_perc
+                new_row = {
+                    "Threshold": thr,
+                    "Batch": batch,
+                    "Fenotype": fenotype,
+                    "Mean_diff": np.mean(WT) - np.mean(mut),
+                    "CI": np.ptp(
+                        stats.ttest_ind(WT, mut).confidence_interval(
+                            confidence_level=0.80
+                        )
+                    )
+                    / 2,
+                }
+                threshold_result.loc[len(threshold_result)] = new_row
+
+
+threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
+
+df_plot = threshold_result[threshold_result["Fenotype"].isin(["KO179"])] #filtro para lo que se quiere repesentar
+df_plot['CI_up'] = df_plot.Mean_diff + df_plot.CI
+df_plot['CI_down'] = df_plot.Mean_diff - df_plot.CI
+
+g = sns.lineplot(
+    data=df_plot,
+    x="Threshold",
+    y="Mean_diff",
+    hue="hue",
+)
+g.set_title("Diference of Solidity Batch Mean values with Threshold")
+
+for hue in df_plot.hue.unique():
+    g.fill_between(x='Threshold', y1 = 'CI_up', y2 = 'CI_down',  alpha=0.1, data = df_plot[df_plot.hue == hue])
+plt.show()
 
 
 # %%% [md]
 """
-Como es de esperar para la circularity, y debido a la alta correlación entre variables, el efecto es el mismo
+Como es de esperar para la circularity, y debido a la alta correlación entre variables, el efecto es el mismo, pero incluso más claro. Los intervalos de confiza son consistentemente diferentes, lo que indica una alta variabilidad entre batches
 
 """
 
@@ -553,6 +553,8 @@ plt.plot(df_temp)
 plt.plot(peaks, df_temp[peaks], "2", markersize=24)
 plt.title("Picos encontrados sobre la Roundness", size=20)
 plt.show()
+#%%
+for hue in 
 
 # %%% [md]
 """
@@ -749,7 +751,7 @@ fft_scaled_WT = pd.DataFrame()
 fft_scaled_WT.insert(0, "Freq", x_scaled)
 fft_scaled_WT = fft_scaled_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "CONTROL":
+    if g[0 : g.index(" ")] == "CONTROL":
         x_temp = df[["Curvatura"]][df.Gusano == g]
         duration_temp = np.int(len(x_temp) / sample_rate)
         N_points = len(x_temp)
@@ -762,7 +764,7 @@ fft_scaled_MUT = pd.DataFrame()
 fft_scaled_MUT.insert(0, "Freq", x_scaled)
 fft_scaled_MUT = fft_scaled_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "MUT":
+    if g[0 : g.index(" ")] == "MUT":
         x_temp = df[["Curvatura"]][df.Gusano == g]
         duration_temp = np.int(len(x_temp) / sample_rate)
         N_points = len(x_temp)
@@ -823,7 +825,7 @@ fft_WT = pd.DataFrame()
 fft_WT.insert(0, "Freq", x_fft)
 fft_WT = fft_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "CONTROL":
+    if g[0 : g.index(" ")] == "CONTROL":
         x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
         g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
         fft_WT.insert(len(fft_WT.columns), g, np.abs(g_fft))
@@ -832,7 +834,7 @@ fft_MUT = pd.DataFrame()
 fft_MUT.insert(0, "Freq", x_fft)
 fft_MUT = fft_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "MUT":
+    if g[0 : g.index(" ")] == "MUT":
         x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
         g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
         fft_MUT.insert(len(fft_MUT.columns), g, np.abs(g_fft))
@@ -928,7 +930,7 @@ periodograms_F_WT = pd.DataFrame()
 periodograms_F_WT.insert(0, "Freq", x_fft)
 periodograms_F_WT = periodograms_F_WT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "CONTROL":
+    if g[0 : g.index(" ")] == "CONTROL":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         x_period, y_period = periodogram(
             g_temp,
@@ -944,7 +946,7 @@ periodograms_F_MUT = pd.DataFrame()
 periodograms_F_MUT.insert(0, "Freq", x_fft)
 periodograms_F_MUT = periodograms_F_MUT.set_index("Freq")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "MUT":
+    if g[0 : g.index(" ")] == "MUT":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         x_period, y_period = periodogram(
             g_temp,
@@ -1015,7 +1017,7 @@ periodograms_LS_WT = pd.DataFrame()
 periodograms_LS_WT.insert(0, "W", f_periodogram_LS)
 periodograms_LS_WT = periodograms_LS_WT.set_index("W")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "CONTROL":
+    if g[0 : g.index(" ")] == "CONTROL":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         t_temp = df["T_seg"][df.Gusano == g]
         temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
@@ -1025,7 +1027,7 @@ periodograms_LS_MUT = pd.DataFrame()
 periodograms_LS_MUT.insert(0, "W", f_periodogram_LS)
 periodograms_LS_MUT = periodograms_LS_MUT.set_index("W")
 for g in set(df.Gusano):
-    if g[0: g.index(" ")] == "MUT":
+    if g[0 : g.index(" ")] == "MUT":
         g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
         t_temp = df["T_seg"][df.Gusano == g]
         temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
