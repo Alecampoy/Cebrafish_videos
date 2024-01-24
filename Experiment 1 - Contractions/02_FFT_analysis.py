@@ -19,7 +19,7 @@ import platform
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy import stats
+from scipy import stats, signal
 from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
 from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
@@ -186,10 +186,41 @@ grped_bplot = sns.stripplot(
 handles, labels = grped_bplot.get_legend_handles_labels()
 
 
-grped_bplot.set_title("Distancia Recorrida por el Zebrafish (px)")
+grped_bplot.set_title("Distancia Recorrida por el Zebrafish durante el video (px)")
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
+# %%% Suavizado de las columnas [md]
+'''
+### Suavizado de las columnas
+He observado que hay peces que vibran mucho, por lo que su medición muestra que se mueven mucho cuando apenas se han movido realmente. Para solucionarlo voy a aplicar un filtro de ventana gaussiana y recalcular el ultimo gráfico
+'''
+
+# %%%% Ventana Gausiana
+from scipy.ndimage import gaussian_filter1d
+
+def apply_gaussian_filter(group_df, column, new_column_name,  sigma=1.0):
+    group_df[new_column_name] = gaussian_filter1d(group_df[column], sigma)
+    return group_df
+
+a = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(apply_gaussian_filter, column = 'XM', new_column_name = 'XM_filt')
+# .dropna().reset_index().explode('XM')
+
+# %%
+
+XM_filt = df.groupby(["Batch", "Fenotype", "Fish"], as_index=True).XM.apply(lambda x: gaussian_filter1d(x, sigma = 1)).dropna().reset_index().explode('XM')
+YM_filt = df.groupby(["Batch", "Fenotype", "Fish"], as_index=True).YM.apply(lambda x: gaussian_filter1d(x, sigma = 1)).dropna().reset_index().explode('YM')
+
+df = pd.merge(df, XM_filt, on = ["Batch", "Fenotype", "Fish"], how = 'left')
+
+
+# %%
+from scipy.ndimage.filters import gaussian_filter1d
+gaussian_filter1d(r, sigma=1)
+
+len(r)
+len(gaussian_filter1d(r, sigma=1))
+plt.show()
 # %% Evolución temporal de todas las variables [md]
 """
 ## Evolución temporal de las variables
