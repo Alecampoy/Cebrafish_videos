@@ -20,6 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats, signal
+from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
 from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
@@ -191,36 +192,81 @@ plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %%% Suavizado de las columnas [md]
-'''
+"""
 ### Suavizado de las columnas
 He observado que hay peces que vibran mucho, por lo que su medición muestra que se mueven mucho cuando apenas se han movido realmente. Para solucionarlo voy a aplicar un filtro de ventana gaussiana y recalcular el ultimo gráfico
-'''
+"""
 
-# %%%% Ventana Gausiana
-from scipy.ndimage import gaussian_filter1d
+# %%%% Ventana Gausiana & calculo distancia suavizada
 
-def apply_gaussian_filter(group_df, column, new_column_name,  sigma=1.0):
+
+def apply_gaussian_filter(group_df, column, new_column_name, sigma=3.0):
     group_df[new_column_name] = gaussian_filter1d(group_df[column], sigma)
     return group_df
 
-a = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(apply_gaussian_filter, column = 'XM', new_column_name = 'XM_filt')
-# .dropna().reset_index().explode('XM')
 
-# %%
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    apply_gaussian_filter, column="XM", new_column_name="XM_filt"
+)
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    apply_gaussian_filter, column="YM", new_column_name="YM_filt"
+)
 
-XM_filt = df.groupby(["Batch", "Fenotype", "Fish"], as_index=True).XM.apply(lambda x: gaussian_filter1d(x, sigma = 1)).dropna().reset_index().explode('XM')
-YM_filt = df.groupby(["Batch", "Fenotype", "Fish"], as_index=True).YM.apply(lambda x: gaussian_filter1d(x, sigma = 1)).dropna().reset_index().explode('YM')
+df["X_filt_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).XM_filt.diff()
+df["Y_filt_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).YM_filt.diff()
+df["dist_filt"] = np.sqrt((df.X_filt_diff**2) + (df.Y_filt_diff**2))
 
-df = pd.merge(df, XM_filt, on = ["Batch", "Fenotype", "Fish"], how = 'left')
+# %%%% Boxplot por batch Filtrado
+# dataframe con la distancia recorrida por el  gusano
+Dist_filt = (
+    df.dropna()
+    .groupby(["Batch", "Fenotype", "Fish"], as_index=False)
+    .dist_filt.sum(min_count=1)
+    .round()
+)
+Dist_filt = Dist_filt.loc[
+    Dist_filt.dist_filt != 0
+]  # Aparecen como 0 las categorias para las que no hay datos, pero tambien hay zebra que no se mueven
 
 
-# %%
-from scipy.ndimage.filters import gaussian_filter1d
-gaussian_filter1d(r, sigma=1)
+grped_bplot = sns.catplot(
+    x="Batch",
+    y="dist_filt",
+    hue="Fenotype",
+    kind="box",
+    showfliers=False,
+    legend=False,
+    height=6,
+    aspect=1.9,
+    data=Dist_filt,
+    hue_order=["WT", "KO44", "KO179"],
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch",
+    y="dist_filt",
+    hue="Fenotype",
+    jitter=0.18,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    data=Dist_filt,
+    hue_order=["WT", "KO44", "KO179"],
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
 
-len(r)
-len(gaussian_filter1d(r, sigma=1))
+
+grped_bplot.set_title(
+    "Distancia Suavizada Recorrida por el Zebrafish durante el video (px)"
+)
+plt.legend(handles[0:3], labels[0:3])
 plt.show()
+
+# %%% [md]
+"""
+La aplicación del filtro no cambia los resultados
+"""
 # %% Evolución temporal de todas las variables [md]
 """
 ## Evolución temporal de las variables
@@ -348,7 +394,7 @@ Contando para cada gusano el total del tiempo que pasa sobre el Threshold, obten
 # %%% Comparación usando un threshold fijo
 
 Variable_plot = "Solidity"
-threshold = 0.72
+threshold = 0.85
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x > threshold).sum())
@@ -400,7 +446,7 @@ plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 
-# %%% Evolución del resultado con el threshold [md]
+# %%% Evolución del resultado vs threshold [md]
 """
 ## Evolución del resultado con el threshold
 Dado que este resultado es sensible al Threshold, vamos a ver como cambia el resultado con el Threshold
@@ -411,7 +457,7 @@ elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa
 """
 
 
-# %%% Construcción del DF de evolución del resultado con el threshold NUEVO CODIGO
+# %%% Construcción del DF de evolución del resultado con el threshold (NUEVO CODIGO)
 
 Variable_plot = "Solidity"
 
@@ -459,14 +505,15 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
                 threshold_result.loc[len(threshold_result)] = new_row
 
 
-
 # %%% Plot del resultado frente al threshold con Intervalos de confianza
 
 threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
 
-df_plot = threshold_result[threshold_result["Fenotype"].isin(["KO179"])] #filtro para lo que se quiere repesentar
-df_plot['CI_up'] = df_plot.Mean_diff + df_plot.CI
-df_plot['CI_down'] = df_plot.Mean_diff - df_plot.CI
+df_plot = threshold_result[
+    threshold_result["Fenotype"].isin(["KO44"])
+]  # filtro para lo que se quiere repesentar
+df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
+df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
 
 g = sns.lineplot(
     data=df_plot,
@@ -477,7 +524,13 @@ g = sns.lineplot(
 g.set_title("Diference of Solidity Batch Mean values with Threshold")
 
 for hue in df_plot.hue.unique():
-    g.fill_between(x='Threshold', y1 = 'CI_up', y2 = 'CI_down',  alpha=0.1, data = df_plot[df_plot.hue == hue])
+    g.fill_between(
+        x="Threshold",
+        y1="CI_up",
+        y2="CI_down",
+        alpha=0.1,
+        data=df_plot[df_plot.hue == hue],
+    )
 plt.show()
 
 
@@ -487,7 +540,7 @@ plt.show()
 Lo mismo para la circularity
 """
 
-# %%% Construcción del DF 
+# %%%% Construcción del DF
 
 Variable_plot = "Circ"
 
@@ -534,12 +587,15 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
                 }
                 threshold_result.loc[len(threshold_result)] = new_row
 
+# %%%% Plot
 
 threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
 
-df_plot = threshold_result[threshold_result["Fenotype"].isin(["KO179"])] #filtro para lo que se quiere repesentar
-df_plot['CI_up'] = df_plot.Mean_diff + df_plot.CI
-df_plot['CI_down'] = df_plot.Mean_diff - df_plot.CI
+df_plot = threshold_result[
+    threshold_result["Fenotype"].isin(["KO44"])
+]  # filtro para lo que se quiere repesentar
+df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
+df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
 
 g = sns.lineplot(
     data=df_plot,
@@ -550,11 +606,17 @@ g = sns.lineplot(
 g.set_title("Diference of Solidity Batch Mean values with Threshold")
 
 for hue in df_plot.hue.unique():
-    g.fill_between(x='Threshold', y1 = 'CI_up', y2 = 'CI_down',  alpha=0.1, data = df_plot[df_plot.hue == hue])
+    g.fill_between(
+        x="Threshold",
+        y1="CI_up",
+        y2="CI_down",
+        alpha=0.1,
+        data=df_plot[df_plot.hue == hue],
+    )
 plt.show()
 
 
-# %%% [md]
+# %%%% [md]
 """
 Como es de esperar para la circularity, y debido a la alta correlación entre variables, el efecto es el mismo, pero incluso más claro. Los intervalos de confiza son consistentemente diferentes, lo que indica una alta variabilidad entre batches
 
@@ -570,7 +632,7 @@ Para ello usamos la funcion peak finder sobre la magnitud que parece que muestra
 ### Ejemplo de Peak Finder sobre un pez
 """
 
-# %%% Mediante Peak Finder
+# %%% Peak Finder - Ejemplo 1 pez
 df_temp = df[
     (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
 ].Round
@@ -584,64 +646,64 @@ plt.plot(df_temp)
 plt.plot(peaks, df_temp[peaks], "2", markersize=24)
 plt.title("Picos encontrados sobre la Roundness", size=20)
 plt.show()
-#%%
-for hue in 
 
 # %%% [md]
 """
 Es interesante ver como funciona sobre todos los gusanos
 """
 
-# %%% Peak finder en todos los gusanos
+# %%% Peak finder a todos los Zebra
 
-df["unique_fish"] = (
-    df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
-)
+# df["unique_fish"] = (
+#     df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
+# )
 
-# Filtro para ver por batch
-# dfa = df[df.Batch == "batch 6"]
+# # Filtro para ver por batch
+# # dfa = df[df.Batch == "batch 6"]
 
-for f in sorted(set(df.unique_fish)):
-    fish_temp = df[df.unique_fish == f].Round  # ajustar estos parametros
-    peaks, _ = find_peaks(
-        fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
-    )
+# for f in sorted(set(df.unique_fish)):
+#     fish_temp = df[df.unique_fish == f].Round  # ajustar estos parametros
+#     peaks, _ = find_peaks(
+#         fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
+#     )
 
-    plt.plot(fish_temp)
-    plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
-    plt.title(f)
-    plt.show()
+#     plt.plot(fish_temp)
+#     plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
+#     plt.title(f)
+#     plt.show()
 
-# %%% Aplicando un filtro
+# %%% [md]
+"""
+Cuando visualizo las gráficas de todos los Zebra, todos los picos están bien encontrados.
 
-# Aplicar un filtro No es necesario, pues los peaks estan bien encontrados
-
+Aplicar un filtro a la gráfica del movimiento NO es necesario, pues los peaks estan bien encontrados
+"""
 # %%% [md]
 """
 ## Número de picos por condición
 
 Represento el número de picos por condición y batch. Dado que todos los videos duran el mismo tiempo, se puede asociar a la frecuencia.
 
-### Circularity
+### Roundness
 
-Usando la circularity
+Usando la Roundness
 """
 
 # %%% Por condición
 
-Variable_plot = "LongestShortestPath_inv"
+Variable_plot = "Round"
 peaks_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(
         lambda x: len(
             find_peaks(
-                # x, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1 # para magnitudes 0-1
                 x,
-                height=0.005,
-                prominence=0.002,
+                height=0.4,
+                prominence=0.08,
                 threshold=0.0,
                 distance=2,
-                width=1,  # para perimetro_inv
+                width=1  # para magnitudes 0-1
+                # x,height=0.005,prominence=0.002,threshold=0.0,distance=2,width=1,  # para perimetro_inv
             )[0]
         )
     )
@@ -689,7 +751,7 @@ intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altur
 
 ### Conclusión
 
-El método funciona correctamente, pero hay mucha variabilidad interbatch.
+El método funciona correctamente, pero hay mucha variabilidad interbatch. Aunque los WT son similares en la mayoria de batches.
 Recomiendo repasar las gráficas de los peces comparandolas con las fotos de microscopia y ver que videos contienen defectos. También es necesario aumentar la N
 """
 
