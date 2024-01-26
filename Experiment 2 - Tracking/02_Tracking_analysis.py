@@ -77,8 +77,10 @@ df["Batch"] = pd.Categorical(
     ordered=True,
 )
 
-# Para evaluar la distancia al centro de 0 a 1
-df["Dist_center"] = df[["Mean-Distance"]] / 255
+# Para evaluar la distancia al borde de 0 (border) a 1 (center)
+df["Dist_border"] = df[["Mean-Distance"]] / 255
+# Alternativamente la distancia al centro 1=border a 0=center
+df["Dist_center"] = abs(df["Dist_border"] - 1)
 
 # Variable auxiliar
 df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
@@ -118,7 +120,7 @@ plt.show()
 
 # %%% NA Impute
 
-df[["X", "Y", "Dist_center"]] = df[["X", "Y", "Dist_center"]].interpolate(
+df[["X", "Y", "Dist_border"]] = df[["X", "Y", "Dist_border"]].interpolate(
     method="linear"
 )
 
@@ -126,9 +128,9 @@ df[["X", "Y", "Dist_center"]] = df[["X", "Y", "Dist_center"]].interpolate(
 """
 No hay NAs
 """
-# %% TO DO Filtrado de datos [md]
+# %% TO DO si necesario Filtrado de datos [md]
 """
-
+Se pueden eliminar los frames en los que se ha detectado un salto demasiado alto o imputar NAs, segun el metodo 'find maxima strict' ó 'w/o strict'
 """
 # %% Distancia Recorrida [md]
 """
@@ -138,9 +140,9 @@ Se calcula la distancia que recorre el pez a lo largo del video y se gráfica po
 
 # %%% Calculo de la distancia recorrida
 
-df.insert(7, "X_diff", df.groupby(["Batch", "Fenotype", "Fish"]).X.diff())
-df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff())
-df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
+df["X_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).X.diff()
+df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
+df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
 # dataframe con la distancia recorrida por el  gusano
 Dist = (
@@ -190,7 +192,7 @@ plt.show()
 # %% Posición del Pez sobre el video [md]
 """ 
 # Posición del Zebra en el Pocillo
-A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima que la posición que mantiene el Zebra es comportamental, por lo que vamos a estudiar que posición mantiene con respecto al borde d=0 hasta el centro d=255. (Dado que existe simetria radial, solo usamos la distancia respecto al borde)
+A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima que la posición que mantiene el Zebra es comportamental, por lo que vamos a estudiar que posición mantiene con respecto al borde d=0 hasta el centro d=1. (Dado que existe simetria radial, solo usamos la distancia respecto al borde)
 """
 
 # %%% Histograma 1 Zebra [md]
@@ -201,7 +203,7 @@ Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posicio
 # %%% Grafico Histograma 1 Zebra
 df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_1")]
 
-sns.histplot(data=df_temp, x="Dist_center", stat="density", binrange=[0, 1], bins=12)
+sns.histplot(data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=12)
 plt.show()
 
 # %%% [md]
@@ -237,7 +239,7 @@ g = sns.FacetGrid(
 
 g.map_dataframe(
     sns.histplot,
-    x="Dist_center",
+    x="Dist_border",
     element="step",
     edgecolor="black",
     binrange=[0, 1],
@@ -266,7 +268,7 @@ df_temp2 = df[(df.Batch == "batch 7") & (df.Fenotype == "KO44")]
 
 sns.histplot(
     data=df_temp,
-    x="Dist_center",
+    x="Dist_border",
     hue="Fish",
     multiple="stack",
     common_norm=True,
@@ -280,7 +282,7 @@ sns.histplot(
 
 sns.histplot(
     data=df_temp2,
-    x="Dist_center",
+    x="Dist_border",
     hue="Fish",
     multiple="stack",
     element="step",
@@ -295,7 +297,7 @@ plt.show()
 
 # %%% [md]
 """
-Resulta un plot bastante sucio. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que no se debe a un Zebra Oulier, sino que son razonablemente homogeneos.
+Resulta un plot bastante sucio. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que son razonablemente homogeneos y no se debe a un Zebra Oulier.
 
 ### Normalización manual histograma
 Otra alternativa es generar manualmente el histograma y representarlo con barras de error.
@@ -312,18 +314,18 @@ nbins = int(round(math.log(4200, 2), 1))  # Numero de Bins siguiendo regla
 
 distribution_df = (
     df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)
-    .Dist_center.apply(
+    .Dist_border.apply(
         lambda x: np.histogram(x, range=[0, 1], bins=nbins, density=True)
     )
     .dropna()
 )
 
-distribution_df["hist"], distribution_df["bins"] = zip(*distribution_df.Dist_center)
+distribution_df["hist"], distribution_df["bins"] = zip(*distribution_df.Dist_border)
 
 distribution_df["bins"] = distribution_df["bins"].apply(
     lambda x: x[:-1]
 )  # Para que tenga el mismo numero de elementos que 'hist'
-distribution_df = distribution_df.drop("Dist_center", axis=1)
+distribution_df = distribution_df.drop("Dist_border", axis=1)
 distribution_df = distribution_df.explode(["hist", "bins"])
 
 
@@ -399,7 +401,7 @@ df_temp = df[
     (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_4")
 ]
 
-g = sns.lineplot(data=df_temp, x="Time", y="Dist_center")
+g = sns.lineplot(data=df_temp, x="Time", y="Dist_border")
 g.axhline(0.2, color="red")
 g.set_title("Tiempo en el borde - Dist = 0", size=25)
 plt.show()
@@ -411,7 +413,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 
 # %%%% Comparación usando un threshold fijo
 
-Variable_plot = "Dist_center"
+Variable_plot = "Dist_border"
 threshold = 0.20
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
@@ -475,7 +477,7 @@ elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa
 
 # %%%% Construcción del DF de evolución del resultado con el threshold
 
-Variable_plot = "Dist_center"
+Variable_plot = "Dist_border"
 
 threshold_result = pd.DataFrame(
     columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
@@ -514,7 +516,7 @@ for thr in np.arange(0.0, 0.15, 0.01):  # iteración sobre el threshold
                     "Mean_diff": np.mean(WT) - np.mean(mut),
                     "CI": np.ptp(
                         stats.ttest_ind(WT, mut).confidence_interval(
-                            confidence_level=0.80
+                            confidence_level=0.80  # El ancho del intervalo del confianza en el plot subsiguiente
                         )
                     )
                     / 2,
@@ -539,7 +541,7 @@ g = sns.lineplot(
     y="Mean_diff",
     hue="hue",
 )
-g.set_title("Diference of Distance to Border Batch Mean values vs Threshold")
+g.set_title("Evolución del resultado (diferencia de medias) con el threshold Threshold")
 
 for hue in df_plot.hue.unique():
     g.fill_between(
@@ -555,4 +557,62 @@ plt.show()
 # %%%% [md]
 """
 En esta gráfica camos a ver si de verdad hay una diferencia en el porcentaje de tiempo que pasan cerca del borde
+"""
+
+# %% Distancia como variable extensiva [md]
+"""
+# Distancia como variable extensiva
+
+Como sugerencia de Tomás, voy a calcular el sumatorio de la distancia radial al centro como si fuera una variable extensiva y representar la distribución mediante boxplots. Tratar la distancia al centro como variable extensiva nos indica la "cantidad de tiempo" que ha pasado lejos del centro/cerca del borde. Posiblemente este comportamiento lo podrémos haber detectado ya con el análisis anterior. 
+
+"""
+
+# %%% Calculo del DF de la variable extensiva
+
+Distancia_acumulada = (
+    df.groupby(["Batch", "Fenotype", "Fish"])["Dist_center"]
+    .sum()
+    .rename("Distancia_acumulada")
+    .reset_index()
+)
+Distancia_acumulada = Distancia_acumulada.loc[
+    Distancia_acumulada.Distancia_acumulada != 0
+]
+
+grped_bplot = sns.catplot(
+    x="Batch",
+    y="Distancia_acumulada",
+    data=Distancia_acumulada,
+    hue="Fenotype",
+    kind="box",
+    legend=False,
+    showfliers=False,
+    height=6,
+    aspect=1.9,
+    hue_order=["WT", "KO44", "KO179"],
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch",
+    y="Distancia_acumulada",
+    data=Distancia_acumulada,
+    hue="Fenotype",
+    jitter=True,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    hue_order=["WT", "KO44", "KO179"],
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
+grped_bplot.set_title(
+    "Distancia radial acumulada como variable extensiva",
+    size=20,
+)
+plt.legend(handles[0:3], labels[0:3])
+plt.show()
+
+# %%% Conclusiones [md]
+"""
+A ver que sale
 """

@@ -766,8 +766,7 @@ En lugar de contar el número de picos, voy a usar transformar las señales al d
 """
 # Fourier Transform & Periodogram
 
-En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
-
+En lugar de contar el número de picos, voy a usar transformar las señales al dominio de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición experimental
 """
 
 # %%% FFT Analisis de Frecuencias del movimiento para un Pez Zebra

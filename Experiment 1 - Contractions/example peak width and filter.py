@@ -38,9 +38,3 @@ plt.hlines(
 )
 
 plt.show()
-
-# to filter
-window = signal.general_gaussian(51, p=0.5, sig=20)
-filtered = signal.fftconvolve(window, data)
-filtered = (np.average(data) / np.average(filtered)) * filtered
-filtered = np.roll(filtered, -25)
