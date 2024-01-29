@@ -77,19 +77,16 @@ df["Batch"] = pd.Categorical(
     ordered=True,
 )
 
-# Para evaluar la distancia al borde de 0 (border) a 1 (center)
-df["Dist_border"] = df[["Mean-Distance"]] / 255
-# Alternativamente la distancia al centro 1=border a 0=center
-df["Dist_center"] = abs(df["Dist_border"] - 1)
-
-# Variable auxiliar
-df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
-
 
 elements = round(
-    pd.crosstab(index=df.Batch, columns=df.Fenotype) / 4202
+    pd.crosstab(index=df.Batch, columns=df.Fenotype) / 4200
 )  # divided by lengh of the video
 print(str(elements).replace(".0", "").replace("],", "]\n"))
+
+# %% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
+# aparecen como caddena de texto en la columna frame
+df["Frame"] = pd.to_numeric(df["Frame"], errors="coerce")
+df = df.dropna(subset=["Frame"], how="any", axis=0)
 
 # %% NAs [md]
 """
@@ -120,29 +117,82 @@ plt.show()
 
 # %%% NA Impute
 
-df[["X", "Y", "Dist_border"]] = df[["X", "Y", "Dist_border"]].interpolate(
+df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
     method="linear"
 )
 
 # %%% [md]
 """
-No hay NAs
+Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido 4200 frames. Se han imputado
 """
-# %% TO DO si necesario Filtrado de datos [md]
+# %% Filtrado de datos debido a detección de otras particulas[md]
 """
+# Filtrado de los datos
 Se pueden eliminar los frames en los que se ha detectado un salto demasiado alto o imputar NAs, segun el metodo 'find maxima strict' ó 'w/o strict'
 """
+# %%% Histograma de las distancias
+df["X_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).X.diff()
+df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
+df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
+
+df_temp = df[
+    (df.Batch == "batch 6") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_5753")
+]
+
+sns.histplot(data=df_temp, x="dist", stat="density", log_scale=True)
+plt.show()
+# %%% [md]
+"""
+Se aprecia como hay movimientos que la distancia recorrida es muy alta. Esto solo puede deberse a un error en la detección del gusano. Considero que 100px es el límite de salto por frame, aunque bien podrían ser menos.
+Se eliminan e imputan.
+"""
+
+# %%% Imputación anomalias
+
+"""
+Como se recalculan las distancias, es posible que un punto outlier aparezca varias veces, pero solo se elimina una vez. Para corregirlo se realiza el proceso de filtrado varias veces
+"""
+for i in [0, 1, 2]:
+    # Imputación en las columnas que tienen medidas
+    df.loc[df.dist > 100, ("X", "Y", "Mean-Distance")] = np.nan
+    # imputación por interpolación de los cercanos
+    df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
+        method="linear"
+    )
+
+    # Recalculo las distancias
+    df["X_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).X.diff()
+    df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
+    df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
+
+df_temp = df[
+    (df.Batch == "batch 6") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_5753")
+]
+
+sns.histplot(data=df_temp, x="dist", stat="density", log_scale=True)
+plt.show()
+
+
+# %% Variables auxiliares
+"""
+Con el dataset limpio genero unas variables auxiliares
+"""
+# Para evaluar la distancia al borde de 0 (border) a 1 (center)
+df["Dist_border"] = df[["Mean-Distance"]] / 255
+# Alternativamente la distancia al centro 1=border a 0=center
+df["Dist_center"] = abs(df["Dist_border"] - 1)
+# Variable auxiliar
+df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
+
+
 # %% Distancia Recorrida [md]
 """
 ## Distancia Recorrida
 Se calcula la distancia que recorre el pez a lo largo del video y se gráfica por batch
 """
 
-# %%% Calculo de la distancia recorrida
 
-df["X_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).X.diff()
-df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
-df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
+# %%% Calculo de la distancia recorrida
 
 # dataframe con la distancia recorrida por el  gusano
 Dist = (
@@ -262,9 +312,9 @@ En los casos en los que la distribución de una condición es significativamente
 
 # %%% Histograma acumulado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-
-df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT")]
-df_temp2 = df[(df.Batch == "batch 7") & (df.Fenotype == "KO44")]
+batch = "batch 8"
+df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
+df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
 
 sns.histplot(
     data=df_temp,
@@ -276,7 +326,7 @@ sns.histplot(
     stat="density",
     binrange=[0, 1],
     bins=12,
-    palette="Reds",
+    palette="Blues",
     alpha=0.4,
 )
 
@@ -290,14 +340,14 @@ sns.histplot(
     stat="density",
     binrange=[0, 1],
     bins=12,
-    palette="Greens",
+    palette="Oranges",
     alpha=0.3,
 )
 plt.show()
 
 # %%% [md]
 """
-Resulta un plot bastante sucio. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que son razonablemente homogeneos y no se debe a un Zebra Oulier.
+Resulta un plot bastante sucio pero se aprecia la diferencia. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que son razonablemente homogeneos y no se debe a un Zebra Oulier.
 
 ### Normalización manual histograma
 Otra alternativa es generar manualmente el histograma y representarlo con barras de error.
@@ -401,7 +451,7 @@ df_temp = df[
     (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_4")
 ]
 
-g = sns.lineplot(data=df_temp, x="Time", y="Dist_border")
+g = sns.lineplot(data=df_temp, x="Frame", y="Dist_border")
 g.axhline(0.2, color="red")
 g.set_title("Tiempo en el borde - Dist = 0", size=25)
 plt.show()
@@ -614,5 +664,6 @@ plt.show()
 
 # %%% Conclusiones [md]
 """
-A ver que sale
+
+
 """
