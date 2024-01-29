@@ -67,7 +67,7 @@ for (i=0; i<list.length; i++){
 		run("Gaussian Blur...", "sigma=1");
 		run("Enhance Contrast...", "saturated=0.01 normalize");
 		run("Gamma...", "value=0.31");
-		doWand(width/2, height/2, 27.0, "Legacy");
+		doWand(width/2, height/2, 18.0, "Legacy");
 		roiManager("Add");
 		run("Fit Circle");
 		roiManager("Add");
