@@ -20,7 +20,7 @@
 run("Close All");
 run("Clear Results");
 print("\\Clear");
-if(roiManager("count") !=0) {roiManager("delete");}
+roiManager("reset");
 
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black");
@@ -44,7 +44,7 @@ for (i=0; i<list.length; i++){
 	
 	// 1.2 Open and get data
 		title=list[i];
-		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=500 last_frame=4701"); // 14 minutes video
+		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=500 last_frame=4699"); // 14 minutes video
 		rename("original");
 		run("8-bit");
 		original = getImageID();		
@@ -53,16 +53,22 @@ for (i=0; i<list.length; i++){
 		getDimensions(width, height, channels, slices, frames);
 		getPixelSize(unit, pw, ph, pd);
 		frame_interval = Stack.getFrameInterval();
-
+		makeRectangle(0, 0, width - 7, height); // set 4 for batch 8 & 6 and set 6 for batch 7 
+		run("Crop");
+		//mean_bck = getValue("Mean raw"); // avoid an error if there is a black line in the video
+		//changeValues(0, 1, mean_bck); // performs only in the current slice
+		
+		
 // 2. Process
 	// 2.1 generate the distance map
 		selectImage(original);
-		Stack.setFrame(frames/2);
+		Stack.setSlice(slices/2);
 		run("Duplicate...", "title=well_edge");
-		run("Gamma...", "value=0.41");
-		run("Gaussian Blur...", "sigma=2");
-		// run("Enhance Contrast...", "saturated=0.001 normalize process_all"); // optional if wand does not work properly
-		doWand(width/2, height/2, 4.0, "Legacy");
+		run("Gaussian Blur...", "sigma=1");
+		run("Enhance Contrast...", "saturated=0.01 normalize");
+		run("Gamma...", "value=0.3");
+		doWand(width/2, height/2, 27.0, "Legacy");
+		roiManager("Add");
 		run("Fit Circle");
 		roiManager("Add");
 		run("Create Mask");
@@ -76,15 +82,15 @@ for (i=0; i<list.length; i++){
 		run("Z Project...", "projection=Median");
 		rename("median_proyection");
 		run("Invert");
-		roiManager("Select", 0);
-		run("Enlarge...", "enlarge=-8");
-		run("Gaussian Blur...", "sigma=8"); // elimina cualquier rastro del pez en caso de que este tanto tiempo quieto que aparezca en la proyeccion mediana
+		//roiManager("Select", 1);
+		//run("Enlarge...", "enlarge=-8");
+		//run("Gaussian Blur...", "sigma=8"); // elimina cualquier rastro del pez en caso de que este tanto tiempo quieto que aparezca en la proyeccion mediana
 		imageCalculator("Add stack", "original","median_proyection");
 		selectImage(original);
 		run("Invert", "stack");
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
-		roiManager("Select", 0);
-		run("Enlarge...", "enlarge=8");
+		roiManager("Select", 1);
+		run("Enlarge...", "enlarge=16");
 		run("Clear Outside", "stack");
 		run("Select None");
 		
@@ -93,7 +99,7 @@ for (i=0; i<list.length; i++){
 			selectImage(original);
 			run("Select None");
 			Stack.setSlice(t+1);
-			run("Find Maxima...", "prominence=83 output=[Point Selection]");
+			run("Find Maxima...", "prominence=40 strict output=[Point Selection]"); // quizas poner el argumento strict para que no aparezca ningun punto si el pez no se detecta, y entonces poner cero
 			selectImage(distance_map);
 			run("Restore Selection");
 			run("Measure");
@@ -135,16 +141,20 @@ for (i=0; i<list.length; i++){
 					setForegroundColor(255, 0, 0);  // draw in red
 					// pinto una linea del movimiento entre frame y frame
 					drawLine(X_0/pw, Y_0/pw, X/pw, Y/pw); // functions needs arguments in pixels
+					run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
+					result_temp_2 = getImageID();
+					close("result_temp");
+					selectImage(result_temp_2);
+					rename("result_temp");
 				}
-				run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
-				result_temp_2 = getImageID();
-				close("result_temp");
-				selectImage(result_temp_2);
-				rename("result_temp");
-			
 				// Create the result as stack concatenation
 				if (t==0) {
-					selectImage(result_temp_2);
+					setForegroundColor(255, 255, 0);
+					selectImage(result_temp);
+					roiManager("Select", 0);
+					run("Draw", "slice");
+					run("Select None");
+					run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
 					rename("Stack_Result");
 				} else {
 					run("Concatenate...", "  title=Stack_Result open image1=Stack_Result image2=result_temp image3=[-- None --]");
@@ -168,8 +178,8 @@ for (i=0; i<list.length; i++){
 		saveAs("Text", Results+title+"_Results.csv");
 		print("\\Clear");
 		print("Frame;X;Y;Mean-Distance;Time");  // header of the result file  in the Log window
-		run("Close All");
-		roiManager("delete"); 
+		close("*");
+		roiManager("reset"); 
 		run("Clear Results");
 	}
 }		
@@ -180,7 +190,7 @@ print("\\Clear");
 print("Terminado");
 Finish_time = getTime();
 Time_used = Finish_time - Start_time;
-print("It took =", Time_used/60000, "minutes to finish the proccess");
+print("It took =", Time_used/(60000 * 60), "h to finish the proccess");
 
 
 //Functions
