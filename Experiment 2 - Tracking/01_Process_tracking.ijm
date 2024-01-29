@@ -66,7 +66,7 @@ for (i=0; i<list.length; i++){
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=1");
 		run("Enhance Contrast...", "saturated=0.01 normalize");
-		run("Gamma...", "value=0.3");
+		run("Gamma...", "value=0.31");
 		doWand(width/2, height/2, 27.0, "Legacy");
 		roiManager("Add");
 		run("Fit Circle");
@@ -91,7 +91,9 @@ for (i=0; i<list.length; i++){
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 1);
 		run("Enlarge...", "enlarge=16");
-		run("Clear Outside", "stack");
+		mean_bck = getValue("Mean raw");
+		setBackgroundColor(mean_bck, mean_bck, mean_bck);
+		run("Clear Outside", "stack"); 
 		run("Select None");
 		
 	//2.3 Loop for every temporal frame to detect the points
@@ -150,7 +152,7 @@ for (i=0; i<list.length; i++){
 				}
 				// Create the result as stack concatenation
 				if (t==0) {
-					setForegroundColor(255, 255, 0);
+					setForegroundColor(255, 255, 0); // Draw in yellow
 					selectImage(result_temp);
 					roiManager("Select", 0);
 					run("Draw", "slice");
