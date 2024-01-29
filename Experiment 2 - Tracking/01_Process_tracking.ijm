@@ -66,8 +66,8 @@ for (i=0; i<list.length; i++){
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=1");
 		run("Enhance Contrast...", "saturated=0.01 normalize");
-		run("Gamma...", "value=0.31");
-		doWand(width/2, height/2, 18.0, "Legacy");
+		run("Gamma...", "value=0.30");
+		doWand(width/2, height/2, 16.0, "Legacy");
 		roiManager("Add");
 		run("Fit Circle");
 		roiManager("Add");
