@@ -139,7 +139,8 @@ df_temp = df[
     (df.Batch == "batch 6") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_5753")
 ]
 
-sns.histplot(data=df_temp, x="dist", stat="density", log_scale=True)
+g = sns.histplot(data=df_temp, x="dist", stat="density", log_scale=True)
+g.set_title("Distribution of frame movement of a single zebra")
 plt.show()
 # %%% [md]
 """
@@ -169,7 +170,8 @@ df_temp = df[
     (df.Batch == "batch 6") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_5753")
 ]
 
-sns.histplot(data=df_temp, x="dist", stat="density", log_scale=True)
+g = sns.histplot(data=df_temp, x="dist", stat="density", log_scale=True)
+g.set_title("Distribution of frame movement of a single zebra")
 plt.show()
 
 
@@ -253,7 +255,11 @@ Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posicio
 # %%% Grafico Histograma 1 Zebra
 df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_1")]
 
-sns.histplot(data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=12)
+g = sns.histplot(
+    data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=12
+)
+g.set_title("Distribution of radial position relative to edge of a single zebra")
+
 plt.show()
 
 # %%% [md]
@@ -302,6 +308,8 @@ g.map_dataframe(
 )
 g.add_legend()
 g.set_axis_labels(fontsize=20)
+g.fig.suptitle("Accumulated distribution of radial position relative to edge")
+plt.subplots_adjust(top=0.95)
 plt.show()
 # %%% [md]
 """
@@ -312,7 +320,7 @@ En los casos en los que la distribución de una condición es significativamente
 
 # %%% Histograma acumulado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-batch = "batch 8"
+batch = "batch 6"
 df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
 df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
 
@@ -330,7 +338,7 @@ sns.histplot(
     alpha=0.4,
 )
 
-sns.histplot(
+g = sns.histplot(
     data=df_temp2,
     x="Dist_border",
     hue="Fish",
@@ -343,6 +351,8 @@ sns.histplot(
     palette="Oranges",
     alpha=0.3,
 )
+g.set_title("Accumulated histogram of radial position relative to edge for batch 6")
+
 plt.show()
 
 # %%% [md]
@@ -430,7 +440,8 @@ g.map_dataframe(
 
 g.add_legend()
 g.set_axis_labels(fontsize=20)
-
+g.fig.suptitle("Averaged distribution of radial position relative to edge")
+plt.subplots_adjust(top=0.95)
 plt.show()
 
 # %%%% [md]
@@ -464,7 +475,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border"
-threshold = 0.20
+threshold = 0.15
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x < threshold).sum())
@@ -510,7 +521,7 @@ grped_bplot = sns.stripplot(
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 grped_bplot.set_title(
-    "Porcentaje del tiempo que pasa el gusano cerca del borde - bajo el Threshold = "
+    "Porcentaje del tiempo que pasa el gusano cerca del borde - Threshold = "
     + str(threshold),
     size=20,
 )
