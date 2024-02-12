@@ -9,8 +9,6 @@ Created on Fri Jan 26 19:03:59 2024
 import matplotlib.pyplot as plt
 import numpy as np
 
-plt.style.use("seaborn-poster")
-
 
 # %%
 # sampling rate
@@ -19,7 +17,7 @@ sr = 2000
 ts = 1.0 / sr
 t = np.arange(0, 1, ts)
 
-freq = 1.0
+freq = 2.0
 x = 3 * np.sin(2 * np.pi * freq * t)
 
 freq = 4
@@ -35,16 +33,20 @@ plt.ylabel("Amplitude")
 plt.show()
 
 # %%
-from scipy.fftpack import fft, ifft
+from scipy.fft import fft, ifft
 
-X = fft(x)
+X = fft(x, norm="forward")
+N = len(X)
+n = np.arange(N)
+T = N / sr
+freq = n / T
 
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
 
-plt.stem(freq, np.abs(X), "b", markerfmt=" ", basefmt="-b")
+plt.stem(freq, np.abs(X) ** 2, "b", markerfmt=" ", basefmt="-b")
 plt.xlabel("Freq (Hz)")
-plt.ylabel("FFT Amplitude |X(freq)|")
+plt.ylabel("FFT Amplitude |X(freq)|**2")
 plt.xlim(0, 10)
 
 plt.subplot(122)
@@ -53,3 +55,5 @@ plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.tight_layout()
 plt.show()
+
+# %% Calculation of the power
