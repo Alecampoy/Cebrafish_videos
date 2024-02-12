@@ -14,29 +14,44 @@
  * 
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
-
+STRICT = false; // argumento de find maxima
+if (STRICT == true) {strict_value = 33;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 // 0.0 Clean previous data in FIJI
 run("Close All");
 run("Clear Results");
 print("\\Clear");
 roiManager("reset");
+Start_time = getTime(); // to inform how long does it take to process the folder
+setBatchMode(false);
 
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
 setBackgroundColor(0, 0, 0);
-run("Set Measurements...", "mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
+run("Set Measurements...", "area mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
 print("Frame;X;Y;Mean-Distance;Time"); // header of the result file in the Log window
 
+// Parent Folder to process all batches
 
-// 1 Select the Folder with the files
-dir = getDirectory("Select the folder with the .mp4 movies");
-list= getFileList (dir);
-Results = createFolder(dir, "Results");
+dir_parent = getDirectory("Select the folder with the .mp4 movies");
+list_parent =  getFileList (dir_parent);
 
-Start_time = getTime(); // to inform how long does it take to process the folder
-setBatchMode(false);
+for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches, llega hasta abajo
+	dir = dir_parent+list_parent[j];
+// Wand for batch
+wand=14.0; // for batch 6
+if (list_parent[j].contains("Batch 07")) {wand=17.0;}
+else if (list_parent[j].contains("Batch 08")) {wand=25.0;}
+else if (list_parent[j].contains("Batch 11")) {wand=9.0;}
+
+
+// Folder with the files
+
+list= getFileList(dir);
+if (STRICT == true) {Results = createFolder(dir, "Results_strict_"+strict_value);}
+else {Results = createFolder(dir, "Results");}
+
 
 //  Loop to open and process each file
 for (i=0; i<list.length; i++){
@@ -53,7 +68,7 @@ for (i=0; i<list.length; i++){
 		getDimensions(width, height, channels, slices, frames);
 		getPixelSize(unit, pw, ph, pd);
 		frame_interval = Stack.getFrameInterval();
-		makeRectangle(0, 0, width - 7, height); // set 4 for batch 8 & 6 and set 6 for batch 7 
+		makeRectangle(0, 0, width - 8, height-4); // set 4 for batch 8 & 6 and set 6 for batch 7 
 		run("Crop");
 		//mean_bck = getValue("Mean raw"); // avoid an error if there is a black line in the video
 		//changeValues(0, 1, mean_bck); // performs only in the current slice
@@ -66,8 +81,8 @@ for (i=0; i<list.length; i++){
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=1");
 		run("Enhance Contrast...", "saturated=0.01 normalize");
-		run("Gamma...", "value=0.30");
-		doWand(width/2, height/2, 16.0, "Legacy");
+		run("Gamma...", "value=0.26");
+		doWand(width/2, height/2, wand, "Legacy");
 		roiManager("Add");
 		run("Fit Circle");
 		roiManager("Add");
@@ -101,17 +116,58 @@ for (i=0; i<list.length; i++){
 			selectImage(original);
 			run("Select None");
 			Stack.setSlice(t+1);
-			run("Find Maxima...", "prominence=40 strict output=[Point Selection]"); // quizas poner el argumento strict para que no aparezca ningun punto si el pez no se detecta, y entonces poner cero
+			wait(32);
+			if (STRICT == true) {run("Find Maxima...", "prominence="+strict_value+" strict output=[Point Selection]");
+				// start selecting rois
+				// keep only the littles roi, probably the fish, t nto zero to draw the plate roi
+				run("Measure");
+				if (nResults >=2 && t !=0) {
+					roiManager("reset"); // clean the roi for further filtering of the big particles
+					run("Clear Results"); // cleaned for analyzed particles
+					selectImage(original);
+					run("Select None");
+					Stack.setSlice(t+1);
+					run("Find Maxima...", "prominence="+strict_value+" strict output=[Maxima Within Tolerance]");
+					temp_2_results = getImageID();
+					run("Analyze Particles...", "size=0-Infinity display add");
+					selectWindow("Results");
+					Area_column = Table.getColumn("Area");
+					indices_min = Array.findMinima(Area_column, 0);
+					if (Area_column[indices_min[0]] < 108) {
+						roiManager("Select", indices_min[0]);
+						setBackgroundColor(0, 0, 0);
+						run("Clear Outside");
+						run("Select None");
+						run("Find Maxima...", "prominence=100 output=[Point Selection]");
+					}
+					selectImage(temp_2_results);
+					close();
+				}
+				// common measurement of distance map
+					run("Clear Results");
+					selectImage(distance_map);
+					wait(32);			
+					run("Restore Selection");
+					run("Measure");
+					run("Select None");
+
+			} // Finish strict
+			
+			else{run("Find Maxima...", "prominence=100 output=[Point Selection]");			// no strict
 			selectImage(distance_map);
+			wait(32);
 			run("Restore Selection");
 			run("Measure");
 			run("Select None");
-							
+			}
+
+
 	// 2.3.3 Get features in the frame
+			if (t==0) {X="NA"; X_0="NA";} // to avoid an error in following 'if'. It behaves different as in python where only the first argument is evaluated if false
 			selectWindow("Results");
 				if (nResults == 1) {
-					wait(50);
-					if (t>0) {X_0=X; Y_0=Y;} //to draw a line later
+					wait(32);	
+					if (t>0 && X != "NA") {X_0=X; Y_0=Y;} //to draw a line later, avoiding the NA to draw a line not appropiate.
 					frame = t+1;
 					X = getResultString("X", 0);
 					Y = getResultString("Y", 0);
@@ -119,14 +175,14 @@ for (i=0; i<list.length; i++){
 					time = frame/5; // 5 fps
 					
 				} else { 
-					wait(50);
+					wait(32);
 					frame = t+1;
 					X = "NA";
 					Y = "NA";
 					Distance_edge = "NA";
 					time = frame/5; // 5 fps
 				
-}
+				}
 
 	// 2.3.5 Write the results of the frame in the table			
 				print(frame+";"+X+";"+Y+";"+Distance_edge+";"+time);
@@ -135,20 +191,21 @@ for (i=0; i<list.length; i++){
 	// 3.1 Get the frame image to print the results
 				selectImage(original);
 				Stack.setSlice(t+1);
+				run("Select None");
 				run("Duplicate...", "title=result_temp");
 				result_temp = getImageID();
 				run("RGB Color");
 				// If there is one Roi, then draw 
-				if (nResults == 1 && t>0){
+				if (nResults == 1 && t>0 && X_0 != "NA" && X != "NA"){
 					selectImage(result_temp);
 					setForegroundColor(255, 0, 0);  // draw in red
 					// pinto una linea del movimiento entre frame y frame
 					drawLine(X_0/pw, Y_0/pw, X/pw, Y/pw); // functions needs arguments in pixels
-					run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
-					result_temp_2 = getImageID();
-					close("result_temp");
-					selectImage(result_temp_2);
-					rename("result_temp");
+					//run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
+					//result_temp_2 = getImageID();
+					//close("result_temp");
+					//selectImage(result_temp_2);
+					//rename("result_temp");
 				}
 				// Create the result as stack concatenation
 				if (t==0) {
@@ -157,10 +214,13 @@ for (i=0; i<list.length; i++){
 					roiManager("Select", 0);
 					run("Draw", "slice");
 					run("Select None");
-					run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
+					//run("Scale...", "x=0.6 y=0.6 z=1.0 interpolation=Bilinear fill process create"); 
 					rename("Stack_Result");
+					roiManager("reset"); // clean the roi for further filtering of the big particles
 				} else {
-					run("Concatenate...", "  title=Stack_Result open image1=Stack_Result image2=result_temp image3=[-- None --]");
+					imageCalculator("Max", "Stack_Result","result_temp");
+					close("result_temp");
+					//run("Concatenate...", "  title=Stack_Result open image1=Stack_Result image2=result_temp image3=[-- None --]");
 				}
 
 			run("Clear Results");
@@ -171,8 +231,8 @@ for (i=0; i<list.length; i++){
 	// 4.1 Save the result stack image
 		selectWindow("Stack_Result");
 		rename(title+"_result");
-		saveAs("Tiff", Results+title+"_tracking.tif");
-		run("Z Project...", "projection=[Max Intensity]");
+		//saveAs("Tiff", Results+title+"_tracking.tif");
+		//run("Z Project...", "projection=[Max Intensity]");
 		saveAs("Tiff", Results+title+"_tracking_projection.tif");
 		
 		
@@ -186,6 +246,8 @@ for (i=0; i<list.length; i++){
 		run("Clear Results");
 	}
 }		
+
+} // cierre loop de carpeta_parent
 
 setBatchMode(false);
 // Macro is finished. Print time						
