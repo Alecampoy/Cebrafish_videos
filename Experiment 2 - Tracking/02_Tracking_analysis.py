@@ -44,7 +44,7 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 if platform.system() == "Windows":
     folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Tracking\\resultados sucios\\"
 else:
-    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Tracking/resultados sucios/"
+    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Tracking/Resultados_strict/"
 files = get_files_in_folder(folder_path)
 
 df = []
@@ -155,7 +155,7 @@ Como se recalculan las distancias, es posible que un punto outlier aparezca vari
 """
 for i in [0, 1, 2]:
     # Imputación en las columnas que tienen medidas
-    df.loc[df.dist > 100, ("X", "Y", "Mean-Distance")] = np.nan
+    df.loc[df.dist > 80, ("X", "Y", "Mean-Distance")] = np.nan
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -168,7 +168,7 @@ for i in [0, 1, 2]:
 
 df_temp = df[
     (df.Batch == "batch 6") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_5753")
-]
+].dropna()
 
 g = sns.histplot(data=df_temp, x="dist", stat="density", log_scale=True)
 g.set_title("Distribution of frame movement of a single zebra")
@@ -351,7 +351,7 @@ g = sns.histplot(
     palette="Oranges",
     alpha=0.3,
 )
-g.set_title("Accumulated histogram of radial position relative to edge for batch 6")
+g.set_title("Accumulated histogram of radial position relative to edge")
 
 plt.show()
 
@@ -475,7 +475,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border"
-threshold = 0.15
+threshold = 0.25
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x < threshold).sum())
