@@ -675,6 +675,8 @@ plt.show()
 
 # %%% Conclusiones [md]
 """
+No hay diferencia entre los dos métodos de análisis de los videos.
+El batch 11 no se ha posido procesar bien
 
 
 """
