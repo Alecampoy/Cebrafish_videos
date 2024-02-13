@@ -675,7 +675,7 @@ plt.show()
 
 # %%% Conclusiones [md]
 """
-No hay diferencia entre los dos métodos de análisis de los videos.
+He comprobado y No hay diferencia entre los dos métodos de análisis de los videos (strict y maximun maxima).
 El batch 11 no se ha posido procesar bien
 
 
