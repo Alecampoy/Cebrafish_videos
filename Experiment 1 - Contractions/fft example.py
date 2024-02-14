@@ -9,10 +9,8 @@ Created on Fri Jan 26 19:03:59 2024
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-# %%
 # sampling rate
-sr = 2000
+sr = 2500
 # sampling interval
 ts = 1.0 / sr
 t = np.arange(0, 1, ts)
@@ -27,6 +25,8 @@ freq = 7
 x += 2 * np.sin(2 * np.pi * freq * t)
 
 x += 2
+x += np.random.normal(1, 1.3, sr)
+
 plt.figure(figsize=(8, 6))
 plt.plot(t, x, "r")
 plt.ylabel("Amplitude")
@@ -36,13 +36,13 @@ plt.show()
 # %%
 from scipy import fft
 
-X = fft.fft(x, norm="backward")
-N = len(X)
-n = np.arange(N)
-T = N / sr
-freq = fft.fftfreq(N, ts)
+X = fft.rfft(x, norm="backward")
+N = len(x)
+freq = fft.rfftfreq(N, ts)
 
-psd = np.abs(X) ** 2 / (sr * N)
+psd = np.abs(X) ** 2 / (
+    sr * N
+)  # aquii esta la clave de la normalización. He encontrado que con diferentes sr se obtienen diferntes valores. Por ello estudiar esto. Tambien usar la fft completa y no rfft para evitar problemas con parserval
 
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
@@ -50,23 +50,22 @@ plt.subplot(121)
 plt.stem(freq, psd, "b", markerfmt=" ", basefmt="-b")
 plt.xlabel("Freq (Hz)")
 plt.ylabel("FFT Amplitude |X(freq)|**2")
-plt.xlim(-10, 10)
+plt.xlim(0.1, 11)
 
 plt.subplot(122)
-plt.plot(t, fft.ifft(X), "r")
+plt.plot(t, fft.irfft(X), "r")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.tight_layout()
 plt.show()
 
-freqs = fft.fftfreq(N, ts)
 
 # %% Calculation of the power
 # Parserval's theorem
 V = np.sum(x**2) / sr
-
-P = np.sum(psd)  # [0:int(sr/2)]
-
+V
+P = np.sum(psd)
+P
 
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
@@ -77,7 +76,7 @@ plt.ylabel("FFT Amplitude |X(freq)|**2")
 plt.xlim(0, 10)
 
 plt.subplot(122)
-plt.plot(t, fft.ifft(X), "r")
+plt.plot(t, fft.irfft(X), "r")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.tight_layout()
