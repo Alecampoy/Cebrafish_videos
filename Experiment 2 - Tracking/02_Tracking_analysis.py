@@ -8,6 +8,11 @@
 """
 
 # %% Librerias
+from IPython import get_ipython
+
+# limpia variables y librerias antiguas
+get_ipython().magic("reset -sf")
+
 import warnings, math
 import pandas as pd
 import re
@@ -320,9 +325,9 @@ En los casos en los que la distribución de una condición es significativamente
 
 # %%% Histograma acumulado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-batch = "batch 6"
+batch = "batch 8"
 df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
-df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
+df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO179")]
 
 sns.histplot(
     data=df_temp,
@@ -475,7 +480,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border"
-threshold = 0.25
+threshold = 0.15
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x < threshold).sum())

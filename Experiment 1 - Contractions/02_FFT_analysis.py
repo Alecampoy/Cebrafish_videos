@@ -10,6 +10,11 @@
 
 
 # %% Librerias
+from IPython import get_ipython
+
+# limpia variables y librerias antiguas
+get_ipython().magic("reset -sf")
+
 import warnings
 import pandas as pd
 import numpy as np
@@ -702,7 +707,7 @@ peaks_df = (
                 prominence=0.08,
                 threshold=0.0,
                 distance=2,
-                width=1  # para magnitudes 0-1
+                width=1,  # para magnitudes 0-1
                 # x,height=0.005,prominence=0.002,threshold=0.0,distance=2,width=1,  # para perimetro_inv
             )[0]
         )

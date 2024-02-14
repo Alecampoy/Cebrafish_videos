@@ -5,12 +5,17 @@ Created on Fri Jan 26 19:03:59 2024
 @author: Ale Campoy
 """
 # https://pythonnumericalmethods.berkeley.edu/notebooks/chapter24.04-FFT-in-Python.html
-# https://pythonnumericalmethods.berkeley.edu/notebooks/chapter24.04-FFT-in-Python.html
+
+from IPython import get_ipython
+
+get_ipython().magic("reset -sf")
+
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 # sampling rate
-sr = 2500
+sr = 100
 # sampling interval
 ts = 1.0 / sr
 t = np.arange(0, 1, ts)
@@ -24,8 +29,8 @@ x += 3 * np.sin(2 * np.pi * freq * t)
 freq = 7
 x += 2 * np.sin(2 * np.pi * freq * t)
 
-x += 2
-x += np.random.normal(1, 1.3, sr)
+x += 0
+# x += np.random.normal(1, 1.3, sr)
 
 plt.figure(figsize=(8, 6))
 plt.plot(t, x, "r")
@@ -36,13 +41,12 @@ plt.show()
 # %%
 from scipy import fft
 
-X = fft.rfft(x, norm="backward")
+X = fft.fft(x, norm="backward")
 N = len(x)
-freq = fft.rfftfreq(N, ts)
+freq = fft.fftfreq(N, ts)
 
-psd = np.abs(X) ** 2 / (
-    sr * N
-)  # aquii esta la clave de la normalización. He encontrado que con diferentes sr se obtienen diferntes valores. Por ello estudiar esto. Tambien usar la fft completa y no rfft para evitar problemas con parserval
+psd = np.abs(X) ** 2 / (sr * N)
+# aquii esta la clave de la normalización. Por ello estudiar esto. Tambien usar la fft completa y no rfft para evitar problemas con parserval
 
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
@@ -50,10 +54,10 @@ plt.subplot(121)
 plt.stem(freq, psd, "b", markerfmt=" ", basefmt="-b")
 plt.xlabel("Freq (Hz)")
 plt.ylabel("FFT Amplitude |X(freq)|**2")
-plt.xlim(0.1, 11)
+plt.xlim(-0.1, 11)
 
 plt.subplot(122)
-plt.plot(t, fft.irfft(X), "r")
+plt.plot(t, fft.ifft(X), "r")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.tight_layout()
@@ -73,36 +77,17 @@ plt.subplot(121)
 plt.stem(freq, psd / P, "b", markerfmt=" ", basefmt="-b")
 plt.xlabel("Freq (Hz)")
 plt.ylabel("FFT Amplitude |X(freq)|**2")
-plt.xlim(0, 10)
+plt.xlim(-0.1, 10)
 
 plt.subplot(122)
-plt.plot(t, fft.irfft(X), "r")
+plt.plot(t, fft.ifft(X), "r")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.tight_layout()
 plt.show()
 
 # normalized PSD
+P
 
-np.sum(psd / P)
-
-# %% Welsh
-from scipy.signal import welch
-
-frequencies_welch, psd_welch = welch(X, sr, nperseg=512)
-
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-
-plt.stem(freq, psd / P, "b", markerfmt=" ", basefmt="-b")
-plt.xlabel("Freq (Hz)")
-plt.ylabel("FFT Amplitude |X(freq)|**2")
-plt.xlim(0, 10)
-
-plt.subplot(122)
-plt.plot(frequencies_welch, psd_welch, "r")
-plt.xlim(0, 10)
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
-plt.tight_layout()
-plt.show()
+# %% References
+# https://appliedacousticschalmers.github.io/scaling-of-the-dft/AES2020_eBrief/
