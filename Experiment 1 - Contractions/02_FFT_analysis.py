@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# %%
 # Spyder Editor
 
 # %% Intro [md]
@@ -21,13 +20,11 @@ import numpy as np
 import re
 import os
 import platform
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy import stats, signal
+from scipy import stats, fft
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
-from scipy.fft import fft, rfft, fftfreq, rfftfreq
 from scipy.linalg import dft
 
 # os.chdir("/home/ale/Documentos/GitHub/Cebrafish_videos/Experiment 1 - Contractions")
@@ -764,7 +761,7 @@ Recomiendo repasar las gráficas de los peces comparandolas con las fotos de mic
 """
 # Fourier Transform & Periodogram
 
-En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición
+En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición. Usaré la transformada de Fourier para encontrar las frecuencias más fuertes en el dominio de frecuencias y lo traspasaremos a periodos. Repetiré el estudio usando el Periodograma de XXXX. Complementaré el estudio tratando de usar una Wavelet Transformation para convertir los picos en una señal más sinosoidal.
 
 """
 # %% FFT [md]
@@ -772,45 +769,54 @@ En lugar de contar el número de picos, voy a usar transformar las señales al d
 # Fourier Transform & Periodogram
 
 En lugar de contar el número de picos, voy a usar transformar las señales al dominio de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición experimental
+
+## Ejemplo FFT 1 pez
 """
 
 # %%% FFT Analisis de Frecuencias del movimiento para un Pez Zebra
-# Ajustar al cebra
-# la duracion esta ajustada para cada sample por haber eliminado los NA
-sample_rate = 900 / 60
-duration = np.int(len(x) / sample_rate)
-N_points = len(x)
+# la duracion debe estar ajustada para cada sample por haber eliminado los NA. comprobar la duración del video y calular como se eliminan los NA: mejor imputarlos que borrarlos. Los videos tienen 1550 frames
 
-# usando la función FFT
-g_fft = rfft(detrend(x, axis=0), axis=0, norm="forward")
-# Calculo de las frecuencias pare representar en el eje X
-x_fft = rfftfreq(N_points, 1 / sample_rate)
+zebra_temp = df[
+    (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
+]
+
+# Calculos para frequencias en seg
+x = zebra_temp.LongestShortestPath_inv.values  # signal as array
+# x = x-np.mean(x) # to avoid the signal at the first fourier coefficient F(0)
+x = detrend(x, axis=0)
+
+sample_rate = 9  # frames / s
+time_step = 1 / sample_rate
+N_points = len(zebra_temp)
+# t = np.arange(0, N_points/sample_rate, time_step)
+t = zebra_temp.Time
+plt.figure(figsize=(8, 6))
+plt.plot(t, x, "r")
+plt.ylabel("Amplitude")
+plt.show()
+
+# %%
+
+zebra_fft = fft.fft(x, norm="backward")
+zebra_freqs = fft.fftfreq(
+    N_points, time_step
+)  # Calculo de las frecuencias pare representar en el eje X
+zebra_psd = np.abs(zebra_fft) ** 2 / (sample_rate * N_points)  # Power spectral density
 
 
-plt.plot(x_fft, np.abs(g_fft))
+plt.stem(
+    zebra_freqs[0 : int(len(zebra_freqs) / 2)],
+    zebra_psd[0 : int(len(zebra_freqs) / 2)],
+    markerfmt=" ",
+    basefmt="-s",
+)
 plt.title("FFT")
 plt.xlabel("Frecuency (Hz)")
+plt.xlim(-0.01, 0.75)
 plt.show()
+
 
 # %% CODIGO GUSANOS
-
-
-# %%% FFT
-# la duracion esta ajustada para cada sample por haber eliminado los NA
-sample_rate = 900 / 60
-duration = np.int(len(x) / sample_rate)
-N_points = len(x)
-
-# usando la función FFT
-g_fft = rfft(detrend(x, axis=0), axis=0, norm="forward")
-# Calculo de las frecuencias pare representar en el eje X
-x_fft = rfftfreq(N_points, 1 / sample_rate)
-
-
-plt.plot(x_fft, np.abs(g_fft))
-plt.title("FFT")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
 
 
 # %% Analisis de Frecuencias (FFT) por condición

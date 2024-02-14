@@ -13,24 +13,26 @@ get_ipython().magic("reset -sf")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
+# %%
 # sampling rate
-sr = 100
+sr = 200
 # sampling interval
-ts = 1.0 / sr
-t = np.arange(0, 1, ts)
+ts = 1 / sr
+t = np.arange(0, 10, ts)
 
-freq = 2.0
+freq = 0.5
 x = 1.5 * np.sin(2 * np.pi * freq * t)
 
-freq = 4
+freq = 2
 x += 3 * np.sin(2 * np.pi * freq * t)
 
 freq = 7
 x += 2 * np.sin(2 * np.pi * freq * t)
 
-x += 0
-# x += np.random.normal(1, 1.3, sr)
+x += 5
+x += np.random.normal(1, 1, sr * 10)
+
+x = x - np.mean(x)
 
 plt.figure(figsize=(8, 6))
 plt.plot(t, x, "r")
@@ -87,7 +89,7 @@ plt.tight_layout()
 plt.show()
 
 # normalized PSD
-P
+sum(psd) / P
 
 # %% References
 # https://appliedacousticschalmers.github.io/scaling-of-the-dft/AES2020_eBrief/
