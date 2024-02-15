@@ -773,7 +773,7 @@ En lugar de contar el número de picos, voy a usar transformar las señales al d
 ## Ejemplo FFT 1 pez
 """
 
-# %%% FFT Analisis de Frecuencias del movimiento para un Pez Zebra
+# %%% Pez Ejemplo FFT - Analisis de Frecuencias del movimiento para un Pez Zebra
 # la duracion debe estar ajustada para cada sample por haber eliminado los NA. comprobar la duración del video y calular como se eliminan los NA: mejor imputarlos que borrarlos. Los videos tienen 1550 frames
 
 zebra_temp = df[
@@ -781,29 +781,29 @@ zebra_temp = df[
 ]
 
 # Calculos para frequencias en seg
-x = zebra_temp.LongestShortestPath_inv.values  # signal as array
-# x = x-np.mean(x) # to avoid the signal at the first fourier coefficient F(0)
-x = detrend(x, axis=0)
+signal = zebra_temp.Perim_inv.values  # signal as array
+signal = signal - np.mean(
+    signal
+)  # to avoid the signal at the first fourier coefficient F(0)
+# signal = detrend(signal, axis=0)
 
 sample_rate = 9  # frames / s
 time_step = 1 / sample_rate
-N_points = len(zebra_temp)
+N_points = len(signal)
 # t = np.arange(0, N_points/sample_rate, time_step)
 t = zebra_temp.Time
-plt.figure(figsize=(8, 6))
-plt.plot(t, x, "r")
+plt.figure(figsize=(11, 9))
+plt.plot(t, signal, "r")
 plt.ylabel("Amplitude")
 plt.show()
 
-# %%
-
-zebra_fft = fft.fft(x, norm="backward")
+zebra_fft = fft.fft(signal, norm="backward")
 zebra_freqs = fft.fftfreq(
     N_points, time_step
 )  # Calculo de las frecuencias pare representar en el eje X
 zebra_psd = np.abs(zebra_fft) ** 2 / (sample_rate * N_points)  # Power spectral density
 
-
+plt.subplot(121)
 plt.stem(
     zebra_freqs[0 : int(len(zebra_freqs) / 2)],
     zebra_psd[0 : int(len(zebra_freqs) / 2)],
@@ -812,7 +812,38 @@ plt.stem(
 )
 plt.title("FFT")
 plt.xlabel("Frecuency (Hz)")
-plt.xlim(-0.01, 0.75)
+plt.xlim(-0.01, 0.5)
+# plt.show()
+
+plt.subplot(122)
+plt.plot(t, fft.ifft(zebra_fft), "r")
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude")
+plt.tight_layout()
+plt.show()
+
+# %%test
+
+zebra_fft_fil = np.array(zebra_fft)
+zebra_fft_fil[(np.abs(zebra_fft) ** 2 / (sample_rate * N_points)) > 0.50e-6] = 0
+# zebra_fft_fil[(np.abs(zebra_fft)**2 / (sample_rate * N_points)) < 0.05e-6] = 0
+zebra_psd = np.abs(zebra_fft_fil) ** 2 / (
+    sample_rate * N_points
+)  # Power spectral density
+
+
+plt.subplot(121)
+
+plt.stem(zebra_freqs, zebra_psd, "b", markerfmt=" ", basefmt="-b")
+plt.xlabel("Freq (Hz)")
+plt.ylabel("FFT Amplitude |X(freq)|**2")
+plt.xlim(-0.1, 2)
+
+plt.subplot(122)
+plt.plot(t, fft.ifft(zebra_fft_fil), "r")
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude")
+plt.tight_layout()
 plt.show()
 
 

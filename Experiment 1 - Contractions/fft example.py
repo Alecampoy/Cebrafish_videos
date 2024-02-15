@@ -150,9 +150,9 @@ plt.show()
 
 # Parameters
 frequency = 2.5  # Frequency of the pulses (in Hz)
-pulse_width = 0.3  # Width of each pulse (in seconds)
+pulse_width = 0.01  # Width of each pulse (in seconds)
 amplitude = 2  # Amplitude of the pulses
-duration = 5  # Duration of the signal (in seconds)
+duration = 6  # Duration of the signal (in seconds)
 sampling_rate = 1000  # Sampling rate (in Hz)
 
 # Time array
@@ -160,8 +160,8 @@ t = np.arange(0, duration, 1 / sampling_rate)
 
 # Generating the pulsed signal
 signal = amplitude * np.where(np.sin(2 * np.pi * frequency * t) > 0, 1, 0)
-signal = np.where((t % (1 / frequency)) < pulse_width, signal, 0)
-signal = signal.astype("float64") + 1 * (np.sin(2 * np.pi * 1.3 * t))
+signal = np.where((t % (1 / frequency)) < pulse_width, signal, 0).astype("float64")
+# signal = signal.astype("float64") + 1 * (np.sin(2 * np.pi * 1.3 * t))
 signal += np.random.normal(1, 0.2, duration * sampling_rate)
 signal = signal - np.mean(signal)
 
