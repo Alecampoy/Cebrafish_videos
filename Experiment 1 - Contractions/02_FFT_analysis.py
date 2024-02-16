@@ -777,101 +777,66 @@ En lugar de contar el número de picos, voy a usar transformar las señales al d
 # la duracion debe estar ajustada para cada sample por haber eliminado los NA. comprobar la duración del video y calular como se eliminan los NA: mejor imputarlos que borrarlos. Los videos tienen 1550 frames
 
 zebra_temp = df[
-    (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
+    (df.Batch == "batch 10") & (df.Fenotype == "KO179") & (df.Fish == "ZebraF_6")
 ]
 
-# Calculos para frequencias en seg
-signal = zebra_temp.Perim_inv.values  # signal as array
-signal = signal - np.mean(
-    signal
-)  # to avoid the signal at the first fourier coefficient F(0)
-# signal = detrend(signal, axis=0)
+signal = zebra_temp.Round.values  # signal as array
+# smooth signal
+
+# to avoid the signal at the first fourier coefficient F(0) we should substract offset
+# signal = signal - np.mean( signal)
+signal = detrend(signal, axis=0)
 
 sample_rate = 9  # frames / s
 time_step = 1 / sample_rate
 N_points = len(signal)
 # t = np.arange(0, N_points/sample_rate, time_step)
-t = zebra_temp.Time
-plt.figure(figsize=(11, 9))
-plt.plot(t, signal, "r")
-plt.ylabel("Amplitude")
-plt.show()
+time_points = zebra_temp.Time
 
+# FFT
 zebra_fft = fft.fft(signal, norm="backward")
-zebra_freqs = fft.fftfreq(
-    N_points, time_step
-)  # Calculo de las frecuencias pare representar en el eje X
+# Calculos para frequencias en seg pare representar en el eje X
+zebra_freqs = fft.fftfreq(N_points, time_step)
+# Power spectral density
 zebra_psd = np.abs(zebra_fft) ** 2 / (sample_rate * N_points)  # Power spectral density
 
-plt.subplot(121)
-plt.stem(
-    zebra_freqs[0 : int(len(zebra_freqs) / 2)],
-    zebra_psd[0 : int(len(zebra_freqs) / 2)],
-    markerfmt=" ",
-    basefmt="-s",
-)
-plt.title("FFT")
-plt.xlabel("Frecuency (Hz)")
-plt.xlim(-0.01, 0.5)
-# plt.show()
-
-plt.subplot(122)
-plt.plot(t, fft.ifft(zebra_fft), "r")
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
-plt.tight_layout()
-plt.show()
-
-# %%test
-
+# Filtrado FFT - Filtro por la psd
 zebra_fft_fil = np.array(zebra_fft)
-zebra_fft_fil[(np.abs(zebra_fft) ** 2 / (sample_rate * N_points)) > 0.50e-6] = 0
-# zebra_fft_fil[(np.abs(zebra_fft)**2 / (sample_rate * N_points)) < 0.05e-6] = 0
-zebra_psd = np.abs(zebra_fft_fil) ** 2 / (
-    sample_rate * N_points
-)  # Power spectral density
+# # upper power limit
+zebra_fft_fil[zebra_psd > 0.030] = 0
+# # lower power limit
+# zebra_fft_fil[zebra_psd < 0.05e-6] = 0
+# bandpass filter
+zebra_fft_fil[abs(zebra_freqs > 0.8)] = 0
+zebra_fil_psd = np.abs(zebra_fft_fil) ** 2 / (sample_rate * N_points)
 
+# Plot
+fig, axes = plt.subplots(2, 2, figsize=(21, 13))
+fft_plot_x = zebra_freqs[(zebra_freqs < 3) & (zebra_freqs > 0)]  # set max freq to plot
 
-plt.subplot(121)
+sns.lineplot(x=time_points, y=signal, ax=axes[0, 0], color="r")
+sns.lineplot(x=fft_plot_x, y=zebra_psd[0 : len(fft_plot_x)], ax=axes[0, 1])
+sns.lineplot(x=fft_plot_x, y=zebra_fil_psd[0 : len(fft_plot_x)], ax=axes[1, 0])
+# same limit for the filtered fft
+axes[1, 0].set_ylim(axes[0, 1].get_ylim())
+sns.lineplot(x=time_points, y=signal, linewidth=1, alpha=0.6, ax=axes[1, 1], color="r")
+sns.lineplot(x=time_points, y=fft.ifft(zebra_fft_fil), ax=axes[1, 1])
 
-plt.stem(zebra_freqs, zebra_psd, "b", markerfmt=" ", basefmt="-b")
-plt.xlabel("Freq (Hz)")
-plt.ylabel("FFT Amplitude |X(freq)|**2")
-plt.xlim(-0.1, 2)
+axes[0, 0].set_title("Signal")
+axes[0, 1].set_title("FFT PSD")
+axes[1, 0].set_title("Filtered FFT")
+axes[1, 1].set_title("IFFT")
 
-plt.subplot(122)
-plt.plot(t, fft.ifft(zebra_fft_fil), "r")
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude")
+# Adjust layout
 plt.tight_layout()
-plt.show()
 
+# Show plot
+plt.show()
 
 # %% CODIGO GUSANOS
 
 
 # %% Analisis de Frecuencias (FFT) por condición
-# %%% Interpolando FFT
-# Se consigue así que todos tengan la misma longitud
-# %%%% ajuste de un gusano (ejemplo)
-
-x_min = 0
-x_max = max(x_fft)
-n = len(x_fft)
-x_new = np.linspace(0.00, 6, 100)  # parámetro que ajusta
-y = np.abs(g_fft).reshape(-1)
-g_fft_interp = np.interp(x_new, x_fft, y)
-
-plt.plot(x_fft, y, linewidth=0.6, color="blue")
-plt.plot(x_new, g_fft_interp, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# ejemplo escalado
-# x = np.linspace(0, 2 * np.pi, 10)
-# y = np.sin(x)
-# xvals = np.linspace(0, 2 * np.pi, 50)
-# g_fft_interp = np.interp(xvals, x, y)
 
 # %%%% DF para todos los gusanos
 

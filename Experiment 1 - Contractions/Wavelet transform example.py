@@ -59,6 +59,8 @@ t = np.linspace(0, duration, int(duration * sampling_rate), endpoint=False)
 
 # Generating the original signal
 original_signal = np.sin(2 * np.pi * frequency * t)
+original_signal += 0.2 * np.sin(2 * np.pi * 2.2 * t)
+original_signal += 0.5 * np.sin(2 * np.pi * 3 * t)
 
 # Perform Discrete Wavelet Transform (DWT)
 level = 5  # Adjust the level of decomposition as needed
