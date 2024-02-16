@@ -773,12 +773,13 @@ En lugar de contar el número de picos, voy a usar transformar las señales al d
 ## Ejemplo FFT 1 pez
 """
 
-# %%% Pez Ejemplo FFT - Analisis de Frecuencias del movimiento para un Pez Zebra
+# %%% Zebra Ejemplo FFT - Analisis de Frecuencias del movimiento para un Pez Zebra
 # la duracion debe estar ajustada para cada sample por haber eliminado los NA. comprobar la duración del video y calular como se eliminan los NA: mejor imputarlos que borrarlos. Los videos tienen 1550 frames
 
 zebra_temp = df[
     (df.Batch == "batch 10") & (df.Fenotype == "KO179") & (df.Fish == "ZebraF_6")
 ]
+
 
 signal = zebra_temp.Round.values  # signal as array
 # smooth signal
@@ -793,45 +794,72 @@ N_points = len(signal)
 # t = np.arange(0, N_points/sample_rate, time_step)
 time_points = zebra_temp.Time
 
-# FFT
-zebra_fft = fft.fft(signal, norm="backward")
-# Calculos para frequencias en seg pare representar en el eje X
-zebra_freqs = fft.fftfreq(N_points, time_step)
-# Power spectral density
-zebra_psd = np.abs(zebra_fft) ** 2 / (sample_rate * N_points)  # Power spectral density
 
-# Filtrado FFT - Filtro por la psd
-zebra_fft_fil = np.array(zebra_fft)
-# # upper power limit
-zebra_fft_fil[zebra_psd > 0.030] = 0
-# # lower power limit
-# zebra_fft_fil[zebra_psd < 0.05e-6] = 0
-# bandpass filter
-zebra_fft_fil[abs(zebra_freqs > 0.8)] = 0
-zebra_fil_psd = np.abs(zebra_fft_fil) ** 2 / (sample_rate * N_points)
+def plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f="Zebra"):
+    # FFT
+    zebra_fft = fft.fft(signal, norm="backward")
+    # Calculos para frequencias en seg pare representar en el eje X
+    zebra_freqs = fft.fftfreq(N_points, time_step)
+    # Power spectral density
+    zebra_psd = np.abs(zebra_fft) ** 2 / (
+        sample_rate * N_points
+    )  # Power spectral density
 
-# Plot
-fig, axes = plt.subplots(2, 2, figsize=(21, 13))
-fft_plot_x = zebra_freqs[(zebra_freqs < 3) & (zebra_freqs > 0)]  # set max freq to plot
+    # Filtrado FFT - Filtro por la psd
+    zebra_fft_fil = np.array(zebra_fft)
+    # # upper power limit
+    # zebra_fft_fil[zebra_psd > 0.030] = 0
+    # # lower power limit
+    zebra_fft_fil[zebra_psd < 0.05e-6] = 0
+    # bandpass filter
+    zebra_fft_fil[abs(zebra_freqs > 0.5)] = 0
+    zebra_fil_psd = np.abs(zebra_fft_fil) ** 2 / (sample_rate * N_points)
 
-sns.lineplot(x=time_points, y=signal, ax=axes[0, 0], color="r")
-sns.lineplot(x=fft_plot_x, y=zebra_psd[0 : len(fft_plot_x)], ax=axes[0, 1])
-sns.lineplot(x=fft_plot_x, y=zebra_fil_psd[0 : len(fft_plot_x)], ax=axes[1, 0])
-# same limit for the filtered fft
-axes[1, 0].set_ylim(axes[0, 1].get_ylim())
-sns.lineplot(x=time_points, y=signal, linewidth=1, alpha=0.6, ax=axes[1, 1], color="r")
-sns.lineplot(x=time_points, y=fft.ifft(zebra_fft_fil), ax=axes[1, 1])
+    # Plot
+    fig, axes = plt.subplots(2, 2, figsize=(21, 13))
+    fft_plot_x = zebra_freqs[
+        (zebra_freqs < 3) & (zebra_freqs > 0)
+    ]  # set max freq to plot
 
-axes[0, 0].set_title("Signal")
-axes[0, 1].set_title("FFT PSD")
-axes[1, 0].set_title("Filtered FFT")
-axes[1, 1].set_title("IFFT")
+    sns.lineplot(x=time_points, y=signal, ax=axes[0, 0], color="r")
+    sns.lineplot(x=fft_plot_x, y=zebra_psd[0 : len(fft_plot_x)], ax=axes[0, 1])
+    sns.lineplot(x=fft_plot_x, y=zebra_fil_psd[0 : len(fft_plot_x)], ax=axes[1, 0])
+    # same limit for the filtered fft
+    axes[1, 0].set_ylim(axes[0, 1].get_ylim())
+    sns.lineplot(
+        x=time_points, y=signal, linewidth=1, alpha=0.6, ax=axes[1, 1], color="r"
+    )
+    sns.lineplot(x=time_points, y=fft.ifft(zebra_fft_fil), ax=axes[1, 1])
 
-# Adjust layout
-plt.tight_layout()
+    axes[0, 0].set_title("Signal")
+    axes[0, 1].set_title("FFT PSD")
+    axes[1, 0].set_title("Filtered FFT")
+    axes[1, 1].set_title("IFFT")
+    fig.suptitle(f)
+    plt.tight_layout()
+    plt.show()
 
-# Show plot
-plt.show()
+
+plot_fft_filter(signal, sample_rate, time_step, N_points, time_points)
+
+# %%% FFT filter for every zebra
+
+df["unique_fish"] = (
+    df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
+)
+
+# Filtro para ver por batch
+dfa = df[df.Batch == "batch 7"]
+
+for f in sorted(set(dfa.unique_fish)):
+    signal = dfa[dfa.unique_fish == f].Round.values  # ajustar estos parametros
+    signal = detrend(signal, axis=0)
+    sample_rate = 9  # frames / s
+    time_step = 1 / sample_rate
+    N_points = len(signal)
+    # t = np.arange(0, N_points/sample_rate, time_step)
+    time_points = zebra_temp.Time
+    plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f)
 
 # %% CODIGO GUSANOS
 
