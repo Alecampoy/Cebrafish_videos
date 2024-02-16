@@ -864,10 +864,8 @@ for f in sorted(set(dfa.unique_fish)):
 # %% CODIGO GUSANOS
 
 
-# %% Analisis de Frecuencias (FFT) por condición
-
-# %%%% DF para todos los gusanos
-
+# %%%% FFT DF para todos los gusanos
+# coimprobar como funciona con el codigo de los gusanos para ver si interesa replicarlo
 sample_rate = 900 / 60
 max_freq = 6
 rate_N = 500
@@ -941,70 +939,6 @@ plt.plot(x_scaled, fft_scaled_MUT.Max, linewidth=0.8, color="orange")
 plt.xlabel("Frecuency (Hz)")
 plt.show()
 
-# %%% Ajustando la longitud de entrada a la FFT a un número comun de frames
-
-# %%%% DF generado
-limite_t = N_points = 300
-x_fft = rfftfreq(N_points, 1 / sample_rate)
-
-# WT
-fft_WT = pd.DataFrame()
-fft_WT.insert(0, "Freq", x_fft)
-fft_WT = fft_WT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        fft_WT.insert(len(fft_WT.columns), g, np.abs(g_fft))
-# MUT
-fft_MUT = pd.DataFrame()
-fft_MUT.insert(0, "Freq", x_fft)
-fft_MUT = fft_MUT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        x_temp = df[["Curvatura"]][df.Gusano == g][:limite_t]
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        fft_MUT.insert(len(fft_MUT.columns), g, np.abs(g_fft))
-funciones_analisis.agrupamiento_gusanos_fft(fft_WT, "CONTROL")
-funciones_analisis.agrupamiento_gusanos_fft(fft_MUT, "MUT")
-
-# %%%% plot Medias
-
-plt.plot(x_fft, fft_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
-    x_fft,
-    (fft_WT.Media - fft_WT.SEM),
-    (fft_WT.Media + fft_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(x_fft, fft_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    x_fft,
-    (fft_MUT.Media - fft_MUT.SEM),
-    (fft_MUT.Media + fft_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
-)
-
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Suma
-
-plt.plot(x_fft, fft_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(x_fft, fft_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Max
-
-plt.plot(x_fft, fft_WT.Max, linewidth=0.8, color="blue")
-plt.plot(x_fft, fft_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
 
 # %% Periodograma gusano y 'Curvatura'
 # %%% funcion periodogram (usa FFT)
@@ -1027,7 +961,9 @@ for ventana in ventanas:
     plt.xlabel("Frecuency (Hz)")
     plt.title("Función periodograma (usa FFT) y una ventana " + ventana)
     plt.show()
-# %%% Lomb-Scargle Periodogram
+
+
+# %% Lomb-Scargle Periodogram
 periods = np.linspace(0.00001, 10, 1000)
 f_periodogram = 2 * np.pi / periods
 y_periodogram = lombscargle(
