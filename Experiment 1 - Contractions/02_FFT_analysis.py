@@ -785,12 +785,13 @@ signal = zebra_temp.Round.values  # signal as array
 # smooth signal
 
 # to avoid the signal at the first fourier coefficient F(0) we should substract offset
+# ^f(0) =  mean power of signal
 # signal = signal - np.mean( signal)
 signal = detrend(signal, axis=0)
 
 sample_rate = 9  # frames / s
-time_step = 1 / sample_rate
-N_points = len(signal)
+time_step = 1 / sample_rate  # Delta t
+N_points = len(signal)  # lenght signal
 # t = np.arange(0, N_points/sample_rate, time_step)
 time_points = zebra_temp.Time
 
