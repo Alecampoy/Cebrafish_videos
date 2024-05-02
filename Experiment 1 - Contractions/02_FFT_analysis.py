@@ -74,6 +74,9 @@ for f in files:
         df.append(csv)
         del (csv, f)
 
+# raw strings (r' ') to avoid escape character issues.
+
+# convierte la lista en un dataframe
 df = pd.concat(df)
 # renombro la columna con nombre repetido
 df = df.rename(columns={"XM.1": "YM"})
