@@ -6,17 +6,15 @@
  * 	
  * Description: Analysis of moving Cebrafish
  * 
- * Input: Folder with the set of bright field images .tiff coming from Leica magnifier
+ * Input: Folder with the set of bright field images .tif or .lif (if individual images) coming from Leica magnifier
  *
- * Method: Segmentation of the zebra embryo using Phantas.
+ * Method: Segmentation of the zebra embryo using Phantast.
  * 
  * Output: Segmented images, skeleton and results file
  * 
  *///////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-// Clean previous data in FIJI
+// Clean previous data in FIJI
 run("Close All");
 run("Clear Results");
 print("\\Clear");
@@ -232,6 +230,7 @@ for (i=0; i<list.length; i++){
 		print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;LongestShortestPath;BranchLen;EuclideanDist;Time");
 		run("Close All");
 		run("Clear Results");
+		run("Collect Garbage");
 	}
 }
 
