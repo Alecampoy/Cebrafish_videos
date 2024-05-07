@@ -232,6 +232,7 @@ for (i=0; i<list.length; i++){
 		print("Frame;area;XM;XM;Perim;Circ;Feret;FeretAngle;MinFeret;AR;Round;Solidity;NBranches;AvgBranchLen;MaxBranchLen;LongestShortestPath;BranchLen;EuclideanDist;Time");
 		run("Close All");
 		run("Clear Results");
+		run("Collect Garbage");
 	}
 }
 
