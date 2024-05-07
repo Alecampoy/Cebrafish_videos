@@ -8,7 +8,7 @@
  * 
  * Input: Folder with the set of bright field images .tiff coming from Leica magnifier
  *
- * Method: Segmentation of the worm using Phantas.
+ * Method: Segmentation of the zebra embryo using Phantas.
  * 
  * Output: Segmented images, skeleton and results file
  * 
