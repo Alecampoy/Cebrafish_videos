@@ -34,37 +34,34 @@ print("Frame;X;Y;Mean-Distance;Time"); // header of the result file in the Log w
 
 // Parent Folder to process all batches
 
-dir_parent = getDirectory("Select the folder with the .mp4 movies");
-list_parent =  getFileList (dir_parent);
+dir_parent = getDirectory("Select the folder where each folder is a batch");
+list_parent =  getFileList (dir_parent); // lista de las carpetas en dir_parent
 
 for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches, llega hasta abajo
-	dir = dir_parent+list_parent[j];
-// Wand for batch
-wand=14.0; // for batch 6
-if (list_parent[j].contains("Batch 07")) {wand=17.0;}
-else if (list_parent[j].contains("Batch 08")) {wand=25.0;}
-else if (list_parent[j].contains("Batch 11")) {wand=9.0;}
+	dir = dir_parent+list_parent[j]; // carpeta con las peliculas
+	// Wand for batch
+	wand=14.0; // for batch 6
+	if (list_parent[j].contains("Batch 07")) {wand=17.0;}
+	else if (list_parent[j].contains("Batch 08")) {wand=25.0;}
+	else if (list_parent[j].contains("Batch 11")) {wand=9.0;}
 
+	// Folder with the files
+	list= getFileList(dir); // lista con los archivos que se van a procesar
+	if (STRICT == true) {Results = createFolder(dir, "Results_strict_"+strict_value);}
+	else {Results = createFolder(dir, "Results");}
 
-// Folder with the files
-
-list= getFileList(dir);
-if (STRICT == true) {Results = createFolder(dir, "Results_strict_"+strict_value);}
-else {Results = createFolder(dir, "Results");}
-
-
-//  Loop to open and process each file
-for (i=0; i<list.length; i++){
-	if (endsWith(list[i], ".mp4")){
+// 1. Loop to open and process each file
+	for (i=0; i<list.length; i++){
+		if (endsWith(list[i], ".mp4")){
 	
-	// 1.2 Open and get data
+		// 1.2 Open and get data
 		title=list[i];
 		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=500 last_frame=4699"); // 14 minutes video
 		rename("original");
 		run("8-bit");
 		original = getImageID();		
 				
-	// 1.3 Get dimensions
+		// 1.3 Get dimensions
 		getDimensions(width, height, channels, slices, frames);
 		getPixelSize(unit, pw, ph, pd);
 		frame_interval = Stack.getFrameInterval();
@@ -74,7 +71,7 @@ for (i=0; i<list.length; i++){
 		//changeValues(0, 1, mean_bck); // performs only in the current slice
 		
 		
-// 2. Process
+// 2. Process filse
 	// 2.1 generate the distance map
 		selectImage(original);
 		Stack.setSlice(slices/2);
