@@ -18,6 +18,7 @@
 run("Close All");
 run("Clear Results");
 print("\\Clear");
+run("Collect Garbage");
 if(roiManager("count") !=0) {roiManager("delete");}
 
 // Set measurements
@@ -34,12 +35,13 @@ Results = createFolder(dir, "Results");
 Start_time = getTime(); // to inform how long does it take to process the folder
 setBatchMode(false);
 
-	// 0.1 Loop to open and process each file
+// 0.1 Loop to open and process each file
 imagen = 0;
 for (i=0; i<list.length; i++){
 	if (endsWith(list[i], "if")){
 		imagen = imagen+1;
-	// 0.2 Open and get data
+
+// 0.2 Open and get data
 		title=list[i];
 		//open(dir+title);
 		run("Bio-Formats (Windowless)", "open=["+dir+title+"]");
@@ -53,23 +55,23 @@ for (i=0; i<list.length; i++){
 // 2. Process
 		rename("original");
 		original = getImageID();
-		run("Duplicate...", "title=duplicate duplicate");
-		run("Median...", "radius=1 stack");
-		run("32-bit");
-		duplicate = getImageID();
 
-// 2.3 Segment the worm
-	//2.3.1 Loop for every temporal frame
+// 2.1 Segment the worm
+	//2.1.1 Loop for every temporal frame
 			for (t = 0; t < frames; t++) {
-				selectImage(duplicate);
+				selectImage(original);
 				Stack.setFrame(t+1);
+				run("Duplicate...", "title=duplicate");
+				duplicate = getImageID();
+				run("Median...", "radius=1");
+				run("32-bit");
 				run("PHANTAST", "sigma=2.8 epsilon=0.02 new slice");
 				run("Invert");
 				run("Fill Holes");
 				rename("binary_temp"); // Output
 				binary_temp=getImageID();
 
-    //2.3.2 Get the largtest element
+    //2.1.2 Get the largtest element
                 run("Analyze Particles...", "size=0-Infinity display add");
                 //run("Grays");
                 selectWindow("Results");
@@ -117,8 +119,7 @@ for (i=0; i<list.length; i++){
 					Solidity = "NA";
 					AR="NA";
 					Round="NA";
-				
-				}
+				}
 
 	// 2.3.4 Skeletonize and measure
 				selectImage(binary_temp);
@@ -157,7 +158,7 @@ for (i=0; i<list.length; i++){
 					V2y = 0;
 				}
 				
-	// 2.3.5 Write the results of the frame in the table			
+// 2.1.5 Write the results of the frame in the table			
 				print((t+1)+";"+area+";"+XM+";"+YM+";"+Perim+";"+Circ+";"+Feret+";"+FeretAngle+";"+MinFeret+";"+AR+";"+Round+";"+Solidity+";"+NBranches+";"+AvgBranchLen+";"+MaxBranchLen+";"+LongestShortestPath+";"+BranchLen+";"+EuclideanDist+";"+frame_interval*t);
 
 // 3. Draw segmentation	on the original at this frame
@@ -203,9 +204,11 @@ for (i=0; i<list.length; i++){
 					//drawLine(V1x, V1y, V2x, V2y); // functions needs arguments in pixels
 					roiManager("Delete");
 				} 
+				// close temporal frame images
 				close("skeleton_temp");
 				close("binary_temp");
 				close("Longest shortest paths");
+				close("duplicate");
 				run("Clear Results");
 				// Create the result as stack
 				if (t==0) {
