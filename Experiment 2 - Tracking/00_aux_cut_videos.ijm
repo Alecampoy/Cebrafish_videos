@@ -6,7 +6,7 @@ dir = getDirectory("Choose a Directory to save all images");
 
 // reference selection at first cross
 getSelectionCoordinates(xpoints, ypoints);
-X0 =  xpoints[0];
+X0 = xpoints[0];
 Y0 = ypoints[0];
 
 // rectangle size
@@ -34,7 +34,6 @@ saveAs("tiff", dir+condiciones[1]);
 close();
 run("Collect Garbage");
 
-
 // well 3
 selectImage(image);
 makeRectangle(X0 + 346 + 12, Y0 - height - 12, width, height);
@@ -44,7 +43,6 @@ saveAs("tiff", dir+condiciones[2]);
 close();
 run("Collect Garbage");
 
-
 // well 4
 selectImage(image);
 makeRectangle(X0 - width - 12, Y0 + 12, width, height);
@@ -53,7 +51,6 @@ run("8-bit");
 saveAs("tiff", dir+condiciones[3]);
 close();
 run("Collect Garbage");
-
 
 // well 5
 selectImage(image);
