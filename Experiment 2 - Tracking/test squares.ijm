@@ -17,9 +17,9 @@ width = 310;
 height = 310;
 } else {
 gap_little = 30;
-gap_big = 525;
-width = 450;
-height = 454;
+gap_big = 543;
+width = 448;
+height = 449;
 }
 
 // condiciones 
