@@ -67,7 +67,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		Stack.setSlice(slices/2);
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=1");
-		run("Enhance Contrast...", "saturated=0.35 normalize"); // ojo: tienen que estar las imagenes limpias por fuera del pocillo. el cartel perturba esta ejecucion
+		run("Enhance Contrast...", "saturated=0.36 normalize"); // ojo: tienen que estar las imagenes limpias por fuera del pocillo. el cartel perturba esta ejecucion
 		run("Gamma...", "value=1.37");
 		run("Gaussian Blur...", "sigma=1");
 		wand=34;
