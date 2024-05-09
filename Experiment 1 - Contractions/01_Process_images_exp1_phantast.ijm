@@ -19,7 +19,7 @@ run("Close All");
 run("Clear Results");
 print("\\Clear");
 run("Collect Garbage");
-if(roiManager("count") !=0) {roiManager("delete");}
+roiManager("reset");
 
 // Set measurements
 run("Options...", "iterations=1 count=1 black");

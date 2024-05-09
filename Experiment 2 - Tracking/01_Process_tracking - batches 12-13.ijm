@@ -52,6 +52,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		// 1.2 Open and get data
 		title=list[i];
 		open(dir+title);
+		run("Select None");
 		rename("original");
 		original = getImageID();		
 				
@@ -68,7 +69,8 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Gaussian Blur...", "sigma=1");
 		run("Enhance Contrast...", "saturated=0.35 normalize"); // ojo: tienen que estar las imagenes limpias por fuera del pocillo. el cartel perturba esta ejecucion
 		run("Gamma...", "value=1.37");
-		wand=21;
+		run("Gaussian Blur...", "sigma=1");
+		wand=34;
 		doWand(width/2, height/2, wand, "4-connected");
 		roiManager("Add");
 		run("Fit Circle");
