@@ -25,10 +25,10 @@ height = 449;
 // condiciones 
 //condiciones = newArray("WT1", "WT2", "WT3", "WT4", "WT5", "WT6");
 //condiciones = newArray("WT7", "WT8", "WT9", "WT10", "WT11", "WT12");
-condiciones = newArray("KO44_13", "KO44_14", "KO44_15", "KO44_16", "KO44_17", "KO44_18");
+//condiciones = newArray("KO44_13", "KO44_14", "KO44_15", "KO44_16", "KO44_17", "KO44_18");
 //condiciones = newArray("KO44_19", "KO44_20", "KO44_21", "KO44_22", "KO44_23", "KO44_24");
 //condiciones = newArray("KO179_25", "KO179_26", "KO179_27", "KO179_28", "KO179_29", "KO179_30");
-//condiciones = newArray("KO179_31", "KO179_32", "KO179_33", "KO179_34", "KO179_35", "KO179_36");
+condiciones = newArray("KO179_31", "KO179_32", "KO179_33", "KO179_34", "KO179_35", "KO179_36");
 
 // well 1
 selectImage(image);
