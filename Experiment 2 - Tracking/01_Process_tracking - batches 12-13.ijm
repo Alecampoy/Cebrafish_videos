@@ -67,10 +67,10 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		Stack.setSlice(slices/2);
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=1");
-		run("Enhance Contrast...", "saturated=0.36 normalize"); // ojo: tienen que estar las imagenes limpias por fuera del pocillo. el cartel perturba esta ejecucion
-		run("Gamma...", "value=1.37");
+		run("Enhance Contrast...", "saturated=0.40 normalize"); // ojo: tienen que estar las imagenes limpias por fuera del pocillo. el cartel perturba esta ejecucion
+		run("Gamma...", "value=1.42");
 		run("Gaussian Blur...", "sigma=1");
-		wand=34;
+		wand=24;
 		doWand(width/2, height/2, wand, "4-connected");
 		roiManager("Add");
 		run("Fit Circle");
