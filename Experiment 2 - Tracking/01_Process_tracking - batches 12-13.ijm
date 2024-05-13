@@ -14,8 +14,8 @@
  * 
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
-STRICT = false; // argumento de find maxima
-if (STRICT == true) {strict_value = 33;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
+STRICT = true; // argumento de find maxima
+if (STRICT == true) {strict_value = 10;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 // 0.0 Clean previous data in FIJI
 run("Close All");
@@ -70,6 +70,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Enhance Contrast...", "saturated=0.40 normalize"); // ojo: tienen que estar las imagenes limpias por fuera del pocillo. el cartel perturba esta ejecucion
 		run("Gamma...", "value=1.42");
 		run("Gaussian Blur...", "sigma=1");
+		run("Subtract Background...", "rolling=50 light");
 		wand=24;
 		doWand(width/2, height/2, wand, "4-connected");
 		roiManager("Add");
@@ -128,27 +129,28 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 						run("Clear Outside");
 						run("Select None");
 						run("Find Maxima...", "prominence=100 output=[Point Selection]");
-					}
+						}
 					selectImage(temp_2_results);
 					close();
-				}
+					}
 				// common measurement of distance map
 					run("Clear Results");
 					selectImage(distance_map);
-					wait(32);			
+					wait(15);			
 					run("Restore Selection");
 					run("Measure");
 					run("Select None");
 
 			} // Finish strict
 			
-			else{run("Find Maxima...", "prominence=100 output=[Point Selection]");			// no strict, considers the fish the brightest point
-			selectImage(distance_map);
-			wait(32);
-			run("Restore Selection");
-			run("Measure");
-			run("Select None");
-			}
+			else { // NO STRICT
+				run("Find Maxima...", "prominence=100 output=[Point Selection]");	// no strict, considers the fish the brightest point
+				selectImage(distance_map);
+				wait(32);
+				run("Restore Selection");
+				run("Measure");
+				run("Select None");
+				}
 
 
 	// 2.3.3 Get features in the frame
@@ -169,8 +171,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 					X = "NA";
 					Y = "NA";
 					Distance_edge = "NA";
-					time = frame/5; // 5 fps
-				
+					time = frame/5; // 5 fps				
 				}
 
 	// 2.3.5 Write the results of the frame in the table			
