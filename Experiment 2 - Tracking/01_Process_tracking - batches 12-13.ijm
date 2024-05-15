@@ -234,6 +234,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		close("*");
 		roiManager("reset"); 
 		run("Clear Results");
+		run("Collect Garbage");
 	}
 }		
 
