@@ -24,3 +24,6 @@ Macro process the images previous to the tracking
 # Experiment 3: Movement of the tail
  
 Marta needs videos from a high speed acquisition camera
+
+
+XXXXXXXXXXXXXXX
