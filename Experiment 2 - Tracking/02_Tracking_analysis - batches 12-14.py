@@ -44,6 +44,72 @@ Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
 """
 
+# %%% Load Files batches 1-11
+
+if platform.system() == "Windows":
+    folder_path = "P:\CABD\Lab Ozren\Marta Fernandez\Behavioral Assays Batches 1-11 Results\Experimento Tracking"
+else:
+    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Tracking/Resultados/"
+
+files = get_files_in_folder(folder_path)
+
+df1 = []
+for f in files:
+    if ".csv" in f:
+        csv = pd.read_csv(f, sep=";")
+        csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
+        csv.insert(1, "Fenotype", re.search("(KO\d*|WT)", f.upper()).group(1))
+        if csv.Batch.iloc[1] == "batch 7":
+            csv.insert(2, "Fish", "ZebraF_" + re.search("(Ko |Wt )(\d+)", f).group(2))
+        else:
+            csv.insert(
+                2, "Fish", "ZebraF_" + re.search("(\d+)(.mp4)", f.lower()).group(1)
+            )
+        df1.append(csv)
+        del (csv, f)
+
+df1 = pd.concat(df1)
+df1.Time = (df1.Frame - 1) / 5  # 5 fps
+# df1 = df1.drop(df1.columns[-1], axis=1)
+
+
+# renombro KO a KO44 para el batch 6 y 7
+df1.loc[df1.Fenotype == "KO", "Fenotype"] = "KO44"
+df1.loc[df1.Fenotype == "KO 44", "Fenotype"] = "KO44"
+df1.loc[df1.Fenotype == "KO 179", "Fenotype"] = "KO179"
+
+df1["Batch"] = pd.Categorical(
+    df1["Batch"],
+    categories=["batch 6", "batch 7", "batch 8", "batch 11"],
+    ordered=True,
+)
+
+df1["DF"] = "DF1"
+
+elements = round(
+    pd.crosstab(index=df1.Batch, columns=df1.Fenotype) / 4200
+)  # divided by lengh of the video
+print(str(elements).replace(".0", "").replace("],", "]\n"))
+
+# %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
+# aparecen como caddena de texto en la columna frame
+df1["Frame"] = pd.to_numeric(df1["Frame"], errors="coerce")
+df1 = df1.dropna(subset=["Frame"], how="any", axis=0)
+
+# %%%% Variables auxiliares
+"""
+Con el dataset limpio genero unas variables auxiliares
+"""
+# Para evaluar la distancia al borde de 0 (border) a 1 (center)
+df1["Dist_border"] = (
+    df1[["Mean-Distance"]] / 255
+)  # Radio del pocillo para estos batches
+# Alternativamente la distancia al centro 1=border a 0=center
+df1["Dist_center"] = abs(df1["Dist_border"] - 1)
+# Variable auxiliar
+df1["Feno_Batch"] = df1.Fenotype.astype(str) + "_" + df1.Batch.astype(str)
+
+
 # %%% Load Files batches 12-14
 
 if platform.system() == "Windows":
@@ -53,34 +119,57 @@ else:
 
 files = get_files_in_folder(folder_path)
 
-df = []
+df2 = []
 for f in files:
     if ".csv" in f:
         csv = pd.read_csv(f, sep=";")
         csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
         csv.insert(1, "Fenotype", re.search("(KO\d*|WT)", f.upper()).group(1))
         csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.tif)", f.lower()).group(1))
-        df.append(csv)
+        df2.append(csv)
         del (csv, f)
 
-df = pd.concat(df)
-# df = df.drop(df.columns[-1], axis=1)
+df2 = pd.concat(df2)
+df2.Time = (df2.Frame - 1) / 6  # 6 fps
+# df2 = df2.drop(df2.columns[-1], axis=1)
 
-df["Batch"] = pd.Categorical(
-    df["Batch"],
+df2["DF"] = "DF2"
+
+df2["Batch"] = pd.Categorical(
+    df2["Batch"],
     categories=["batch 12", "batch 13", "batch 14"],
     ordered=True,
 )
 
 elements = round(
-    pd.crosstab(index=df.Batch, columns=df.Fenotype) / 5601
+    pd.crosstab(index=df2.Batch, columns=df2.Fenotype) / 5601
 )  # divided by lengh of the video
 print(str(elements).replace(".0", "").replace("],", "]\n"))
 
 # %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
 # aparecen como cadena de texto en la columna frame
-df["Frame"] = pd.to_numeric(df["Frame"], errors="coerce")
-df = df.dropna(subset=["Frame"], how="any", axis=0)
+df2["Frame"] = pd.to_numeric(df2["Frame"], errors="coerce")
+df2 = df2.dropna(subset=["Frame"], how="any", axis=0)
+
+# %%%% Variables auxiliares
+"""
+Con el dataset limpio genero unas variables auxiliares. La distancia la normalizo a 1, siendo 0 el borde y 1 el centro del pocillo.
+"""
+
+# Para evaluar la distancia al borde de 0 (border) a 1 (center)
+
+df2["Dist_border"] = (
+    df2[["Mean-Distance"]] / 170
+)  # valor del radio del pocillo medido de las imagenes para batches 12-14
+df2["Dist_center"] = abs(df2["Dist_border"] - 1)
+# Variable auxiliar
+df2["Feno_Batch"] = df2.Fenotype.astype(str) + "_" + df2.Batch.astype(str)
+
+# %%% Union DF de los distintos batches
+"""
+Ojo, el fps de ambas muestras no es el mismo, por lo que hay que considerarlo a la hora de sacar resultados
+"""
+df = pd.concat([df1, df2])
 
 # %% NAs [md]
 """
@@ -149,9 +238,14 @@ Se eliminan e imputan.
 """
 Como se recalculan las distancias entre 2 frames, es posible que una posición outlier aparezca en varios frames, pero solo se elimina una vez, por lo que al recalcular las distancias apareceran de nuevo estos saltos. Para corregirlo se realiza el proceso de filtrado varias veces.
 """
+
+# Para ambos DF
 for i in range(10):
     # Imputación en las columnas que tienen medidas
-    df.loc[df.dist > 180, ("X", "Y", "Mean-Distance")] = np.nan
+    df.loc[
+        df.DF == "DF1" and df.dist > MEDIRYPONER, ("X", "Y", "Mean-Distance")
+    ] = np.nan
+    df.loc[df.DF == "DF2" and df.dist > 180, ("X", "Y", "Mean-Distance")] = np.nan
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -162,6 +256,7 @@ for i in range(10):
     df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
     df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
+
 df_temp = df[
     (df.Batch == "batch 14") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_16")
 ]
@@ -171,24 +266,6 @@ g = sns.histplot(
 )
 g.set_title("Distribution of frame movement of a single zebra")
 plt.show()
-
-# %% Variables auxiliares
-"""
-Con el dataset limpio genero unas variables auxiliares. La distancia la normalizo a 1, siendo 0 el borde y 1 el centro del pocillo.
-"""
-
-# Para evaluar la distancia al borde de 0 (border) a 1 (center)
-
-# a = df.groupby(["Batch", "Fenotype", "Fish"])[
-#     "Mean-Distance"
-# ].max()
-df["Dist_border"] = (
-    df[["Mean-Distance"]] / 170
-)  # valor del radio del pocillo medido de las imagenes. TO DO: Calcular
-# Alternativamente la distancia al centro 1=border a 0=center
-df["Dist_center"] = abs(df["Dist_border"] - 1)
-# Variable auxiliar
-df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
 
 
 # %% Distancia Recorrida [md]

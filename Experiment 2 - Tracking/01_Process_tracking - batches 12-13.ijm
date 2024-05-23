@@ -163,7 +163,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 					X = getResultString("X", 0);
 					Y = getResultString("Y", 0);
 					Distance_edge = getResultString("Mean", 0); // the distance to the edge is the mean value of the distance map
-					time = frame/5; // 5 fps
+					time = frame/6; // 6 fps
 					
 				} else { 
 					wait(32);
@@ -171,7 +171,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 					X = "NA";
 					Y = "NA";
 					Distance_edge = "NA";
-					time = frame/5; // 5 fps				
+					time = frame/6; // 6 fps				
 				}
 
 	// 2.3.5 Write the results of the frame in the table			
