@@ -44,13 +44,13 @@ Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
 """
 
-# %%% Load Files
+# %%% Load Files batches 12-14
 
 if platform.system() == "Windows":
     folder_path = "P:\CABD\Lab Ozren\Marta Fernandez\Behavioral Assays Batches 12-14 Results\Experimento Tracking"
 else:
     folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Tracking/Resultados_strict/"
-    
+
 files = get_files_in_folder(folder_path)
 
 df = []
@@ -59,8 +59,7 @@ for f in files:
         csv = pd.read_csv(f, sep=";")
         csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
         csv.insert(1, "Fenotype", re.search("(KO\d*|WT)", f.upper()).group(1))
-        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.tif)", f.lower()).group(1)
-            )
+        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.tif)", f.lower()).group(1))
         df.append(csv)
         del (csv, f)
 
@@ -73,13 +72,12 @@ df["Batch"] = pd.Categorical(
     ordered=True,
 )
 
+elements = round(
+    pd.crosstab(index=df.Batch, columns=df.Fenotype) / 5601
+)  # divided by lengh of the video
+print(str(elements).replace(".0", "").replace("],", "]\n"))
 
-    elements = round(
-        pd.crosstab(index=df.Batch, columns=df.Fenotype) / 5601
-    )  # divided by lengh of the video
-    print(str(elements).replace(".0", "").replace("],", "]\n"))
-
-# %% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
+# %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
 # aparecen como cadena de texto en la columna frame
 df["Frame"] = pd.to_numeric(df["Frame"], errors="coerce")
 df = df.dropna(subset=["Frame"], how="any", axis=0)
@@ -126,7 +124,7 @@ Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demas
 # Filtrado de los datos
 Voy a eliminar los frames en los que se ha detectado un salto de posición demasiado alto ya que posiblemente se debera al haber detectado una posición anomala en ese frame. P.ejem el pez de ejemplo tiene uno de estos eventos
 """
-# %%% Histograma de las distancias rocorridas 
+# %%% Histograma de las distancias rocorridas
 df["X_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).X.diff()
 df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
 df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
@@ -135,7 +133,9 @@ df_temp = df[
     (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
 ]
 
-g = sns.histplot(data=df_temp, x="dist", stat="density", log_scale=(False, True), binwidth = 9)
+g = sns.histplot(
+    data=df_temp, x="dist", stat="density", log_scale=(False, True), binwidth=9
+)
 g.set_title("Distribution of frame movement of a single zebra")
 plt.show()
 # %%% [md]
@@ -149,9 +149,9 @@ Se eliminan e imputan.
 """
 Como se recalculan las distancias entre 2 frames, es posible que una posición outlier aparezca en varios frames, pero solo se elimina una vez, por lo que al recalcular las distancias apareceran de nuevo estos saltos. Para corregirlo se realiza el proceso de filtrado varias veces.
 """
-for i in [0, 1, 2]:
+for i in range(10):
     # Imputación en las columnas que tienen medidas
-    df.loc[df.dist > 200, ("X", "Y", "Mean-Distance")] = np.nan
+    df.loc[df.dist > 180, ("X", "Y", "Mean-Distance")] = np.nan
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -163,10 +163,12 @@ for i in [0, 1, 2]:
     df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
 df_temp = df[
-    (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
+    (df.Batch == "batch 14") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_16")
 ]
 
-g = sns.histplot(data=df_temp, x="dist", stat="density", log_scale=(False, True), binwidth = 9)
+g = sns.histplot(
+    data=df_temp, x="dist", stat="density", log_scale=(False, True), binwidth=9
+)
 g.set_title("Distribution of frame movement of a single zebra")
 plt.show()
 
@@ -176,7 +178,13 @@ Con el dataset limpio genero unas variables auxiliares. La distancia la normaliz
 """
 
 # Para evaluar la distancia al borde de 0 (border) a 1 (center)
-df["Dist_border"] = df.groupby(["Batch", "Fenotype", "Fish"])['Mean-Distance'].transform(lambda x: x / x.max())
+
+# a = df.groupby(["Batch", "Fenotype", "Fish"])[
+#     "Mean-Distance"
+# ].max()
+df["Dist_border"] = (
+    df[["Mean-Distance"]] / 170
+)  # valor del radio del pocillo medido de las imagenes. TO DO: Calcular
 # Alternativamente la distancia al centro 1=border a 0=center
 df["Dist_center"] = abs(df["Dist_border"] - 1)
 # Variable auxiliar
@@ -196,13 +204,13 @@ Se calcula la distancia que recorre el pez a lo largo del video y se gráfica po
 Dist = (
     df.dropna()
     .groupby(["Batch", "Fenotype", "Fish"], as_index=False)
-    .dist.sum(min_count=1)
+    .dist.sum(min_count=0)
     .round()
 )  # .reset_index()
 
 Dist = Dist.loc[
     Dist.dist != 0
-]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos
+]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 # %%% Box-plot por batch
 
 grped_bplot = sns.catplot(
@@ -249,7 +257,7 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
 # %%% Grafico Histograma 1 Zebra
-df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_1")]
+df_temp = df[(df.Batch == "batch 14") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_3")]
 
 g = sns.histplot(
     data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=12
@@ -260,7 +268,7 @@ plt.show()
 
 # %%% [md]
 """
-Se observa como el Zebra se posiciona mayormente a lo largo de la franja centra, como esperable probabilisticamente, sin posicionarse apenas cerca del borde. 
+Se observa como el Zebra se posiciona mayormente a lo largo de la franja central, como esperable probabilisticamente, sin posicionarse apenas cerca del borde. 
 
 ## El Histograma debe normalizarse y luego lo podremos agrupar
 
@@ -316,9 +324,9 @@ En los casos en los que la distribución de una condición es significativamente
 
 # %%% Histograma acumulado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-batch = "batch 8"
+batch = "batch 12"
 df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
-df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO179")]
+df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
 
 sns.histplot(
     data=df_temp,
@@ -366,7 +374,7 @@ Nota a posteriori: lo siguiente podría realizarse usando un Density Kernel Esti
 
 # %%%% Generación Data Frame y agregación de histogramas
 
-nbins = int(round(math.log(4200, 2), 1))  # Numero de Bins siguiendo regla
+nbins = int(round(math.log(5601, 2), 1))  # Numero de Bins siguiendo regla
 
 distribution_df = (
     df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)
@@ -455,7 +463,7 @@ Por último, voy a realizar un análisis del tiempo que pasa cercano al borde. P
 # %%%% Plot Ejemplo threshold
 
 df_temp = df[
-    (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_4")
+    (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_14")
 ]
 
 g = sns.lineplot(data=df_temp, x="Frame", y="Dist_border")
@@ -471,7 +479,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border"
-threshold = 0.15
+threshold = 0.1
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x < threshold).sum())
@@ -541,7 +549,7 @@ threshold_result = pd.DataFrame(
 )
 ref = ko44 = ko179 = np.nan
 
-for thr in np.arange(0.0, 0.15, 0.01):  # iteración sobre el threshold
+for thr in np.arange(0.0, 0.30, 0.02):  # iteración sobre el threshold
     # data frame con los valores para ese threshold
     time_over_Thr = (
         df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
