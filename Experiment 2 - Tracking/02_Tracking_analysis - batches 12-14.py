@@ -206,7 +206,7 @@ df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
 
 # %%% [md]
 """
-Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido 5600 frames. Se han imputado
+Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido miles de frames. Se han imputado
 """
 # %% Filtrado de datos debido a detección de otras particulas[md]
 """
