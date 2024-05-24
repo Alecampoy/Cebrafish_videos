@@ -49,7 +49,7 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 if platform.system() == "Windows":
     folder_path = "P:\CABD\Lab Ozren\Marta Fernandez\Behavioral Assays Batches 1-11 Results\Experimento Tracking"
 else:
-    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Tracking/Resultados/"
+    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Behavioral Assays Batches 1-11 Results/Experimento Tracking/"
 
 files = get_files_in_folder(folder_path)
 
@@ -84,7 +84,7 @@ df1["Batch"] = pd.Categorical(
     ordered=True,
 )
 
-df1["DF"] = "DF1"
+df1["DF"] = "DF1"  # Para identificar el grupo de batches
 
 elements = round(
     pd.crosstab(index=df1.Batch, columns=df1.Fenotype) / 4200
@@ -115,7 +115,7 @@ df1["Feno_Batch"] = df1.Fenotype.astype(str) + "_" + df1.Batch.astype(str)
 if platform.system() == "Windows":
     folder_path = "P:\CABD\Lab Ozren\Marta Fernandez\Behavioral Assays Batches 12-14 Results\Experimento Tracking"
 else:
-    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Tracking/Resultados_strict/"
+    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Behavioral Assays Batches 12-14 Results/Experimento Tracking/"
 
 files = get_files_in_folder(folder_path)
 
@@ -133,7 +133,7 @@ df2 = pd.concat(df2)
 df2.Time = (df2.Frame - 1) / 6  # 6 fps
 # df2 = df2.drop(df2.columns[-1], axis=1)
 
-df2["DF"] = "DF2"
+df2["DF"] = "DF2"  # Para identificalo luego
 
 df2["Batch"] = pd.Categorical(
     df2["Batch"],
@@ -242,9 +242,9 @@ Como se recalculan las distancias entre 2 frames, es posible que una posición o
 # Para ambos DF
 for i in range(10):
     # Imputación en las columnas que tienen medidas
-    df.loc[
-        df.DF == "DF1" and df.dist > MEDIRYPONER, ("X", "Y", "Mean-Distance")
-    ] = np.nan
+    df.loc[df.DF == "DF1" and df.dist > MEDIRYPONER, ("X", "Y", "Mean-Distance")] = (
+        np.nan
+    )
     df.loc[df.DF == "DF2" and df.dist > 180, ("X", "Y", "Mean-Distance")] = np.nan
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
