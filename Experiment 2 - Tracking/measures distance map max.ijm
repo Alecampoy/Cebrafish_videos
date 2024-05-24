@@ -52,11 +52,12 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 
 // 1. Loop to open and process each file
 	for (i=0; i<list.length; i++){
-		if (endsWith(list[i], ".tif")){
+		if (endsWith(list[i], ".mp4")){
 	
 		// 1.2 Open and get data
 		title=list[i];
-		open(dir+title);
+		run("Movie (FFMPEG)...", "choose=["+dir+title+"] first_frame=500 last_frame=500"); // para videos
+		// open(dir+title); // Para imagnes tiff
 		run("Select None");
 		rename("original");
 		original = getImageID();
@@ -77,7 +78,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Gamma...", "value=1.42");
 		run("Gaussian Blur...", "sigma=1");
 		run("Subtract Background...", "rolling=50 light");
-		wand=24;
+		wand=19;
 		doWand(width/2, height/2, wand, "4-connected");
 		roiManager("Add");
 		run("Fit Circle");
@@ -86,7 +87,8 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Distance Map");
 		getStatistics(area, mean, min, max, std, histogram);
 		print(list_parent[j]+";"+list[i]+";"+max);
-
+		selectImage("well_edge");
+		saveAs("jpg", Results+title+"_well.jpg");
 		close("*");
 		roiManager("reset"); 
 		run("Clear Results");

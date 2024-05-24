@@ -242,10 +242,10 @@ Como se recalculan las distancias entre 2 frames, es posible que una posición o
 # Para ambos DF
 for i in range(10):
     # Imputación en las columnas que tienen medidas
-    df.loc[df.DF == "DF1" and df.dist > MEDIRYPONER, ("X", "Y", "Mean-Distance")] = (
+    df.loc[(df.DF == "DF1") & (df.dist > 220), ("X", "Y", "Mean-Distance")] = np.nan
+    df.loc[(df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")] = (
         np.nan
-    )
-    df.loc[df.DF == "DF2" and df.dist > 180, ("X", "Y", "Mean-Distance")] = np.nan
+    )  # ya el tamaño de los pocillso son diferentes
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -258,7 +258,7 @@ for i in range(10):
 
 
 df_temp = df[
-    (df.Batch == "batch 14") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_16")
+    (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
 ]
 
 g = sns.histplot(
