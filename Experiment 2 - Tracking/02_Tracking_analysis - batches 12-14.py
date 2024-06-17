@@ -92,18 +92,18 @@ elements = round(
 print(str(elements).replace(".0", "").replace("],", "]\n"))
 
 # %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
-# aparecen como caddena de texto en la columna frame
+# aparecen como cadena de texto en la columna frame
 df1["Frame"] = pd.to_numeric(df1["Frame"], errors="coerce")
 df1 = df1.dropna(subset=["Frame"], how="any", axis=0)
 
-# %%%% Variables auxiliares
+# %%% Variables auxiliares
 """
-Con el dataset limpio genero unas variables auxiliares
+Con el dataset limpio genero unas variables auxiliares. La más importante es la distancia al borde (o al centro) normalizada a 1
 """
 # Para evaluar la distancia al borde de 0 (border) a 1 (center)
 df1["Dist_border"] = (
     df1[["Mean-Distance"]] / 255
-)  # Radio del pocillo para estos batches
+)  # Radio del pocillo para estos batches, medido con un macro
 # Alternativamente la distancia al centro 1=border a 0=center
 df1["Dist_center"] = abs(df1["Dist_border"] - 1)
 # Variable auxiliar
@@ -151,7 +151,7 @@ print(str(elements).replace(".0", "").replace("],", "]\n"))
 df2["Frame"] = pd.to_numeric(df2["Frame"], errors="coerce")
 df2 = df2.dropna(subset=["Frame"], how="any", axis=0)
 
-# %%%% Variables auxiliares
+# %%% Variables auxiliares
 """
 Con el dataset limpio genero unas variables auxiliares. La distancia la normalizo a 1, siendo 0 el borde y 1 el centro del pocillo.
 """
@@ -222,14 +222,14 @@ df_temp = df[
     (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
 ]
 
-g = sns.histplot(
-    data=df_temp, x="dist", stat="density", log_scale=(False, True), binwidth=9
-)
+g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
+# g.set_yscale('log')
+plt.yscale("log")
 plt.show()
 # %%% [md]
 """
-Se aprecia como hay movimientos que la distancia recorrida es muy alta. Esto solo puede deberse a un error en la detección del gusano. Considero que 200px es el límite de salto por frame, aunque bien podrían ser menos.
+Se aprecia como hay movimientos que la distancia recorrida es muy alta. Esto solo puede deberse a un error en la detección del gusano. Considero que 220px o 180px -según batches- es el límite de salto por frame, aunque bien podrían ser menos.
 Se eliminan e imputan.
 """
 
@@ -243,9 +243,9 @@ Como se recalculan las distancias entre 2 frames, es posible que una posición o
 for i in range(10):
     # Imputación en las columnas que tienen medidas
     df.loc[(df.DF == "DF1") & (df.dist > 220), ("X", "Y", "Mean-Distance")] = np.nan
-    df.loc[(df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")] = (
-        np.nan
-    )  # ya el tamaño de los pocillso son diferentes
+    df.loc[
+        (df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")
+    ] = np.nan  # ya el tamaño de los pocillso son diferentes
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -261,10 +261,9 @@ df_temp = df[
     (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
 ]
 
-g = sns.histplot(
-    data=df_temp, x="dist", stat="density", log_scale=(False, True), binwidth=9
-)
+g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
+g.set_yscale("log")
 plt.show()
 
 
@@ -290,16 +289,17 @@ Dist = Dist.loc[
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 # %%% Box-plot por batch
 
+# batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"] 
+batches_2_plot = ["batch 12", "batch 13", "batch 14"]
 grped_bplot = sns.catplot(
     x="Batch",
     y="dist",
     hue="Fenotype",
     kind="box",
     showfliers=False,
-    legend=False,
     height=6,
     aspect=1.9,
-    data=Dist,
+    data=Dist[Dist.Batch.isin(batches_2_plot)],
     hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
@@ -308,19 +308,27 @@ grped_bplot = sns.stripplot(
     y="dist",
     hue="Fenotype",
     jitter=0.18,
-    dodge=True,
+    dodge=True,    
+    legend=False,
     marker="o",
     color="black",
     # palette="Set2",
-    data=Dist,
-    hue_order=["WT", "KO44", "KO179"],
+    data=Dist[Dist.Batch.isin(batches_2_plot)],
+    hue_order=["WT", "KO44", "KO179"]
 )
+
 handles, labels = grped_bplot.get_legend_handles_labels()
+grped_bplot.axes.legend(handles[0:3], labels[0:3], title='Fenotype', loc='upper right')
 
+# Set title for the plot
+grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
 
-grped_bplot.set_title("Distancia Total Recorrida por el Zebrafish (px)")
-plt.legend(handles[0:3], labels[0:3])
 plt.show()
+
+# %%%% [md]
+'''
+los batches tomados con distinto set-up no son comparables ya que el tamaño del pixel no es el mismo. Se podría calibrar si fuera necesario.
+'''
 
 # %% Posición del Pez sobre el video [md]
 """ 
@@ -334,7 +342,7 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
 # %%% Grafico Histograma 1 Zebra
-df_temp = df[(df.Batch == "batch 14") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_3")]
+df_temp = df[(df.Batch == "batch 12") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_2")]
 
 g = sns.histplot(
     data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=12
@@ -345,25 +353,28 @@ plt.show()
 
 # %%% [md]
 """
-Se observa como el Zebra se posiciona mayormente a lo largo de la franja central, como esperable probabilisticamente, sin posicionarse apenas cerca del borde. 
+Se observa como el Zebra se posiciona a lo largo del video. Al estar normalizado a densidad, el tiempo total del video es 1
 
-## El Histograma debe normalizarse y luego lo podremos agrupar
+`density: normalize such that the total area of the histogram equals 1`
 
 """
 # %%% Histograma por Condición [md]
 """
 ## Histograma Condición 
-Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo acumulando los histogramas. Esto no es un problema ya que como todos los videos duran lo mismo, pueden sumarse los counts y sera equivalente a sumar la densidad de probabilidades. 
+Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo acumulando los histogramas. Esto no es un problema ya que los histogramas estan normalizados con density. 
 
 """
 # %%% Dibujado con Histplot por Batch
-
+ Explorar por que no pinta los batches del DF2- quizas es por los index
+ 
+batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"] 
+# batches_2_plot = ["batch 12", "batch 13", "batch 14"]
 
 g = sns.FacetGrid(
-    df,
+    data=df2,
     row="Batch",
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT",  "KO44", "KO179"],
     palette="pastel",
     sharex="col",
     sharey=False,
