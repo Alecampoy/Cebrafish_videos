@@ -5,6 +5,7 @@ Created on Tue Feb 13 12:27:09 2024
 @author: Ale Campoy
 """
 import numpy as np
+import matplotlib.pyplot as plt
 
 R = 1
 r = R * np.sqrt(
@@ -21,8 +22,11 @@ weights_a_ind = 1 / weights_a[bin_of_r]
 # b = np.diff(np.searchsorted(bins, r))
 weights_r = 1 / (np.pi * r)  # dada la naturaleza radial de los datos
 
+sns.histplot(r, stat="density", binrange=[0, 1], bins=10)
+
+plt.show()
+
 # %%
-import matplotlib.pyplot as plt
 
 
 count, bins = np.histogram(r, bins, density=True)

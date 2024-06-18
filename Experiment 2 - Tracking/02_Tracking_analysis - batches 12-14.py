@@ -110,7 +110,7 @@ df1["Dist_center"] = abs(df1["Dist_border"] - 1)
 df1["Feno_Batch"] = df1.Fenotype.astype(str) + "_" + df1.Batch.astype(str)
 
 
-# %%% Load Files batches 12-14
+# %%% Load batches 12-14
 
 if platform.system() == "Windows":
     folder_path = "P:\CABD\Lab Ozren\Marta Fernandez\Behavioral Assays Batches 12-14 Results\Experimento Tracking"
@@ -169,7 +169,7 @@ df2["Feno_Batch"] = df2.Fenotype.astype(str) + "_" + df2.Batch.astype(str)
 """
 Ojo, el fps de ambas muestras no es el mismo, por lo que hay que considerarlo a la hora de sacar resultados
 """
-df = pd.concat([df1, df2])
+df = pd.concat([df1, df2]).reset_index()
 
 # %% NAs [md]
 """
@@ -289,7 +289,7 @@ Dist = Dist.loc[
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 # %%% Box-plot por batch
 
-# batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"] 
+# batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
 batches_2_plot = ["batch 12", "batch 13", "batch 14"]
 grped_bplot = sns.catplot(
     x="Batch",
@@ -308,17 +308,17 @@ grped_bplot = sns.stripplot(
     y="dist",
     hue="Fenotype",
     jitter=0.18,
-    dodge=True,    
+    dodge=True,
     legend=False,
     marker="o",
     color="black",
     # palette="Set2",
     data=Dist[Dist.Batch.isin(batches_2_plot)],
-    hue_order=["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179"],
 )
 
 handles, labels = grped_bplot.get_legend_handles_labels()
-grped_bplot.axes.legend(handles[0:3], labels[0:3], title='Fenotype', loc='upper right')
+grped_bplot.axes.legend(handles[0:3], labels[0:3], title="Fenotype", loc="upper right")
 
 # Set title for the plot
 grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
@@ -326,9 +326,9 @@ grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
 plt.show()
 
 # %%%% [md]
-'''
-los batches tomados con distinto set-up no son comparables ya que el tamaño del pixel no es el mismo. Se podría calibrar si fuera necesario.
-'''
+"""
+los batches tomados con distinto set-up no son comparables ya que el tamaño del pixel y de la petri no es el mismo. Se podría calibrar si fuera necesario.
+"""
 
 # %% Posición del Pez sobre el video [md]
 """ 
@@ -356,7 +356,6 @@ plt.show()
 Se observa como el Zebra se posiciona a lo largo del video. Al estar normalizado a densidad, el tiempo total del video es 1
 
 `density: normalize such that the total area of the histogram equals 1`
-
 """
 # %%% Histograma por Condición [md]
 """
@@ -364,17 +363,18 @@ Se observa como el Zebra se posiciona a lo largo del video. Al estar normalizado
 Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo acumulando los histogramas. Esto no es un problema ya que los histogramas estan normalizados con density. 
 
 """
+
 # %%% Dibujado con Histplot por Batch
- Explorar por que no pinta los batches del DF2- quizas es por los index
- 
-batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"] 
+# Explorar por que no pinta los batches del DF2- quizas es por los index
+
+batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
 # batches_2_plot = ["batch 12", "batch 13", "batch 14"]
 
 g = sns.FacetGrid(
-    data=df2,
+    data=df,
     row="Batch",
     hue="Fenotype",
-    hue_order=["WT",  "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179"],
     palette="pastel",
     sharex="col",
     sharey=False,
@@ -403,6 +403,8 @@ g.set_axis_labels(fontsize=20)
 g.fig.suptitle("Accumulated distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
+
+
 # %%% [md]
 """
 Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso.
@@ -410,7 +412,7 @@ Este gráfico muestra la densidad de probabilidad para cada condición y batch, 
 En los casos en los que la distribución de una condición es significativamente diferente a las otras habria que estudiar que la contribución individual de cada Zebra sea razonablemente similar, y no que un solo Zebra sea el que produce la desviacion del histograma o PDF. Lo vemos
 """
 
-# %%% Histograma acumulado por Zebra
+# %%% Histograma apilado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
 batch = "batch 12"
 df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
@@ -443,7 +445,7 @@ g = sns.histplot(
     palette="Oranges",
     alpha=0.3,
 )
-g.set_title("Accumulated histogram of radial position relative to edge")
+g.set_title("Stacked histogram of radial position relative to edge")
 
 plt.show()
 
