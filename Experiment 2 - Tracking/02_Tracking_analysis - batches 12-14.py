@@ -104,6 +104,11 @@ Con el dataset limpio genero unas variables auxiliares. La más importante es la
 df1["Dist_border"] = (
     df1[["Mean-Distance"]] / 255
 )  # Radio del pocillo para estos batches, medido con un macro
+
+# Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. También es problematico las observaciones con valor 0 entero. Voy a imputar esto
+df1.loc[df1.Dist_border >= 1, "Dist_border"] = 0.99
+df1.loc[df1.Dist_border <= 0, "Dist_border"] = 0.001
+
 # Alternativamente la distancia al centro 1=border a 0=center
 df1["Dist_center"] = abs(df1["Dist_border"] - 1)
 # Variable auxiliar
@@ -161,6 +166,11 @@ Con el dataset limpio genero unas variables auxiliares. La distancia la normaliz
 df2["Dist_border"] = (
     df2[["Mean-Distance"]] / 170
 )  # valor del radio del pocillo medido de las imagenes para batches 12-14
+
+# Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto
+df2.loc[df2.Dist_border >= 1, "Dist_border"] = 0.99
+df2.loc[df2.Dist_border <= 0, "Dist_border"] = 0.001
+
 df2["Dist_center"] = abs(df2["Dist_border"] - 1)
 # Variable auxiliar
 df2["Feno_Batch"] = df2.Fenotype.astype(str) + "_" + df2.Batch.astype(str)
@@ -199,11 +209,36 @@ NAs_barplot.set_xlabels("Fish", fontsize=15)
 plt.show()
 
 # %%% NA Impute
-
+Hay un problema con la intrepolacion: nolo esta haciendo por grupo, corregir. df_temp sirve de ejemplo. usar codigo chatgpt
 df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
-    method="linear"
+    method="linear",  limit_direction='both'
 )
 
+df_temp = df[(df.Batch == "batch 13") & (df.Fenotype == "KO179") & (df.Fish == "ZebraF_34")]
+
+df_temp[["X", "Y", "Mean-Distance"]] = df_temp[["X", "Y", "Mean-Distance"]].interpolate(
+    method="linear",  limit_direction='both'
+)
+
+import pandas as pd
+import numpy as np
+
+# Example DataFrame
+data = {'group_col': ['A', 'A', 'A', 'B', 'B', 'B'],
+        'value': [np.nan, 2, np.nan, 4, np.nan, 6]}
+df = pd.DataFrame(data)
+
+# Define a function to interpolate within each group
+def interpolate_group(group):
+    return group.interpolate(method='linear', limit_direction='both')
+
+# Apply the interpolation by group
+df_interpolated = df.groupby('group_col').apply(interpolate_group)
+
+print("Original DataFrame:")
+print(df)
+print("\nInterpolated DataFrame:")
+print(df_interpolated)
 # %%% [md]
 """
 Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido miles de frames. Se han imputado
@@ -342,7 +377,7 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
 # %%% Grafico Histograma 1 Zebra
-df_temp = df[(df.Batch == "batch 12") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_2")]
+df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_6")]
 
 g = sns.histplot(
     data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=12
@@ -351,24 +386,66 @@ g.set_title("Distribution of radial position relative to edge of a single zebra"
 
 plt.show()
 
-# %%% [md]
+# %%%% [md]
 """
 Se observa como el Zebra se posiciona a lo largo del video. Al estar normalizado a densidad, el tiempo total del video es 1
 
 `density: normalize such that the total area of the histogram equals 1`
 """
-# %%% Histograma por Condición [md]
+
+# %%% Distribución Radial[md]
+
 """
-## Histograma Condición 
+## Distribución Radial
+Dado que el pocillo es circular y estamos viendo la distribución de su posición radial, hay que compensar la diferencia del area sobre el que el gusano puede distribuirse para una misma posición radial. Se puede visualizar como la diferencia de area que ocupan los anillos para la posición radial. El código de ejemplo se encuentra en `weight area.py`
+
+"""
+
+# %%% Histograma con pesos
+
+# metodo pesos 1
+weights_r = 1 / (
+    np.pi * (1 - df_temp.Dist_border)
+)  # dada la naturaleza radial de los datos y que la distribución va de 0 siendo el anillo más grande al anillo de menos area 1
+
+# metodo pesos 2
+nbins = 12
+bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
+weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
+weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area
+bin_of_dist = np.searchsorted(bins, df_temp.Dist_border) - 1  # bin al que pertenece cada observación
+weights_a_ind = 1 / weights_a[bin_of_dist]
+
+g = sns.histplot(
+    data=df_temp,
+    x="Dist_border",
+    stat="density",
+    weights=weights_r,
+    binrange=[0, 1],
+    bins=nbins,
+)
+g.set_title(
+    "Weighted Distribution of radial position relative to edge of a single zebra"
+)
+
+plt.show()
+
+#%%%% [md]
+'''
+Un par de ejemplos significativos de la diferencia entre el histograma con y sin ponderar, que puede verse bien en las imagenes son los zebra 4,5, y 6 del batch 7
+
+Hay que definir que pesos se usan. el problema con los pesos individuales `weights_r`es que para los valores extremos calcula un peso muy alto, por lo que creo que es mejor generar unos pesos para los bins y usar el mismo peso para todas las observaciones que caigan dentro del bin.
+'''
+
+# %%% Hist. por Condición [md]
+""" 
+## Histograma por Condición 
 Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo acumulando los histogramas. Esto no es un problema ya que los histogramas estan normalizados con density. 
 
 """
 
-# %%% Dibujado con Histplot por Batch
-# Explorar por que no pinta los batches del DF2- quizas es por los index
+# %%%% Dibujado con Histplot por Batch
 
-batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
-# batches_2_plot = ["batch 12", "batch 13", "batch 14"]
 
 g = sns.FacetGrid(
     data=df,
@@ -404,17 +481,71 @@ g.fig.suptitle("Accumulated distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
 
+# %%%% Pesos para Ponderar  por la distribución radial por Batch
+nbins = 10
+bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
+# df["Weights"] = 1 / (np.pi * (1 - df.Dist_border))
+weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
+weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area
+bin_of_dist = np.searchsorted(bins, df.Dist_border)-1  # bin al que pertenece cada observación
+a = 1 / weights_a[bin_of_dist]
+(bin_of_dist == 10).sum()
 
-# %%% [md]
+bin_of_dist[bin_of_dist==10]
+np.where(bin_of_dist==10)
+a=df.iloc[np.where(bin_of_dist==10)]
+# %%%% Hist. ponderado por distribución radial
+
+batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
+# batches_2_plot = ["batch 12", "batch 13", "batch 14"]
+
+g = sns.FacetGrid(
+    data=df,
+    row="Batch",
+    hue="Fenotype",
+    hue_order=["WT", "KO44", "KO179"],
+    palette="pastel",
+    sharex="col",
+    sharey=False,
+    height=5,
+    aspect=4,
+)
+
+# g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+# fontsize=24, fontdict={"weight": "bold"})
+
+g.map_dataframe(
+    sns.histplot,
+    x="Dist_border",
+    element="step",
+    edgecolor="black",
+    binrange=[0, 1],
+    # cumulative=True,
+    bins=nbins,
+    stat="density",
+    weights="Weights_r",
+    common_norm=False,
+    kde=True,
+    kde_kws={"bw_adjust": 0.8},
+)
+g.add_legend()
+g.set_axis_labels(fontsize=20)
+g.fig.suptitle("Accumulated distribution of radial position relative to edge")
+plt.subplots_adjust(top=0.95)
+plt.show()
+
+# %%%% [md]
 """
-Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso.
+Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso en el caso en el que no están ponderados.  
+
+El problema de la distribución ponderada por ser radial viene, creo, del hecho de que se están agregando todos los peces conjuntamente. Posiblemente sea más indicado ver los peces independientemente
 
 En los casos en los que la distribución de una condición es significativamente diferente a las otras habria que estudiar que la contribución individual de cada Zebra sea razonablemente similar, y no que un solo Zebra sea el que produce la desviacion del histograma o PDF. Lo vemos
 """
 
-# %%% Histograma apilado por Zebra
+# %% Hist. apilado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-batch = "batch 12"
+batch = "batch 7"
 df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
 df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
 
@@ -451,8 +582,51 @@ plt.show()
 
 # %%% [md]
 """
-Resulta un plot bastante sucio pero se aprecia la diferencia. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que son razonablemente homogeneos y no se debe a un Zebra Oulier.
+Resulta un plot bastante sucio pero se aprecia la diferencia. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que son razonablemente homogeneos y no se debe a un Zebra Oulier.   
 
+Haciendo lo mismo de manera ponderada. Recomiendo verlo para cada batch
+"""
+#%%% Hist. apilado ponderado
+batch = "batch 14"
+df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
+df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
+
+sns.histplot(
+    data=df_temp,
+    x="Dist_border",
+    hue="Fish",
+    multiple="stack",
+    common_norm=True,
+    element="poly",
+    stat="density",
+    weights="Weights_r",
+    binrange=[0, 1],
+    bins=12,
+    palette="Blues",
+    alpha=0.4,
+)
+
+g = sns.histplot(
+    data=df_temp2,
+    x="Dist_border",
+    hue="Fish",
+    multiple="stack",
+    element="step",
+    common_norm=True,
+    stat="density",
+    weights="Weights_r",
+    binrange=[0, 1],
+    bins=12,
+    palette="Oranges",
+    alpha=0.3,
+)
+g.set_title("Stacked histogram of radial position relative to edge")
+
+plt.show()
+
+
+#%%%
+"""
 ### Normalización manual histograma
 Otra alternativa es generar manualmente el histograma y representarlo con barras de error.
 
@@ -463,7 +637,7 @@ Nota a posteriori: lo siguiente podría realizarse usando un Density Kernel Esti
 
 
 # %%%% Generación Data Frame y agregación de histogramas
-
+Incluir aqui la normalizacion
 nbins = int(round(math.log(5601, 2), 1))  # Numero de Bins siguiendo regla
 
 distribution_df = (
