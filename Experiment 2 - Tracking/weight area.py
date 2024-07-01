@@ -35,7 +35,7 @@ sns.histplot(x=r, stat="density", weights=weights_r, binrange=[0, 1], bins=10)
 count, bins = np.histogram(r, bins, density=True)
 plt.hist(r, bins, weights=weights_a_ind, density=True, alpha=0.5, color="g")
 
-plt.hist(r, bins, weights=weights_r, density=True, alpha=0.5, color="b")
+# plt.hist(r, bins, weights=weights_r, density=True, alpha=0.5, color="b")
 plt.plot(bins, np.ones_like(bins), linewidth=2, color="r")  # uniform line
 plt.plot(
     bins[: len(bins) - 1] + 0.05, count / (np.pi * weights_a), linewidth=2, color="g"
