@@ -96,24 +96,6 @@ print(str(elements).replace(".0", "").replace("],", "]\n"))
 df1["Frame"] = pd.to_numeric(df1["Frame"], errors="coerce")
 df1 = df1.dropna(subset=["Frame"], how="any", axis=0)
 
-# %%% Variables auxiliares
-"""
-Con el dataset limpio genero unas variables auxiliares. La más importante es la distancia al borde (o al centro) normalizada a 1
-"""
-# Para evaluar la distancia al borde de 0 (border) a 1 (center)
-df1["Dist_border"] = (
-    df1[["Mean-Distance"]] / 255
-)  # Radio del pocillo para estos batches, medido con un macro
-
-# Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. También es problematico las observaciones con valor 0 entero. Voy a imputar esto
-df1.loc[df1.Dist_border >= 1, "Dist_border"] = 0.99
-df1.loc[df1.Dist_border <= 0, "Dist_border"] = 0.001
-
-# Alternativamente la distancia al centro 1=border a 0=center
-df1["Dist_center"] = abs(df1["Dist_border"] - 1)
-# Variable auxiliar
-df1["Feno_Batch"] = df1.Fenotype.astype(str) + "_" + df1.Batch.astype(str)
-
 
 # %%% Load batches 12-14
 
@@ -156,30 +138,12 @@ print(str(elements).replace(".0", "").replace("],", "]\n"))
 df2["Frame"] = pd.to_numeric(df2["Frame"], errors="coerce")
 df2 = df2.dropna(subset=["Frame"], how="any", axis=0)
 
-# %%% Variables auxiliares
-"""
-Con el dataset limpio genero unas variables auxiliares. La distancia la normalizo a 1, siendo 0 el borde y 1 el centro del pocillo.
-"""
-
-# Para evaluar la distancia al borde de 0 (border) a 1 (center)
-
-df2["Dist_border"] = (
-    df2[["Mean-Distance"]] / 170
-)  # valor del radio del pocillo medido de las imagenes para batches 12-14
-
-# Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto
-df2.loc[df2.Dist_border >= 1, "Dist_border"] = 0.99
-df2.loc[df2.Dist_border <= 0, "Dist_border"] = 0.001
-
-df2["Dist_center"] = abs(df2["Dist_border"] - 1)
-# Variable auxiliar
-df2["Feno_Batch"] = df2.Fenotype.astype(str) + "_" + df2.Batch.astype(str)
 
 # %%% Union DF de los distintos batches
 """
 Ojo, el fps de ambas muestras no es el mismo, por lo que hay que considerarlo a la hora de sacar resultados
 """
-df = pd.concat([df1, df2]).reset_index()
+df = pd.concat([df1, df2]).reset_index(drop=True)
 
 # %% NAs [md]
 """
@@ -209,40 +173,45 @@ NAs_barplot.set_xlabels("Fish", fontsize=15)
 plt.show()
 
 # %%% NA Impute
-Hay un problema con la intrepolacion: nolo esta haciendo por grupo, corregir. df_temp sirve de ejemplo. usar codigo chatgpt
-df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
-    method="linear",  limit_direction='both'
-)
 
-df_temp = df[(df.Batch == "batch 13") & (df.Fenotype == "KO179") & (df.Fish == "ZebraF_34")]
-
-df_temp[["X", "Y", "Mean-Distance"]] = df_temp[["X", "Y", "Mean-Distance"]].interpolate(
-    method="linear",  limit_direction='both'
-)
-
-import pandas as pd
-import numpy as np
-
-# Example DataFrame
-data = {'group_col': ['A', 'A', 'A', 'B', 'B', 'B'],
-        'value': [np.nan, 2, np.nan, 4, np.nan, 6]}
-df = pd.DataFrame(data)
-
+# Ayuda codigo chatgpt
 # Define a function to interpolate within each group
 def interpolate_group(group):
     return group.interpolate(method='linear', limit_direction='both')
 
-# Apply the interpolation by group
-df_interpolated = df.groupby('group_col').apply(interpolate_group)
+df = df.groupby(["Batch", "Fenotype", "Fish"]).apply(interpolate_group).reset_index(drop=True)
 
-print("Original DataFrame:")
-print(df)
-print("\nInterpolated DataFrame:")
-print(df_interpolated)
+
+# df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
+#     method="linear",  limit_direction='both'
+# )
+
 # %%% [md]
 """
 Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido miles de frames. Se han imputado
 """
+
+# %% Variables auxiliares
+"""
+Con el dataset limpio genero unas variables auxiliares. La más importante es la distancia al borde (o al centro) normalizada a 1
+"""
+
+# Para evaluar la distancia al borde de 0 (border) a 1 (center)
+df["Dist_border"] = 0 # Crea la columna
+
+df.loc[df['DF'] == 'DF1', 'Dist_border'] = df.loc[df['DF'] == 'DF1', 'Mean-Distance'] / 255 # Radio del pocillo para batches hasta el 11, medido con un macro
+df.loc[df['DF'] == 'DF2', 'Dist_border'] = df.loc[df['DF'] == 'DF2', 'Mean-Distance'] / 170 # valor del radio del pocillo medido de las imagenes para batches 12-14
+
+df["Dist_center"] = abs(df["Dist_border"] - 1)
+# Variable auxiliar
+df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
+
+# Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto
+df.loc[df.Dist_border >= 1, "Dist_border"] = 0.99
+df.loc[df.Dist_border <= 0, "Dist_border"] = 0.001
+
+df_temp = df[(df.Batch == "batch 13") & (df.Fenotype == "KO179") & (df.Fish == "ZebraF_34")]
+
 # %% Filtrado de datos debido a detección de otras particulas[md]
 """
 # Filtrado de los datos
@@ -324,8 +293,8 @@ Dist = Dist.loc[
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 # %%% Box-plot por batch
 
-# batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
-batches_2_plot = ["batch 12", "batch 13", "batch 14"]
+batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
+#batches_2_plot = ["batch 12", "batch 13", "batch 14"]
 grped_bplot = sns.catplot(
     x="Batch",
     y="dist",
@@ -405,8 +374,8 @@ Dado que el pocillo es circular y estamos viendo la distribución de su posició
 
 # metodo pesos 1
 weights_r = 1 / (
-    np.pi * (1 - df_temp.Dist_border)
-)  # dada la naturaleza radial de los datos y que la distribución va de 0 siendo el anillo más grande al anillo de menos area 1
+    np.pi * (1 - df_temp.Dist_border.values)
+)  # dada la naturaleza radial de los datos y que la distribución va de 0 siendo el anillo más grande al anillo de menos area 1. Este método no funciona apropiadamente, ya que los valores limite (1, en el centro) generan un peso infinito (o que tiende a) y da problemas en la representación del histograma.
 
 # metodo pesos 2
 nbins = 12
@@ -414,13 +383,13 @@ bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
 weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
 weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area
 bin_of_dist = np.searchsorted(bins, df_temp.Dist_border) - 1  # bin al que pertenece cada observación
-weights_a_ind = 1 / weights_a[bin_of_dist]
+weights_a_ind = 1 / weights_a[bin_of_dist] # este método de pesos le da el mismo peso a cada observación según en que histograma caiga, de este modo no hay problema en las observaciones de valor límite.
 
 g = sns.histplot(
     data=df_temp,
     x="Dist_border",
     stat="density",
-    weights=weights_r,
+    weights=weights_a_ind,
     binrange=[0, 1],
     bins=nbins,
 )
@@ -430,6 +399,7 @@ g.set_title(
 
 plt.show()
 
+hasta aqui bien
 #%%%% [md]
 '''
 Un par de ejemplos significativos de la diferencia entre el histograma con y sin ponderar, que puede verse bien en las imagenes son los zebra 4,5, y 6 del batch 7
