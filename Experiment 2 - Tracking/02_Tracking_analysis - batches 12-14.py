@@ -664,7 +664,7 @@ plt.show()
 # %% Normalización manual histograma [md]
 """
 ### Normalización manual histograma
-Otra alternativa es generar manualmente el histograma y representarlo con barras de error.
+Otra alternativa es generar manualmente el histograma y representarlo con barras de error (intervalo de confianza al 80%).
 
 Nota a posteriori: lo siguiente podría realizarse usando un Density Kernel Estimator, que calcule la distribución y sumar las distribuciones.
 """
@@ -783,6 +783,8 @@ g.set_axis_labels(fontsize=20)
 g.fig.suptitle("Averaged distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
+
+hasta aqui bien
 
 # %%%% [md]
 """
