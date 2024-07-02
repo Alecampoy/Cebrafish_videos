@@ -78,12 +78,6 @@ df1.loc[df1.Fenotype == "KO", "Fenotype"] = "KO44"
 df1.loc[df1.Fenotype == "KO 44", "Fenotype"] = "KO44"
 df1.loc[df1.Fenotype == "KO 179", "Fenotype"] = "KO179"
 
-df1["Batch"] = pd.Categorical(
-    df1["Batch"],
-    categories=["batch 6", "batch 7", "batch 8", "batch 11"],
-    ordered=True,
-)
-
 df1["DF"] = "DF1"  # Para identificar el grupo de batches
 
 elements = round(
@@ -93,8 +87,8 @@ print(str(elements).replace(".0", "").replace("],", "]\n"))
 
 # %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
 # aparecen como cadena de texto en la columna frame
-df1["Frame"] = pd.to_numeric(df1["Frame"], errors="coerce")
-df1 = df1.dropna(subset=["Frame"], how="any", axis=0)
+# df1["Frame"] = pd.to_numeric(df1["Frame"], errors="coerce")
+# df1 = df1.dropna(subset=["Frame"], how="any", axis=0)
 
 
 # %%% Load batches 12-14
@@ -122,12 +116,6 @@ df2.Time = (df2.Frame - 1) / 6  # 6 fps
 
 df2["DF"] = "DF2"  # Para identificalo luego
 
-df2["Batch"] = pd.Categorical(
-    df2["Batch"],
-    categories=["batch 12", "batch 13", "batch 14"],
-    ordered=True,
-)
-
 elements = round(
     pd.crosstab(index=df2.Batch, columns=df2.Fenotype) / 5601
 )  # divided by lengh of the video
@@ -135,8 +123,8 @@ print(str(elements).replace(".0", "").replace("],", "]\n"))
 
 # %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
 # aparecen como cadena de texto en la columna frame
-df2["Frame"] = pd.to_numeric(df2["Frame"], errors="coerce")
-df2 = df2.dropna(subset=["Frame"], how="any", axis=0)
+# df2["Frame"] = pd.to_numeric(df2["Frame"], errors="coerce")
+# df2 = df2.dropna(subset=["Frame"], how="any", axis=0)
 
 
 # %%% Union DF de los distintos batches
@@ -144,6 +132,20 @@ df2 = df2.dropna(subset=["Frame"], how="any", axis=0)
 Ojo, el fps de ambas muestras no es el mismo, por lo que hay que considerarlo a la hora de sacar resultados
 """
 df = pd.concat([df1, df2]).reset_index(drop=True)
+
+df["Batch"] = pd.Categorical(
+    df["Batch"],
+    categories=[
+        "batch 6",
+        "batch 7",
+        "batch 8",
+        "batch 11",
+        "batch 12",
+        "batch 13",
+        "batch 14",
+    ],
+    ordered=True,
+)
 
 # %% NAs [md]
 """
@@ -174,17 +176,23 @@ plt.show()
 
 # %%% NA Impute
 
+
 # Ayuda codigo chatgpt
 # Define a function to interpolate within each group
 def interpolate_group(group):
-    return group.interpolate(method='linear', limit_direction='both')
-
-df = df.groupby(["Batch", "Fenotype", "Fish"]).apply(interpolate_group).reset_index(drop=True)
+    return group.interpolate(method="linear", limit_direction="both")
 
 
-# df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
-#     method="linear",  limit_direction='both'
-# )
+# incluyo las categorías como indice para que no se aplique la interpolación a variables categoricas
+df.set_index(["Batch", "Fenotype", "Fish"], inplace=True)
+
+df = (
+    df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)
+    .apply(interpolate_group)
+    .droplevel(0)
+)
+
+df_temp = df.loc[("batch 13", "KO179", "ZebraF_34")]
 
 # %%% [md]
 """
@@ -197,20 +205,23 @@ Con el dataset limpio genero unas variables auxiliares. La más importante es la
 """
 
 # Para evaluar la distancia al borde de 0 (border) a 1 (center)
-df["Dist_border"] = 0 # Crea la columna
+df["Dist_border"] = 0  # Crea la columna
 
-df.loc[df['DF'] == 'DF1', 'Dist_border'] = df.loc[df['DF'] == 'DF1', 'Mean-Distance'] / 255 # Radio del pocillo para batches hasta el 11, medido con un macro
-df.loc[df['DF'] == 'DF2', 'Dist_border'] = df.loc[df['DF'] == 'DF2', 'Mean-Distance'] / 170 # valor del radio del pocillo medido de las imagenes para batches 12-14
+df.loc[df["DF"] == "DF1", "Dist_border"] = (
+    df.loc[df["DF"] == "DF1", "Mean-Distance"] / 254
+)  # Radio del pocillo para batches hasta el 11, medido con un macro
+df.loc[df["DF"] == "DF2", "Dist_border"] = (
+    df.loc[df["DF"] == "DF2", "Mean-Distance"] / 169
+)  # valor del radio del pocillo medido de las imagenes para batches 12-14
 
 df["Dist_center"] = abs(df["Dist_border"] - 1)
 # Variable auxiliar
-df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
+# df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
 
 # Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto
-df.loc[df.Dist_border >= 1, "Dist_border"] = 0.99
-df.loc[df.Dist_border <= 0, "Dist_border"] = 0.001
+df.loc[df.Dist_border > 1, "Dist_border"] = 1
+# df.loc[df.Dist_border <= 0, "Dist_border"] = 0.001
 
-df_temp = df[(df.Batch == "batch 13") & (df.Fenotype == "KO179") & (df.Fish == "ZebraF_34")]
 
 # %% Filtrado de datos debido a detección de otras particulas[md]
 """
@@ -218,13 +229,15 @@ df_temp = df[(df.Batch == "batch 13") & (df.Fenotype == "KO179") & (df.Fish == "
 Voy a eliminar los frames en los que se ha detectado un salto de posición demasiado alto ya que posiblemente se debera al haber detectado una posición anomala en ese frame. P.ejem el pez de ejemplo tiene uno de estos eventos
 """
 # %%% Histograma de las distancias rocorridas
+# Calculo las distancias en cada paso
 df["X_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).X.diff()
 df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
 df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
-df_temp = df[
-    (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
-]
+df_temp = df.loc[("batch 12", "KO44", "ZebraF_15")].reset_index()
+# df_temp = df[
+#     (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
+# ]
 
 g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
@@ -261,9 +274,7 @@ for i in range(10):
     df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
 
-df_temp = df[
-    (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
-]
+df_temp = df.loc[("batch 12", "KO44", "ZebraF_15")].reset_index()
 
 g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
@@ -283,18 +294,22 @@ Se calcula la distancia que recorre el pez a lo largo del video y se gráfica po
 # dataframe con la distancia recorrida por el  gusano
 Dist = (
     df.dropna()
-    .groupby(["Batch", "Fenotype", "Fish"], as_index=False)
+    .groupby(["Batch", "Fenotype", "Fish"], as_index=True)
     .dist.sum(min_count=0)
     .round()
 )  # .reset_index()
 
 Dist = Dist.loc[
-    Dist.dist != 0
+    Dist != 0
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
-# %%% Box-plot por batch
+
+# %%% Box-plot 6-11
 
 batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
-#batches_2_plot = ["batch 12", "batch 13", "batch 14"]
+# batches_2_plot = ["batch 12", "batch 13", "batch 14"]
+df_plot = Dist.loc[(batches_2_plot)].reset_index()
+df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
+
 grped_bplot = sns.catplot(
     x="Batch",
     y="dist",
@@ -303,7 +318,7 @@ grped_bplot = sns.catplot(
     showfliers=False,
     height=6,
     aspect=1.9,
-    data=Dist[Dist.Batch.isin(batches_2_plot)],
+    data=df_plot,
     hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
@@ -317,7 +332,49 @@ grped_bplot = sns.stripplot(
     marker="o",
     color="black",
     # palette="Set2",
-    data=Dist[Dist.Batch.isin(batches_2_plot)],
+    data=df_plot,
+    hue_order=["WT", "KO44", "KO179"],
+)
+
+handles, labels = grped_bplot.get_legend_handles_labels()
+grped_bplot.axes.legend(handles[0:3], labels[0:3], title="Fenotype", loc="upper right")
+
+# Set title for the plot
+grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
+
+plt.show()
+
+
+# %%% Box-plot 12-14
+
+# batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
+batches_2_plot = ["batch 12", "batch 13", "batch 14"]
+df_plot = Dist.loc[(batches_2_plot)].reset_index()
+df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
+
+grped_bplot = sns.catplot(
+    x="Batch",
+    y="dist",
+    hue="Fenotype",
+    kind="box",
+    showfliers=False,
+    height=6,
+    aspect=1.9,
+    data=df_plot,
+    hue_order=["WT", "KO44", "KO179"],
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch",
+    y="dist",
+    hue="Fenotype",
+    jitter=0.18,
+    dodge=True,
+    legend=False,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    data=df_plot,
     hue_order=["WT", "KO44", "KO179"],
 )
 
@@ -346,10 +403,11 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
 # %%% Grafico Histograma 1 Zebra
-df_temp = df[(df.Batch == "batch 7") & (df.Fenotype == "WT") & (df.Fish == "ZebraF_6")]
+df_temp = df.loc[("batch 7", "WT", "ZebraF_6")].reset_index()
 
+nbins = 12
 g = sns.histplot(
-    data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=12
+    data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=nbins
 )
 g.set_title("Distribution of radial position relative to edge of a single zebra")
 
@@ -382,8 +440,12 @@ nbins = 12
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
 weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
 weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area
-bin_of_dist = np.searchsorted(bins, df_temp.Dist_border) - 1  # bin al que pertenece cada observación
-weights_a_ind = 1 / weights_a[bin_of_dist] # este método de pesos le da el mismo peso a cada observación según en que histograma caiga, de este modo no hay problema en las observaciones de valor límite.
+bin_of_dist = (
+    np.searchsorted(bins, df_temp.Dist_border) - 1
+)  # bin al que pertenece cada observación
+weights_a_ind = (
+    1 / weights_a[bin_of_dist]
+)  # este método de pesos le da el mismo peso a cada observación según en que bin del histograma caiga, de este modo no hay problema en las observaciones de valor límite.
 
 g = sns.histplot(
     data=df_temp,
@@ -399,13 +461,12 @@ g.set_title(
 
 plt.show()
 
-hasta aqui bien
-#%%%% [md]
-'''
+# %%%% [md]
+"""
 Un par de ejemplos significativos de la diferencia entre el histograma con y sin ponderar, que puede verse bien en las imagenes son los zebra 4,5, y 6 del batch 7
 
 Hay que definir que pesos se usan. el problema con los pesos individuales `weights_r`es que para los valores extremos calcula un peso muy alto, por lo que creo que es mejor generar unos pesos para los bins y usar el mismo peso para todas las observaciones que caigan dentro del bin.
-'''
+"""
 
 # %%% Hist. por Condición [md]
 """ 
@@ -418,7 +479,7 @@ Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo
 
 
 g = sns.FacetGrid(
-    data=df,
+    data=df.reset_index(),
     row="Batch",
     hue="Fenotype",
     hue_order=["WT", "KO44", "KO179"],
@@ -437,13 +498,14 @@ g.map_dataframe(
     x="Dist_border",
     element="step",
     edgecolor="black",
+    alpha=0.4,
     binrange=[0, 1],
     # cumulative=True,
     bins=10,
     stat="density",
     common_norm=False,
-    kde=True,
-    kde_kws={"bw_adjust": 0.8},
+    kde=False,
+    kde_kws={"bw_adjust": 1},
 )
 g.add_legend()
 g.set_axis_labels(fontsize=20)
@@ -452,25 +514,22 @@ plt.subplots_adjust(top=0.95)
 plt.show()
 
 # %%%% Pesos para Ponderar  por la distribución radial por Batch
+
 nbins = 10
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
-# df["Weights"] = 1 / (np.pi * (1 - df.Dist_border))
 weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
-weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area
-bin_of_dist = np.searchsorted(bins, df.Dist_border)-1  # bin al que pertenece cada observación
-a = 1 / weights_a[bin_of_dist]
-(bin_of_dist == 10).sum()
+weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area del bin
+bin_of_dist = (
+    np.searchsorted(bins, df.Dist_border) - 1
+)  # bin al que pertenece cada observación
+df["weights_a_ind"] = 1 / weights_a[bin_of_dist]
 
-bin_of_dist[bin_of_dist==10]
-np.where(bin_of_dist==10)
-a=df.iloc[np.where(bin_of_dist==10)]
+df_temp = df.loc[("batch 12", "KO179", "ZebraF_23")].reset_index()
+
 # %%%% Hist. ponderado por distribución radial
 
-batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
-# batches_2_plot = ["batch 12", "batch 13", "batch 14"]
-
 g = sns.FacetGrid(
-    data=df,
+    data=df.reset_index(),
     row="Batch",
     hue="Fenotype",
     hue_order=["WT", "KO44", "KO179"],
@@ -489,13 +548,14 @@ g.map_dataframe(
     x="Dist_border",
     element="step",
     edgecolor="black",
+    alpha=0.5,
     binrange=[0, 1],
     # cumulative=True,
     bins=nbins,
     stat="density",
-    weights="Weights_r",
+    weights="weights_a_ind",
     common_norm=False,
-    kde=True,
+    kde=False,
     kde_kws={"bw_adjust": 0.8},
 )
 g.add_legend()
@@ -508,16 +568,20 @@ plt.show()
 """
 Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso en el caso en el que no están ponderados.  
 
-El problema de la distribución ponderada por ser radial viene, creo, del hecho de que se están agregando todos los peces conjuntamente. Posiblemente sea más indicado ver los peces independientemente
+El problema de la distribución ponderada por ser radial viene, creo, del hecho de que *se están agregando todos los peces conjuntamente*. Un pez anomalo va a tener un peso muy fuerte en este gráfico.
+
+Se hace necesario ver los peces independientemente
 
 En los casos en los que la distribución de una condición es significativamente diferente a las otras habria que estudiar que la contribución individual de cada Zebra sea razonablemente similar, y no que un solo Zebra sea el que produce la desviacion del histograma o PDF. Lo vemos
 """
 
 # %% Hist. apilado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-batch = "batch 7"
-df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
-df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
+batch = "batch 12"
+df_temp = df.loc[(batch, "WT")].reset_index()
+df_temp2 = df.loc[(batch, "KO44")].reset_index()
+
+nbins = 10
 
 sns.histplot(
     data=df_temp,
@@ -528,7 +592,7 @@ sns.histplot(
     element="poly",
     stat="density",
     binrange=[0, 1],
-    bins=12,
+    bins=nbins,
     palette="Blues",
     alpha=0.4,
 )
@@ -542,7 +606,7 @@ g = sns.histplot(
     common_norm=True,
     stat="density",
     binrange=[0, 1],
-    bins=12,
+    bins=nbins,
     palette="Oranges",
     alpha=0.3,
 )
@@ -554,12 +618,14 @@ plt.show()
 """
 Resulta un plot bastante sucio pero se aprecia la diferencia. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que son razonablemente homogeneos y no se debe a un Zebra Oulier.   
 
-Haciendo lo mismo de manera ponderada. Recomiendo verlo para cada batch
+Haciendo lo mismo de manera ponderada. *Recomiendo verlo para cada batch*
 """
-#%%% Hist. apilado ponderado
-batch = "batch 14"
-df_temp = df[(df.Batch == batch) & (df.Fenotype == "WT")]
-df_temp2 = df[(df.Batch == batch) & (df.Fenotype == "KO44")]
+# %%% Hist. apilado ponderado por Zebra
+batch = "batch 12"
+df_temp = df.loc[(batch, "WT")].reset_index()
+df_temp2 = df.loc[(batch, "KO44")].reset_index()
+
+nbins = 10
 
 sns.histplot(
     data=df_temp,
@@ -569,9 +635,9 @@ sns.histplot(
     common_norm=True,
     element="poly",
     stat="density",
-    weights="Weights_r",
+    weights="weights_a_ind",  # wheight calculados
     binrange=[0, 1],
-    bins=12,
+    bins=nbins,
     palette="Blues",
     alpha=0.4,
 )
@@ -584,9 +650,9 @@ g = sns.histplot(
     element="step",
     common_norm=True,
     stat="density",
-    weights="Weights_r",
+    weights="weights_a_ind",
     binrange=[0, 1],
-    bins=12,
+    bins=nbins,
     palette="Oranges",
     alpha=0.3,
 )
@@ -595,7 +661,7 @@ g.set_title("Stacked histogram of radial position relative to edge")
 plt.show()
 
 
-#%%%
+# %% Normalización manual histograma [md]
 """
 ### Normalización manual histograma
 Otra alternativa es generar manualmente el histograma y representarlo con barras de error.
@@ -603,40 +669,44 @@ Otra alternativa es generar manualmente el histograma y representarlo con barras
 Nota a posteriori: lo siguiente podría realizarse usando un Density Kernel Estimator, que calcule la distribución y sumar las distribuciones.
 """
 
-# %%% Normalización manual histograma
-
-
 # %%%% Generación Data Frame y agregación de histogramas
-Incluir aqui la normalizacion
-nbins = int(round(math.log(5601, 2), 1))  # Numero de Bins siguiendo regla
+nbins = 10  # int(round(math.log(5601, 2), 1))  # Numero de Bins siguiendo regla
+
+
+def compute_histogram(group, nbins):
+    hist, bin_edges = np.histogram(
+        group["Dist_border"].to_numpy(),
+        range=[0, 1],
+        bins=nbins,
+        density=True,
+        weights=group["weights_a_ind"].to_numpy(),
+    )
+    return pd.Series({"hist": hist, "bins": bin_edges})
+
 
 distribution_df = (
-    df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)
-    .Dist_border.apply(
-        lambda x: np.histogram(x, range=[0, 1], bins=nbins, density=True)
-    )
+    df.groupby(["Batch", "Fenotype", "Fish"])
+    .apply(compute_histogram, nbins)
+    .reset_index()
     .dropna()
 )
-
-distribution_df["hist"], distribution_df["bins"] = zip(*distribution_df.Dist_border)
 
 distribution_df["bins"] = distribution_df["bins"].apply(
     lambda x: x[:-1]
 )  # Para que tenga el mismo numero de elementos que 'hist'
-distribution_df = distribution_df.drop("Dist_border", axis=1)
 distribution_df = distribution_df.explode(["hist", "bins"])
 
-
+# ahora agrego y calculo la media de cada bin para cada histograma, aunque no lo uso
 distribution_df_agg = (
     distribution_df.groupby(["Batch", "Fenotype", "bins"])
     .agg(
-        mean_hist=("hist", np.mean),
+        mean_hist=("hist", np.median),
         sd_hist=("hist", np.std),
         confid_int=(
             "hist",
             lambda x: np.ptp(
                 st.t.interval(
-                    confidence=0.95,
+                    confidence=0.90,
                     df=len(x) - 1,
                     loc=np.mean(x),
                     scale=st.sem(
@@ -650,7 +720,7 @@ distribution_df_agg = (
     .dropna()
 )
 
-# %%%% Plot de la agregación de histogramas como linea
+# %%%% Plot de la agregación de histogramas como linea con margen ci 80
 # Lo represento como una linea para ver los errores
 
 g = sns.FacetGrid(
@@ -662,7 +732,7 @@ g = sns.FacetGrid(
     sharex="col",
     sharey=False,
     height=4,
-    aspect=3,
+    aspect=4,
 )
 
 # g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
@@ -673,7 +743,39 @@ g.map_dataframe(
     estimator="mean",
     x="bins",
     y="hist",
-    errorbar=("ci", 90),
+    errorbar=("ci", 80),
+)
+
+g.add_legend()
+g.set_axis_labels(fontsize=20)
+g.fig.suptitle("Averaged distribution of radial position relative to edge")
+plt.subplots_adjust(top=0.95)
+plt.show()
+
+# %%%% Mismo Plot pero con median
+# Lo represento como una linea para ver los errores
+
+g = sns.FacetGrid(
+    distribution_df,
+    hue="Fenotype",
+    hue_order=["WT", "KO44", "KO179"],
+    row="Batch",
+    palette="pastel",
+    sharex="col",
+    sharey=False,
+    height=4,
+    aspect=4,
+)
+
+# g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+# fontsize=24, fontdict={"weight": "bold"})
+
+g.map_dataframe(
+    sns.lineplot,
+    estimator="median",
+    x="bins",
+    y="hist",
+    errorbar=("ci", 80),
 )
 
 g.add_legend()
