@@ -70,7 +70,7 @@ for f in files:
         )
         csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
         csv.insert(1, "Fenotype", re.search("_(KO\s?\d*|WT)", f.upper()).group(1))
-        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.lif)", f.lower()).group(1))
+        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.\wif_results)", f.lower()).group(1))
         df.append(csv)
         del (csv, f)
 
@@ -88,11 +88,11 @@ df.loc[df.Fenotype == "KO 179", "Fenotype"] = "KO179"
 
 df["Batch"] = pd.Categorical(
     df["Batch"],
-    categories=["batch 6", "batch 7", "batch 8", "batch 9", "batch 10", "batch 11"],
+    categories=["batch 6", "batch 7", "batch 8", "batch 9", "batch 10", "batch 11", "batch 12", "batch 13", "batch 14"],
     ordered=True,
 )
 
-pd.crosstab(index=df.Batch, columns=df.Fenotype)
+(pd.crosstab(index=df.Batch, columns=df.Fenotype) / 1550)
 
 
 # %% NAs [md]
@@ -129,15 +129,25 @@ plt.show()
 
 # %%% NA Impute
 # df._get_numeric_data().columns
-# Only numeric columns
-df[df.select_dtypes(include=np.number).columns] = df[
-    df.select_dtypes(include=np.number).columns
-].interpolate(method="linear")
+
+def interpolate_group(group):
+    return group.interpolate(method="linear", limit_direction="both")
+
+# incluyo las categorías como indice para que no se aplique la interpolación a variables categoricas
+df.set_index(["Batch", "Fenotype", "Fish"], inplace=True)
+
+df = (
+    df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)
+    .apply(interpolate_group)
+    .droplevel(0)
+)
+
 
 # %%% [md]
 """
 El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs
-El Zebra WT 1 tiene un video de la mitad de frames. Como esta totalmente quieto, se duplican sus datos para que se ajuste a la misma longitud de los demas"""
+El Zebra WT 1 tiene un video de la mitad de frames. Como esta totalmente quieto, se duplican sus datos para que se ajuste a la misma longitud de los demas
+"""
 
 # %% Distancia Recorrida [md]
 """
@@ -152,15 +162,7 @@ df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).YM.diff())
 df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
-Dist = (
-    df.dropna()
-    .groupby(["Batch", "Fenotype", "Fish"], as_index=False)
-    .dist.sum(min_count=1)
-    .round()
-)
-Dist = Dist.loc[
-    Dist.dist != 0
-]  # Aparecen como 0 las categorias para las que no hay datos, pero tambien hay zebra que no se mueven
+Dist =df.groupby(["Batch", "Fenotype", "Fish"]).dist.agg(dist = lambda x: x.sum(), n_obs = lambda x: len(x)).round().dropna()
 
 # %%% Box-plot por batch
 
@@ -196,19 +198,20 @@ grped_bplot.set_title("Distancia Recorrida por el Zebrafish durante el video (px
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
+
 # %%% Suavizado de las columnas [md]
 """
+Hay un valor anomalo en el batch 7 WT zebra 7, mirar
+
 ### Suavizado de las columnas
 He observado que hay peces que vibran mucho, por lo que su medición muestra que se mueven mucho cuando apenas se han movido realmente. Para solucionarlo voy a aplicar un filtro de ventana gaussiana y recalcular el ultimo gráfico
 """
 
 # %%%% Ventana Gausiana & calculo distancia suavizada
 
-
 def apply_gaussian_filter(group_df, column, new_column_name, sigma=3.0):
     group_df[new_column_name] = gaussian_filter1d(group_df[column], sigma)
     return group_df
-
 
 df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     apply_gaussian_filter, column="XM", new_column_name="XM_filt"
@@ -223,16 +226,7 @@ df["dist_filt"] = np.sqrt((df.X_filt_diff**2) + (df.Y_filt_diff**2))
 
 # %%%% Boxplot por batch Filtrado
 # dataframe con la distancia recorrida por el  gusano
-Dist_filt = (
-    df.dropna()
-    .groupby(["Batch", "Fenotype", "Fish"], as_index=False)
-    .dist_filt.sum(min_count=1)
-    .round()
-)
-Dist_filt = Dist_filt.loc[
-    Dist_filt.dist_filt != 0
-]  # Aparecen como 0 las categorias para las que no hay datos, pero tambien hay zebra que no se mueven
-
+Dist_filt = df.groupby(["Batch", "Fenotype", "Fish"]).dist_filt.agg(dist_filt = lambda x: x.sum(), n_obs = lambda x: len(x)).round().dropna()
 
 grped_bplot = sns.catplot(
     x="Batch",
@@ -270,7 +264,7 @@ plt.show()
 
 # %%% [md]
 """
-La aplicación del filtro no cambia los resultados
+La aplicación del filtro no cambia los resultados pero si genera una visualización más adecuada
 """
 # %% Evolución temporal de todas las variables [md]
 """
@@ -288,6 +282,9 @@ Busco picos, por lo que las magnitudes son interesantes si presentan la linea ba
 """
 # %%% Inversa de algunas magnitudes
 # Inversa de algunas magnitudes
+
+hasta aqui bien
+
 df["area_inv"] = 1 / df.area
 df["Perim_inv"] = 1 / df.Perim
 df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
