@@ -131,7 +131,7 @@ print(str(elements).replace(".0", "").replace("],", "]\n"))
 """
 Ojo, el fps de ambas muestras no es el mismo, por lo que hay que considerarlo a la hora de sacar resultados
 """
-df = pd.concat([df1, df2]).reset_index(drop=True)
+df = pd.concat([df1, df2])  # .reset_index(drop=True)
 
 df["Batch"] = pd.Categorical(
     df["Batch"],
@@ -218,9 +218,10 @@ df["Dist_center"] = abs(df["Dist_border"] - 1)
 # Variable auxiliar
 # df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
 
-# Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto
-df.loc[df.Dist_border > 1, "Dist_border"] = 1
-# df.loc[df.Dist_border <= 0, "Dist_border"] = 0.001
+# Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto.
+# Tambien, para evitar problemas con las distribuciones, voy a quitar los valores límite 0 y 1
+df.loc[df.Dist_border >= 1, "Dist_border"] = 0.9999
+df.loc[df.Dist_border <= 0, "Dist_border"] = 0.0001
 
 
 # %% Filtrado de datos debido a detección de otras particulas[md]
@@ -260,9 +261,9 @@ Como se recalculan las distancias entre 2 frames, es posible que una posición o
 for i in range(10):
     # Imputación en las columnas que tienen medidas
     df.loc[(df.DF == "DF1") & (df.dist > 220), ("X", "Y", "Mean-Distance")] = np.nan
-    df.loc[
-        (df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")
-    ] = np.nan  # ya el tamaño de los pocillso son diferentes
+    df.loc[(df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")] = (
+        np.nan
+    )  # ya el tamaño de los pocillso son diferentes
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -431,21 +432,20 @@ Dado que el pocillo es circular y estamos viendo la distribución de su posició
 # %%% Histograma con pesos
 
 # metodo pesos 1
-weights_r = 1 / (
-    np.pi * (1 - df_temp.Dist_border.values)
-)  # dada la naturaleza radial de los datos y que la distribución va de 0 siendo el anillo más grande al anillo de menos area 1. Este método no funciona apropiadamente, ya que los valores limite (1, en el centro) generan un peso infinito (o que tiende a) y da problemas en la representación del histograma.
+weights_r = 1 / (np.pi * (1 - df_temp.Dist_border.values))
+# dada la naturaleza radial de los datos y que la distribución va de 0 siendo el anillo más grande al anillo de menos area 1. Este método no funciona apropiadamente, ya que los valores limite (1, en el centro) generan un peso infinito (o que tiende a) y da problemas en la representación del histograma.
 
 # metodo pesos 2
-nbins = 12
+nbins = 10
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
-weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
-weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area
-bin_of_dist = (
-    np.searchsorted(bins, df_temp.Dist_border) - 1
-)  # bin al que pertenece cada observación
-weights_a_ind = (
-    1 / weights_a[bin_of_dist]
-)  # este método de pesos le da el mismo peso a cada observación según en que bin del histograma caiga, de este modo no hay problema en las observaciones de valor límite.
+weights_a = (np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2)[::-1]
+# Diferencias del area de las circunferencias, este es el peso
+weights_a = -np.diff(weights_a)
+# bin al que pertenece cada observación, resto 1 ya que el limite es el valor de la derecha del bin, luego todos los valores mayores a 0 caen en el bin 1 y su peso corresponde al [0]. Por este motivo he eliminado los valores 0 y 1 y sustituido por 0.0001 y 0.9999
+bin_of_dist = np.searchsorted(bins, df_temp.Dist_border) - 1
+# peso que le corresponde a cada observación
+weights_a_ind = 1 / weights_a[bin_of_dist]
+# este método de pesos le da el mismo peso a cada observación según en que bin del histograma caiga, de este modo no hay problema en las observaciones de valor límite.
 
 g = sns.histplot(
     data=df_temp,
@@ -476,7 +476,6 @@ Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo
 """
 
 # %%%% Dibujado con Histplot por Batch
-
 
 g = sns.FacetGrid(
     data=df.reset_index(),
@@ -517,11 +516,9 @@ plt.show()
 
 nbins = 10
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
-weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
-weights_a = np.diff(weights_a[::-1])  # [:len(weights)-1] Diferencias del area del bin
-bin_of_dist = (
-    np.searchsorted(bins, df.Dist_border) - 1
-)  # bin al que pertenece cada observación
+weights_a = (np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2)[::-1]
+weights_a = -np.diff(weights_a)
+bin_of_dist = np.searchsorted(bins, df.Dist_border) - 1
 df["weights_a_ind"] = 1 / weights_a[bin_of_dist]
 
 df_temp = df.loc[("batch 12", "KO179", "ZebraF_23")].reset_index()
@@ -693,7 +690,7 @@ distribution_df = (
 
 distribution_df["bins"] = distribution_df["bins"].apply(
     lambda x: x[:-1]
-)  # Para que tenga el mismo numero de elementos que 'hist'
+)  # Para que bins tenga el mismo numero de elementos que 'hist'
 distribution_df = distribution_df.explode(["hist", "bins"])
 
 # ahora agrego y calculo la media de cada bin para cada histograma, aunque no lo uso
@@ -780,15 +777,14 @@ g.map_dataframe(
 
 g.add_legend()
 g.set_axis_labels(fontsize=20)
-g.fig.suptitle("Averaged distribution of radial position relative to edge")
+g.fig.suptitle("Median distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
 
-hasta aqui bien
 
 # %%%% [md]
 """
-Espero de este gráfico encontrar diferencias consistentes
+Resumen, cada batch diferente
 """
 # %%% Porcentaje de tiempo pegado al borde [md]
 """
@@ -817,7 +813,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border"
-threshold = 0.1
+threshold = 0.15
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x < threshold).sum())

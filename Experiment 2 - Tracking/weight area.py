@@ -17,8 +17,8 @@ nbins = 10
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
 
 # metodo 1 para los pesos
-weights_a = np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2
-weights_a = np.diff(weights_a)[::-1]  # [:len(weights)-1] Diferencias del area
+weights_a = (np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2)[::-1]
+weights_a = np.diff(weights_a)  # Diferencias del area
 bin_of_r = np.searchsorted(bins, r) - 1  # bin al que pertenece cada observación
 weights_a_ind = 1 / weights_a[bin_of_r]
 # b = np.diff(np.searchsorted(bins, r))
@@ -37,7 +37,7 @@ plt.hist(r, bins, weights=weights_a_ind, density=True, alpha=0.5, color="g")
 
 # plt.hist(r, bins, weights=weights_r, density=True, alpha=0.5, color="b")
 plt.plot(bins, np.ones_like(bins), linewidth=2, color="r")  # uniform line
-plt.plot(
-    bins[: len(bins) - 1] + 0.05, count / (np.pi * weights_a), linewidth=2, color="g"
-)
+# plt.plot(
+#     bins[: len(bins) - 1] + 0.05, count / (np.pi * weights_a), linewidth=2, color="g"
+# )
 plt.show()
