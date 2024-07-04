@@ -209,7 +209,7 @@ He observado que hay peces que vibran mucho, por lo que su medición muestra que
 
 # %%%% Ventana Gausiana & calculo distancia suavizada
 
-def apply_gaussian_filter(group_df, column, new_column_name, sigma=3.0):
+def apply_gaussian_filter(group_df, column, new_column_name, sigma=4.0):
     group_df[new_column_name] = gaussian_filter1d(group_df[column], sigma)
     return group_df
 
@@ -283,8 +283,6 @@ Busco picos, por lo que las magnitudes son interesantes si presentan la linea ba
 # %%% Inversa de algunas magnitudes
 # Inversa de algunas magnitudes
 
-hasta aqui bien
-
 df["area_inv"] = 1 / df.area
 df["Perim_inv"] = 1 / df.Perim
 df["LongestShortestPath_inv"] = 1 / df.LongestShortestPath
@@ -293,9 +291,7 @@ df["Feret_inv"] = 1 / df.Feret
 # df['Prueba'] = (df.Circ + df.Round)*df.Solidity # composición de varias magnitudes
 
 # %%% Grafico todas las magnitudes temporales
-df_temp = df[
-    (df.Batch == "batch 11") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
-].melt(
+df_temp = df.loc[("batch 11", "WT", "ZebraF_4")].melt(
     id_vars=["Frame"],
     value_vars=[
         # "area",
@@ -347,8 +343,51 @@ plt.show()
 
 # %%% [md]
 """
-Los picos en las señales correlacionan altamente, se ejecuta el análisis solamente sobre una única.
+Los picos en las señales correlacionan altamente, se ejecuta el análisis solamente sobre una única variable.
 """
+
+# %%% Filtro de Gaussiano [md]
+"""
+Hay picos que debido al ruido, su parte alta tiene alguna irregularidad. También la linea basal es rugosa. Pienso que un filtro gausiano aplicado va a suavizar las irregularidades y facilitar el análisis posterior. Lo gráfico como ejemplo
+"""
+
+#%%% Filtro Gaussian
+
+df_temp = df.loc[("batch 11", "KO44", "ZebraF_1")]
+df_temp = apply_gaussian_filter(df_temp, column = "Perim_inv", new_column_name = "Perim_inv_filt", sigma=3)
+df_temp = apply_gaussian_filter(df_temp, column = "Circ", new_column_name = "Circ_filt", sigma=4)
+
+df_temp = df_temp.melt(
+    id_vars=["Frame"],
+    value_vars=[
+        "Perim_inv",
+        "Perim_inv_filt",
+        "Circ",
+        "Circ_filt"
+    ],
+)
+
+g = sns.FacetGrid(
+    df_temp,
+    hue="variable",
+    row="variable",
+    sharex="col",
+    sharey=False,
+    height=5,
+    aspect=4,
+    margin_titles=True,
+)
+g.map(sns.lineplot, "Frame", "value")
+g.set_axis_labels(fontsize=20)
+g.fig.suptitle(
+    "Evolución temporal de todas las variables para un pez de ejemplo",
+    fontsize=24,
+    fontdict={"weight": "bold"},
+)
+g.fig.subplots_adjust(top=0.97)
+# sns.set(font_scale=2)
+
+plt.show()
 
 # %% Análisis Overview[md]
 """
@@ -372,46 +411,89 @@ Usando la FFT ver las frecuencias intrinsicas de cada uno de los peces. (puede s
 """
 # Tiempo Replegado
 
-Usando la Solidity = area/convex area, si su valor es superior al Threshold,
-indica que el gusano esta replegado. Se pueden usar otras magnitudes acotadas entre 0-1
+Previamente use la Solidity = area/convex area, pero es una variable muy ruidosa y sensible a irregularidades, voy a en su lugar, usar la inversa del feret (previo filtrado y normalizado min-max. Despues usare un threshold que indicara que el pez esta replegado si su valor es inferior/superior al Threshold. Se pueden usar otras magnitudes, por lo que también voy a realizar lo mismo usando la Circulariry.
 """
 
 # %%% Plot Ejemplo threshold
 
-df_temp = df[
-    (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
-]
+df_temp = df.loc[("batch 13", "KO44", "ZebraF_1")]
+Variable_plot = "Feret_inv"
 
-g = sns.lineplot(data=df_temp, x="Time", y="Solidity")
-g.axhline(0.88, color="red")
-g.set_title("Threshold on Solidity", size=25)
+df_temp = apply_gaussian_filter(df_temp, column=Variable_plot, new_column_name=Variable_plot +"_filt")
+
+g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot+"_filt")
+g.axhline(0.007, color="red")
+g.set_title("Threshold on"+Variable_plot, size=25)
 plt.show()
 
 # %%% [md]
 """
-Contando para cada gusano el total del tiempo que pasa sobre el Threshold, obtenemos
+Para no usar el mismo threshold en cada pez, voy a normalizar cada Feret entre 0-1, así sí tener un threshold estandar.
 """
+
+Ayuda código chatgpt
+
+import pandas as pd
+import numpy as np
+
+# Example DataFrame
+data = {
+    'category': ['A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C'],
+    'signal': [3, 7, 2, 9, 5, 4, 6, 8, 1]
+}
+df = pd.DataFrame(data)
+
+def normalize_group(group):
+    # Sort the signal to find the three minimum and three maximum values
+    sorted_signal = group['signal'].sort_values()
+    
+    # Calculate the average of the three minimum values
+    three_min_avg = sorted_signal.head(3).mean()
+    
+    # Calculate the average of the three maximum values
+    three_max_avg = sorted_signal.tail(3).mean()
+    
+    # Normalize the signal using the average of the three min and three max values
+    group['normalized_signal'] = (group['signal'] - three_min_avg) / (three_max_avg - three_min_avg)
+    
+    # Ensure all values are between 0 and 1
+    group['normalized_signal'] = group['normalized_signal'].clip(0, 1)
+    
+    return group
+
+# Apply normalization to each group
+df_normalized = df.groupby('category').apply(normalize_group).reset_index(drop=True)
+
+# Calculate the mean of the three maximum values in the normalized signal for each group
+mean_of_three_max_normalized = df_normalized.groupby('category').apply(
+    lambda x: x['normalized_signal'].nlargest(3).mean()
+).reset_index(name='mean_of_three_max_normalized')
+
+print("Normalized DataFrame:")
+print(df_normalized)
+print("\nMean of Three Maximum Values (Normalized) by Category:")
+print(mean_of_three_max_normalized)
+
+
 
 
 # %%% Comparación usando un threshold fijo
 
 Variable_plot = "Solidity"
-threshold = 0.85
+
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    apply_gaussian_filter, column=Variable_plot, new_column_name=Variable_plot +"_filt"
+)
+
+threshold = 0.80
 time_over_Thr = (
-    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot+"_filt"]
     .apply(lambda x: (x > threshold).sum())
     .reset_index()
-    .rename(columns={Variable_plot: "contracted"})
+    .rename(columns={Variable_plot +"_filt": "contracted"})
 )
 
 time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
-
-# a = sns.boxplot(x="Fenotype", y="contracted_perc", data=time_over_Thr)
-# a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
-# b = sns.stripplot(
-#     x="Fenotype", y="contracted_perc", data=time_over_Thr, color="grey", size=8
-# )
-# plt.show()
 
 grped_bplot = sns.catplot(
     x="Batch",
@@ -512,7 +594,7 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
 threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
 
 df_plot = threshold_result[
-    threshold_result["Fenotype"].isin(["KO44"])
+    threshold_result["Fenotype"].isin(["KO179"])
 ]  # filtro para lo que se quiere repesentar
 df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
 df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
@@ -621,7 +703,6 @@ plt.show()
 # %%%% [md]
 """
 Como es de esperar para la circularity, y debido a la alta correlación entre variables, el efecto es el mismo, pero incluso más claro. Los intervalos de confiza son consistentemente diferentes, lo que indica una alta variabilidad entre batches
-
 """
 
 # %% Peaks - Numero de coletazos [md]
