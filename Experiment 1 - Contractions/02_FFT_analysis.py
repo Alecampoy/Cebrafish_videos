@@ -70,7 +70,9 @@ for f in files:
         )
         csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
         csv.insert(1, "Fenotype", re.search("_(KO\s?\d*|WT)", f.upper()).group(1))
-        csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.\wif_results)", f.lower()).group(1))
+        csv.insert(
+            2, "Fish", "ZebraF_" + re.search("(\d+)(.\wif_results)", f.lower()).group(1)
+        )
         df.append(csv)
         del (csv, f)
 
@@ -88,7 +90,17 @@ df.loc[df.Fenotype == "KO 179", "Fenotype"] = "KO179"
 
 df["Batch"] = pd.Categorical(
     df["Batch"],
-    categories=["batch 6", "batch 7", "batch 8", "batch 9", "batch 10", "batch 11", "batch 12", "batch 13", "batch 14"],
+    categories=[
+        "batch 6",
+        "batch 7",
+        "batch 8",
+        "batch 9",
+        "batch 10",
+        "batch 11",
+        "batch 12",
+        "batch 13",
+        "batch 14",
+    ],
     ordered=True,
 )
 
@@ -130,8 +142,10 @@ plt.show()
 # %%% NA Impute
 # df._get_numeric_data().columns
 
+
 def interpolate_group(group):
     return group.interpolate(method="linear", limit_direction="both")
+
 
 # incluyo las categorías como indice para que no se aplique la interpolación a variables categoricas
 df.set_index(["Batch", "Fenotype", "Fish"], inplace=True)
@@ -162,7 +176,12 @@ df.insert(8, "Y_diff", df.groupby(["Batch", "Fenotype", "Fish"]).YM.diff())
 df.insert(9, "dist", np.sqrt((df.X_diff**2) + (df.Y_diff**2)))
 
 # dataframe con la distancia recorrida por el  gusano
-Dist =df.groupby(["Batch", "Fenotype", "Fish"]).dist.agg(dist = lambda x: x.sum(), n_obs = lambda x: len(x)).round().dropna()
+Dist = (
+    df.groupby(["Batch", "Fenotype", "Fish"])
+    .dist.agg(dist=lambda x: x.sum(), n_obs=lambda x: len(x))
+    .round()
+    .dropna()
+)
 
 # %%% Box-plot por batch
 
@@ -209,9 +228,11 @@ He observado que hay peces que vibran mucho, por lo que su medición muestra que
 
 # %%%% Ventana Gausiana & calculo distancia suavizada
 
+
 def apply_gaussian_filter(group_df, column, new_column_name, sigma=4.0):
     group_df[new_column_name] = gaussian_filter1d(group_df[column], sigma)
     return group_df
+
 
 df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     apply_gaussian_filter, column="XM", new_column_name="XM_filt"
@@ -226,7 +247,12 @@ df["dist_filt"] = np.sqrt((df.X_filt_diff**2) + (df.Y_filt_diff**2))
 
 # %%%% Boxplot por batch Filtrado
 # dataframe con la distancia recorrida por el  gusano
-Dist_filt = df.groupby(["Batch", "Fenotype", "Fish"]).dist_filt.agg(dist_filt = lambda x: x.sum(), n_obs = lambda x: len(x)).round().dropna()
+Dist_filt = (
+    df.groupby(["Batch", "Fenotype", "Fish"])
+    .dist_filt.agg(dist_filt=lambda x: x.sum(), n_obs=lambda x: len(x))
+    .round()
+    .dropna()
+)
 
 grped_bplot = sns.catplot(
     x="Batch",
@@ -351,20 +377,19 @@ Los picos en las señales correlacionan altamente, se ejecuta el análisis solam
 Hay picos que debido al ruido, su parte alta tiene alguna irregularidad. También la linea basal es rugosa. Pienso que un filtro gausiano aplicado va a suavizar las irregularidades y facilitar el análisis posterior. Lo gráfico como ejemplo
 """
 
-#%%% Filtro Gaussian
+# %%% Filtro Gaussian
 
 df_temp = df.loc[("batch 11", "KO44", "ZebraF_1")]
-df_temp = apply_gaussian_filter(df_temp, column = "Perim_inv", new_column_name = "Perim_inv_filt", sigma=3)
-df_temp = apply_gaussian_filter(df_temp, column = "Circ", new_column_name = "Circ_filt", sigma=4)
+df_temp = apply_gaussian_filter(
+    df_temp, column="Feret_inv", new_column_name="Feret_inv_filt", sigma=2
+)
+df_temp = apply_gaussian_filter(
+    df_temp, column="Circ", new_column_name="Circ_filt", sigma=3
+)
 
 df_temp = df_temp.melt(
     id_vars=["Frame"],
-    value_vars=[
-        "Perim_inv",
-        "Perim_inv_filt",
-        "Circ",
-        "Circ_filt"
-    ],
+    value_vars=["Feret_inv", "Feret_inv_filt", "Circ", "Circ_filt"],
 )
 
 g = sns.FacetGrid(
@@ -419,11 +444,13 @@ Previamente use la Solidity = area/convex area, pero es una variable muy ruidosa
 df_temp = df.loc[("batch 13", "KO44", "ZebraF_1")]
 Variable_plot = "Feret_inv"
 
-df_temp = apply_gaussian_filter(df_temp, column=Variable_plot, new_column_name=Variable_plot +"_filt")
+df_temp = apply_gaussian_filter(
+    df_temp, column=Variable_plot, new_column_name=Variable_plot + "_filt"
+)
 
-g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot+"_filt")
+g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot + "_filt")
 g.axhline(0.007, color="red")
-g.set_title("Threshold on"+Variable_plot, size=25)
+g.set_title("Threshold on " + Variable_plot, size=25)
 plt.show()
 
 # %%% [md]
@@ -431,50 +458,32 @@ plt.show()
 Para no usar el mismo threshold en cada pez, voy a normalizar cada Feret entre 0-1, así sí tener un threshold estandar.
 """
 
-Ayuda código chatgpt
 
-import pandas as pd
-import numpy as np
-
-# Example DataFrame
-data = {
-    'category': ['A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C'],
-    'signal': [3, 7, 2, 9, 5, 4, 6, 8, 1]
-}
-df = pd.DataFrame(data)
-
-def normalize_group(group):
+def normalize_group(group, variable):
     # Sort the signal to find the three minimum and three maximum values
-    sorted_signal = group['signal'].sort_values()
-    
+    sorted_signal = group[variable].sort_values()
+
     # Calculate the average of the three minimum values
-    three_min_avg = sorted_signal.head(3).mean()
-    
+    three_min_avg = sorted_signal.head(6).mean()
+
     # Calculate the average of the three maximum values
-    three_max_avg = sorted_signal.tail(3).mean()
-    
+    three_max_avg = sorted_signal.tail(6).mean()
+
     # Normalize the signal using the average of the three min and three max values
-    group['normalized_signal'] = (group['signal'] - three_min_avg) / (three_max_avg - three_min_avg)
-    
+    group["normalized_sigl"] = (group["Feret_inv"] - three_min_avg) / (
+        three_max_avg - three_min_avg
+    )
+
     # Ensure all values are between 0 and 1
-    group['normalized_signal'] = group['normalized_signal'].clip(0, 1)
-    
+    group[variable + "_norm"] = group[variable].clip(0, 1)
+
     return group
 
+
 # Apply normalization to each group
-df_normalized = df.groupby('category').apply(normalize_group).reset_index(drop=True)
-
-# Calculate the mean of the three maximum values in the normalized signal for each group
-mean_of_three_max_normalized = df_normalized.groupby('category').apply(
-    lambda x: x['normalized_signal'].nlargest(3).mean()
-).reset_index(name='mean_of_three_max_normalized')
-
-print("Normalized DataFrame:")
-print(df_normalized)
-print("\nMean of Three Maximum Values (Normalized) by Category:")
-print(mean_of_three_max_normalized)
-
-
+df_normalized = df.groupby(["Batch", "Fenotype", "Fish"]).apply(
+    normalize_group, "Feret_inv"
+)
 
 
 # %%% Comparación usando un threshold fijo
@@ -482,15 +491,15 @@ print(mean_of_three_max_normalized)
 Variable_plot = "Solidity"
 
 df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
-    apply_gaussian_filter, column=Variable_plot, new_column_name=Variable_plot +"_filt"
+    apply_gaussian_filter, column=Variable_plot, new_column_name=Variable_plot + "_filt"
 )
 
 threshold = 0.80
 time_over_Thr = (
-    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot+"_filt"]
+    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot + "_filt"]
     .apply(lambda x: (x > threshold).sum())
     .reset_index()
-    .rename(columns={Variable_plot +"_filt": "contracted"})
+    .rename(columns={Variable_plot + "_filt": "contracted"})
 )
 
 time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
