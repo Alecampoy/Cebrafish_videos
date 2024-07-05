@@ -379,12 +379,12 @@ Hay picos que debido al ruido, su parte alta tiene alguna irregularidad. Tambié
 
 # %%% Filtro Gaussian
 
-df_temp = df.loc[("batch 11", "KO44", "ZebraF_1")]
+df_temp = df.loc[("batch 11", "WT", "ZebraF_1")]
 df_temp = apply_gaussian_filter(
     df_temp, column="Feret_inv", new_column_name="Feret_inv_filt", sigma=2
 )
 df_temp = apply_gaussian_filter(
-    df_temp, column="Circ", new_column_name="Circ_filt", sigma=3
+    df_temp, column="Circ", new_column_name="Circ_filt", sigma=2
 )
 
 df_temp = df_temp.melt(
@@ -410,9 +410,18 @@ g.fig.suptitle(
     fontdict={"weight": "bold"},
 )
 g.fig.subplots_adjust(top=0.97)
-# sns.set(font_scale=2)
-
+# sns.set(font_scale=2
 plt.show()
+
+# %%%% Aplicación al dataset
+
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    apply_gaussian_filter, column="Circ", new_column_name="Circ_filt", sigma=2
+)
+
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    apply_gaussian_filter, column="Feret_inv", new_column_name="Feret_inv_filt", sigma=3
+)
 
 # %% Análisis Overview[md]
 """
@@ -442,59 +451,67 @@ Previamente use la Solidity = area/convex area, pero es una variable muy ruidosa
 # %%% Plot Ejemplo threshold
 
 df_temp = df.loc[("batch 13", "KO44", "ZebraF_1")]
-Variable_plot = "Feret_inv"
+Variable_plot = "Feret_inv_filt"
 
-df_temp = apply_gaussian_filter(
-    df_temp, column=Variable_plot, new_column_name=Variable_plot + "_filt"
-)
-
-g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot + "_filt")
-g.axhline(0.007, color="red")
+g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot)
+g.axhline(0.4, color="red")
 g.set_title("Threshold on " + Variable_plot, size=25)
 plt.show()
 
 # %%% [md]
 """
-Para no usar el mismo threshold en cada pez, voy a normalizar cada Feret entre 0-1, así sí tener un threshold estandar.
+Para no usar el mismo threshold en cada pez, voy a normalizar cada Feret y Circularity entre 0-1, así sí tener un threshold estandar.
 """
 
 
+# %%% Normalización 0-1
 def normalize_group(group, variable):
     # Sort the signal to find the three minimum and three maximum values
     sorted_signal = group[variable].sort_values()
 
     # Calculate the average of the three minimum values
-    three_min_avg = sorted_signal.head(6).mean()
+    three_min_avg = sorted_signal.head(8).mean()
 
     # Calculate the average of the three maximum values
-    three_max_avg = sorted_signal.tail(6).mean()
+    three_max_avg = sorted_signal.tail(8).mean()
 
     # Normalize the signal using the average of the three min and three max values
-    group["normalized_sigl"] = (group["Feret_inv"] - three_min_avg) / (
+    group[variable] = (group[variable] - three_min_avg) / (
         three_max_avg - three_min_avg
     )
 
     # Ensure all values are between 0 and 1
     group[variable + "_norm"] = group[variable].clip(0, 1)
-
     return group
 
 
-# Apply normalization to each group
-df_normalized = df.groupby(["Batch", "Fenotype", "Fish"]).apply(
-    normalize_group, "Feret_inv"
+# Apply normalization 0-1
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    normalize_group, "Feret_inv_filt"
+)
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    normalize_group, "Circ_filt"
 )
 
+# %%%% Plot ejemplo
+df_temp = df.loc[("batch 11", "WT", "ZebraF_6")]
+Variable_plot = "Feret_inv_filt_norm"
+# Variable_plot = "Circ_filt_norm"
+
+g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot)
+g.axhline(0.6, color="red")
+g.set_title("Threshold on " + Variable_plot, size=25)
+plt.show()
 
 # %%% Comparación usando un threshold fijo
 
-Variable_plot = "Solidity"
+Variable_plot = "Feret_inv_filt_norm"
 
 df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     apply_gaussian_filter, column=Variable_plot, new_column_name=Variable_plot + "_filt"
 )
 
-threshold = 0.80
+threshold = 0.6
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot + "_filt"]
     .apply(lambda x: (x > threshold).sum())
@@ -546,13 +563,13 @@ Dado que este resultado es sensible al Threshold, vamos a ver como cambia el res
 elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa replegado el KO con respecto a su mutante.
 (Este resultado puede ser sensible a la normalización de la señal que queda aún pendiente.)
 
-### Solidity Plot
+### Feret_inv_filt_norm
 """
 
 
 # %%% Construcción del DF de evolución del resultado con el threshold (NUEVO CODIGO)
 
-Variable_plot = "Solidity"
+Variable_plot = "Feret_inv_filt_norm"
 
 threshold_result = pd.DataFrame(
     columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
@@ -603,7 +620,7 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
 threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
 
 df_plot = threshold_result[
-    threshold_result["Fenotype"].isin(["KO179"])
+    threshold_result["Fenotype"].isin(["KO44"])
 ]  # filtro para lo que se quiere repesentar
 df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
 df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
@@ -614,7 +631,7 @@ g = sns.lineplot(
     y="Mean_diff",
     hue="hue",
 )
-g.set_title("Diference of Solidity Batch Mean values with Threshold")
+g.set_title("Diference of Feret_inv Batch Mean values with Threshold")
 
 for hue in df_plot.hue.unique():
     g.fill_between(
@@ -635,7 +652,7 @@ Lo mismo para la circularity
 
 # %%%% Construcción del DF
 
-Variable_plot = "Circ"
+Variable_plot = "Circ_filt_norm"
 
 threshold_result = pd.DataFrame(
     columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
@@ -696,7 +713,7 @@ g = sns.lineplot(
     y="Mean_diff",
     hue="hue",
 )
-g.set_title("Diference of Solidity Batch Mean values with Threshold")
+g.set_title("Diference of Circularity Batch Mean values with Threshold")
 
 for hue in df_plot.hue.unique():
     g.fill_between(
