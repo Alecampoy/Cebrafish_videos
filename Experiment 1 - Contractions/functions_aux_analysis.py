@@ -14,12 +14,13 @@ Funciones para el analisis de gusanos
 
 import os
 import glob
+import numpy as np
+
 
 def get_files_in_folder(folder_path):
-    file_list = glob.glob(folder_path + '/**', recursive=True)
+    file_list = glob.glob(folder_path + "/**", recursive=True)
     files = [file for file in file_list if not os.path.isdir(file)]
     return files
-
 
 
 def agrupamiento_gusanos_fft(df, condicion):
@@ -31,16 +32,22 @@ def agrupamiento_gusanos_fft(df, condicion):
     df.insert(len(df.columns), "SEM", df.iloc[:, :n_gus].sem(axis=1))
 
 
+def remove_outliers_iqr(data):
+    Q1 = np.percentile(data, 25)
+    Q3 = np.percentile(data, 75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    return data[(data >= lower_bound) & (data <= upper_bound)]
+
+
 # # change names of Batch 8
 
 # folder_path = (
 #       "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/Batch 6 Results/"
 # )
 # file_list = os.listdir(folder_path)
- 
+
 # file_list
 # for f in file_list:
 #     os.rename(folder_path+f, folder_path + '150923_' + f[8:])
-    
-
-

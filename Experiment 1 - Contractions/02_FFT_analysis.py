@@ -18,12 +18,12 @@ import warnings
 import pandas as pd
 import numpy as np
 import re
-import os
+import os, time
 import platform
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats, fft
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d, median_filter
 from scipy.signal import find_peaks, find_peaks_cwt, detrend, periodogram, lombscargle
 from scipy.linalg import dft
 
@@ -163,6 +163,94 @@ El Zebra 10 WT del batch 7 se ha eliminado por contener > 500 NAs
 El Zebra WT 1 tiene un video de la mitad de frames. Como esta totalmente quieto, se duplican sus datos para que se ajuste a la misma longitud de los demas
 """
 
+# %% Filtrado de peces anomalos o muertos [md]
+"""
+Encuentro que hay peces que apenas dan coletazos, de este modo su gráfica tiene ruido, pero no aplica a una apropiada señal de un coletazo. Para ver cuales son y eliminarlos voy a calcular su std y su rango, ya que estos serán anormalmente bajos
+"""
+# %%% STD y Rango de Circularity
+
+STD_Rango = (
+    df.groupby(["Batch", "Fenotype", "Fish"])
+    .Circ_filt.agg(
+        STD=lambda x: x.std(), Rango=lambda x: x.max() - x.min(), n_obs=lambda x: len(x)
+    )
+    .dropna()
+)
+
+# %%%% Plot STD
+
+grped_bplot = sns.catplot(
+    x="Batch",
+    y="STD",
+    hue="Fenotype",
+    kind="box",
+    showfliers=False,
+    legend=False,
+    height=6,
+    aspect=1.9,
+    data=STD_Rango,
+    hue_order=["WT", "KO44", "KO179"],
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch",
+    y="STD",
+    hue="Fenotype",
+    jitter=0.18,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    data=STD_Rango,
+    hue_order=["WT", "KO44", "KO179"],
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
+
+grped_bplot.set_title("STD de la Circularity")
+plt.legend(handles[0:3], labels[0:3])
+plt.show()
+
+
+# %%%% Plot Rango
+
+grped_bplot = sns.catplot(
+    x="Batch",
+    y="Rango",
+    hue="Fenotype",
+    kind="box",
+    showfliers=False,
+    legend=False,
+    height=6,
+    aspect=1.9,
+    data=STD_Rango,
+    hue_order=["WT", "KO44", "KO179"],
+)
+# make grouped stripplot
+grped_bplot = sns.stripplot(
+    x="Batch",
+    y="Rango",
+    hue="Fenotype",
+    jitter=0.18,
+    dodge=True,
+    marker="o",
+    color="black",
+    # palette="Set2",
+    data=STD_Rango,
+    hue_order=["WT", "KO44", "KO179"],
+)
+handles, labels = grped_bplot.get_legend_handles_labels()
+
+grped_bplot.set_title("STD de la Circularity")
+plt.legend(handles[0:3], labels[0:3])
+plt.show()
+
+# %%% Rango [md]
+
+"""
+En la grafica del rango se ven claramente los peces anómalos, recomiendo explorar el DF y eliminarlos
+"""
+
+
 # %% Distancia Recorrida [md]
 """
 ## Distancia Recorrida
@@ -220,7 +308,7 @@ plt.show()
 
 # %%% Suavizado de las columnas [md]
 """
-Hay un valor anomalo en el batch 7 WT zebra 7, mirar
+Hay un valor anomalo en el batch 7 WT zebra 7, mirarlo Tambien batch 7 zebra 4 WT y zebra 8 KO44
 
 ### Suavizado de las columnas
 He observado que hay peces que vibran mucho, por lo que su medición muestra que se mueven mucho cuando apenas se han movido realmente. Para solucionarlo voy a aplicar un filtro de ventana gaussiana y recalcular el ultimo gráfico
@@ -241,6 +329,7 @@ df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     apply_gaussian_filter, column="YM", new_column_name="YM_filt"
 )
 
+# nuevo calculo de la distancia recorrida
 df["X_filt_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).XM_filt.diff()
 df["Y_filt_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).YM_filt.diff()
 df["dist_filt"] = np.sqrt((df.X_filt_diff**2) + (df.Y_filt_diff**2))
@@ -290,7 +379,7 @@ plt.show()
 
 # %%% [md]
 """
-La aplicación del filtro no cambia los resultados pero si genera una visualización más adecuada
+La aplicación del filtro no cambia los resultados pero si genera una visualización más adecuada. Mirar los extremos
 """
 # %% Evolución temporal de todas las variables [md]
 """
@@ -372,24 +461,43 @@ plt.show()
 Los picos en las señales correlacionan altamente, se ejecuta el análisis solamente sobre una única variable.
 """
 
-# %%% Filtro de Gaussiano [md]
+# %%% Filtro Gaussiano o Median [md]
 """
 Hay picos que debido al ruido, su parte alta tiene alguna irregularidad. También la linea basal es rugosa. Pienso que un filtro gausiano aplicado va a suavizar las irregularidades y facilitar el análisis posterior. Lo gráfico como ejemplo
 """
 
 # %%% Filtro Gaussian
+# lo aplico a las 3 señales que me interesan
+
+
+def apply_median_filter(group_df, column, new_column_name, sigma=4.0):
+    group_df[new_column_name] = median_filter(
+        group_df[column], size=sigma, mode="reflect"
+    )
+    return group_df
+
 
 df_temp = df.loc[("batch 11", "WT", "ZebraF_1")]
 df_temp = apply_gaussian_filter(
     df_temp, column="Feret_inv", new_column_name="Feret_inv_filt", sigma=2
 )
 df_temp = apply_gaussian_filter(
-    df_temp, column="Circ", new_column_name="Circ_filt", sigma=2
+    df_temp, column="Circ", new_column_name="Circ_filt", sigma=3
+)
+df_temp = apply_gaussian_filter(
+    df_temp, column="Perim_inv", new_column_name="Perim_inv_filt", sigma=2
 )
 
 df_temp = df_temp.melt(
     id_vars=["Frame"],
-    value_vars=["Feret_inv", "Feret_inv_filt", "Circ", "Circ_filt"],
+    value_vars=[
+        "Feret_inv",
+        "Feret_inv_filt",
+        "Circ",
+        "Circ_filt",
+        "Perim_inv",
+        "Perim_inv_filt",
+    ],
 )
 
 g = sns.FacetGrid(
@@ -423,6 +531,9 @@ df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     apply_gaussian_filter, column="Feret_inv", new_column_name="Feret_inv_filt", sigma=3
 )
 
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    apply_gaussian_filter, column="Perim_inv", new_column_name="Perim_inv_filt", sigma=2
+)
 # %% Análisis Overview[md]
 """
 # Análisis
@@ -454,7 +565,7 @@ df_temp = df.loc[("batch 13", "KO44", "ZebraF_1")]
 Variable_plot = "Feret_inv_filt"
 
 g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot)
-g.axhline(0.4, color="red")
+g.axhline(0.008, color="red")
 g.set_title("Threshold on " + Variable_plot, size=25)
 plt.show()
 
@@ -468,18 +579,14 @@ Para no usar el mismo threshold en cada pez, voy a normalizar cada Feret y Circu
 def normalize_group(group, variable):
     # Sort the signal to find the three minimum and three maximum values
     sorted_signal = group[variable].sort_values()
-
     # Calculate the average of the three minimum values
-    three_min_avg = sorted_signal.head(8).mean()
-
+    three_min_avg = sorted_signal.head(12).mean()
     # Calculate the average of the three maximum values
     three_max_avg = sorted_signal.tail(8).mean()
-
     # Normalize the signal using the average of the three min and three max values
-    group[variable] = (group[variable] - three_min_avg) / (
+    group[variable + "_norm"] = (group[variable] - three_min_avg) / (
         three_max_avg - three_min_avg
     )
-
     # Ensure all values are between 0 and 1
     group[variable + "_norm"] = group[variable].clip(0, 1)
     return group
@@ -491,6 +598,9 @@ df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
 )
 df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     normalize_group, "Circ_filt"
+)
+df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    normalize_group, "Perim_inv_filt"
 )
 
 # %%%% Plot ejemplo
@@ -507,16 +617,12 @@ plt.show()
 
 Variable_plot = "Feret_inv_filt_norm"
 
-df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
-    apply_gaussian_filter, column=Variable_plot, new_column_name=Variable_plot + "_filt"
-)
-
 threshold = 0.6
 time_over_Thr = (
-    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot + "_filt"]
+    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(lambda x: (x > threshold).sum())
     .reset_index()
-    .rename(columns={Variable_plot + "_filt": "contracted"})
+    .rename(columns={Variable_plot: "contracted"})
 )
 
 time_over_Thr["contracted_perc"] = 100 * time_over_Thr.contracted / 1550
@@ -548,8 +654,9 @@ grped_bplot = sns.stripplot(
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 grped_bplot.set_title(
-    "Porcentaje del tiempo que pasa el gusano replegado - sobre el Threshold = "
-    + str(threshold),
+    "Porcentaje del tiempo que pasa replegado (sobre el Threshold = "
+    + str(threshold)
+    + ")",
     size=20,
 )
 plt.legend(handles[0:3], labels[0:3])
@@ -564,10 +671,11 @@ elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa
 (Este resultado puede ser sensible a la normalización de la señal que queda aún pendiente.)
 
 ### Feret_inv_filt_norm
+Como he visto que contiene outliers, los he eliminado basandome en la regla del IQR
 """
 
 
-# %%% Construcción del DF de evolución del resultado con el threshold (NUEVO CODIGO)
+# %%% Construcción del DF de evolución del resultado con el threshold
 
 Variable_plot = "Feret_inv_filt_norm"
 
@@ -576,27 +684,28 @@ threshold_result = pd.DataFrame(
 )
 ref = ko44 = ko179 = np.nan
 
-for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
+for thr in np.arange(0.2, 1.01, 0.01):  # iteración sobre el threshold
     # data frame con los valores para ese threshold
     time_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-        .agg(
+        df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False)[Variable_plot].agg(
             contracted=lambda x: (x > thr).sum(),
             contracted_perc=lambda x: 100 * (x > thr).sum() / len(x),
         )
-        .reset_index()
-        .dropna()
+        # .reset_index()
+        # .dropna()
     )
 
     # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
-    for batch, group in time_over_Thr.groupby("Batch"):
+    for batch, group in time_over_Thr.groupby("Batch", group_keys=False):
         WT = (
-            group.dropna()
-            .drop("Batch", axis=1)
-            .loc[group.Fenotype == "WT"]
-            .contracted_perc
+            group
+            # .dropna()
+            # .drop("Batch", axis=1)
+            .loc[
+                group.index.get_level_values("Fenotype") == "WT"
+            ].contracted_perc.dropna()
         )
-        grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
+        grouped_batch = group.dropna().groupby("Fenotype")
         for fenotype, group in grouped_batch:  # loop over each possible fenotype
             if fenotype != "WT":
                 mut = group.contracted_perc
@@ -604,7 +713,9 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
                     "Threshold": thr,
                     "Batch": batch,
                     "Fenotype": fenotype,
-                    "Mean_diff": np.mean(WT) - np.mean(mut),
+                    "Mean_diff": np.mean(remove_outliers_iqr(WT))
+                    - np.mean(remove_outliers_iqr(mut)),
+                    "Median_diff": np.median(WT) - np.median(mut),
                     "CI": np.ptp(
                         stats.ttest_ind(WT, mut).confidence_interval(
                             confidence_level=0.80
@@ -631,7 +742,7 @@ g = sns.lineplot(
     y="Mean_diff",
     hue="hue",
 )
-g.set_title("Diference of Feret_inv Batch Mean values with Threshold")
+g.set_title("Diference of " + Variable_plot + " Batch Mean values along Threshold")
 
 for hue in df_plot.hue.unique():
     g.fill_between(
@@ -641,6 +752,7 @@ for hue in df_plot.hue.unique():
         alpha=0.1,
         data=df_plot[df_plot.hue == hue],
     )
+g.axhline(0, color="black", linestyle="--", linewidth=0.5)
 plt.show()
 
 
@@ -650,7 +762,7 @@ plt.show()
 Lo mismo para la circularity
 """
 
-# %%%% Construcción del DF
+# %%%% Construcción del DF y plot
 
 Variable_plot = "Circ_filt_norm"
 
@@ -659,27 +771,28 @@ threshold_result = pd.DataFrame(
 )
 ref = ko44 = ko179 = np.nan
 
-for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
+for thr in np.arange(0.2, 1.01, 0.01):  # iteración sobre el threshold
     # data frame con los valores para ese threshold
     time_over_Thr = (
-        df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-        .agg(
+        df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False)[Variable_plot].agg(
             contracted=lambda x: (x > thr).sum(),
             contracted_perc=lambda x: 100 * (x > thr).sum() / len(x),
         )
-        .reset_index()
-        .dropna()
+        # .reset_index()
+        # .dropna()
     )
 
     # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
-    for batch, group in time_over_Thr.groupby("Batch"):
+    for batch, group in time_over_Thr.groupby("Batch", group_keys=False):
         WT = (
-            group.dropna()
-            .drop("Batch", axis=1)
-            .loc[group.Fenotype == "WT"]
-            .contracted_perc
+            group
+            # .dropna()
+            # .drop("Batch", axis=1)
+            .loc[
+                group.index.get_level_values("Fenotype") == "WT"
+            ].contracted_perc.dropna()
         )
-        grouped_batch = group.dropna().drop("Batch", axis=1).groupby("Fenotype")
+        grouped_batch = group.dropna().groupby("Fenotype")
         for fenotype, group in grouped_batch:  # loop over each possible fenotype
             if fenotype != "WT":
                 mut = group.contracted_perc
@@ -687,7 +800,9 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
                     "Threshold": thr,
                     "Batch": batch,
                     "Fenotype": fenotype,
-                    "Mean_diff": np.mean(WT) - np.mean(mut),
+                    "Mean_diff": np.mean(remove_outliers_iqr(WT))
+                    - np.mean(remove_outliers_iqr(mut)),
+                    "Median_diff": np.median(WT) - np.median(mut),
                     "CI": np.ptp(
                         stats.ttest_ind(WT, mut).confidence_interval(
                             confidence_level=0.80
@@ -697,8 +812,7 @@ for thr in np.arange(0.1, 1.01, 0.01):  # iteración sobre el threshold
                 }
                 threshold_result.loc[len(threshold_result)] = new_row
 
-# %%%% Plot
-
+# el plot
 threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
 
 df_plot = threshold_result[
@@ -713,7 +827,7 @@ g = sns.lineplot(
     y="Mean_diff",
     hue="hue",
 )
-g.set_title("Diference of Circularity Batch Mean values with Threshold")
+g.set_title("Diference of " + Variable_plot + " Batch Mean values along Threshold")
 
 for hue in df_plot.hue.unique():
     g.fill_between(
@@ -723,6 +837,94 @@ for hue in df_plot.hue.unique():
         alpha=0.1,
         data=df_plot[df_plot.hue == hue],
     )
+
+g.axhline(0, color="black", linestyle="--", linewidth=0.5)
+plt.show()
+
+
+# %%%  Perim_inv vs Threshold Plot [md]
+"""
+### Perimeter inverse plot
+Lo mismo para el perimetro, que tenia unos plots claros
+"""
+
+# %%%% Construcción del DF y plot
+
+Variable_plot = "Perim_inv_filt_norm"
+
+threshold_result = pd.DataFrame(
+    columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
+)
+ref = ko44 = ko179 = np.nan
+
+for thr in np.arange(0.2, 1.01, 0.01):  # iteración sobre el threshold
+    # data frame con los valores para ese threshold
+    time_over_Thr = (
+        df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False)[Variable_plot].agg(
+            contracted=lambda x: (x > thr).sum(),
+            contracted_perc=lambda x: 100 * (x > thr).sum() / len(x),
+        )
+        # .reset_index()
+        # .dropna()
+    )
+
+    # generación de los resultados de ese dataframe y añadidos al dataframe de los resultados. La iteración se hace sobre los batch para calcular los valores para cada fenotipo
+    for batch, group in time_over_Thr.groupby("Batch", group_keys=False):
+        WT = (
+            group
+            # .dropna()
+            # .drop("Batch", axis=1)
+            .loc[
+                group.index.get_level_values("Fenotype") == "WT"
+            ].contracted_perc.dropna()
+        )
+        grouped_batch = group.dropna().groupby("Fenotype")
+        for fenotype, group in grouped_batch:  # loop over each possible fenotype
+            if fenotype != "WT":
+                mut = group.contracted_perc
+                new_row = {
+                    "Threshold": thr,
+                    "Batch": batch,
+                    "Fenotype": fenotype,
+                    "Mean_diff": np.mean(remove_outliers_iqr(WT))
+                    - np.mean(remove_outliers_iqr(mut)),
+                    "Median_diff": np.median(WT) - np.median(mut),
+                    "CI": np.ptp(
+                        stats.ttest_ind(WT, mut).confidence_interval(
+                            confidence_level=0.80
+                        )
+                    )
+                    / 2,
+                }
+                threshold_result.loc[len(threshold_result)] = new_row
+
+# el plot
+threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
+
+df_plot = threshold_result[
+    threshold_result["Fenotype"].isin(["KO44"])
+]  # filtro para lo que se quiere repesentar
+df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
+df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
+
+g = sns.lineplot(
+    data=df_plot,
+    x="Threshold",
+    y="Mean_diff",
+    hue="hue",
+)
+g.set_title("Diference of " + Variable_plot + " Batch Mean values along Threshold")
+
+for hue in df_plot.hue.unique():
+    g.fill_between(
+        x="Threshold",
+        y1="CI_up",
+        y2="CI_down",
+        alpha=0.1,
+        data=df_plot[df_plot.hue == hue],
+    )
+
+g.axhline(0, color="black", linestyle="--", linewidth=0.5)
 plt.show()
 
 
@@ -742,17 +944,20 @@ Para ello usamos la funcion peak finder sobre la magnitud que parece que muestra
 """
 
 # %%% Peak Finder - Ejemplo 1 pez
-df_temp = df[
-    (df.Batch == "batch 7") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_1")
-].Round
+
+Variable = "Circ_filt"
+# Variable = "Perim_inv_filt"
+# Variable = "Feret_inv_filt"
+
+df_temp = df.loc[("batch 7", "KO44", "ZebraF_1"), Variable]
 
 peaks, _ = find_peaks(
-    df_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
+    df_temp, height=0.3, prominence=0.008, threshold=0.0, distance=2, width=1
 )  # ajustar estos parametros
 # he comprobado que algun gusano realiza contracciones y extensiones en 2 frames, por lo que distance = 1 & width = 1
 
-plt.plot(df_temp)
-plt.plot(peaks, df_temp[peaks], "2", markersize=24)
+plt.plot(df_temp.values)
+plt.plot(peaks, df_temp.iloc[peaks], "2", markersize=24)
 plt.title("Picos encontrados sobre la Roundness", size=20)
 plt.show()
 
@@ -763,23 +968,23 @@ Es interesante ver como funciona sobre todos los gusanos
 
 # %%% Peak finder a todos los Zebra
 
-# df["unique_fish"] = (
-#     df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
-# )
+# df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
 
-# # Filtro para ver por batch
-# # dfa = df[df.Batch == "batch 6"]
-
+# i=0
 # for f in sorted(set(df.unique_fish)):
-#     fish_temp = df[df.unique_fish == f].Round  # ajustar estos parametros
+#     i+=1
+#     if i>30:
+#         break
+#     fish_temp = df[df.unique_fish == f].Circ_filt  # ajustar estos parametros
 #     peaks, _ = find_peaks(
 #         fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
 #     )
 
-#     plt.plot(fish_temp)
-#     plt.plot(peaks, fish_temp[peaks], "2", markersize=24)
+#     plt.plot(fish_temp.values)
+#     plt.plot(peaks, fish_temp.iloc[peaks], "2", markersize=24)
 #     plt.title(f)
 #     plt.show()
+#     # time.sleep(0.5)
 
 # %%% [md]
 """
@@ -793,14 +998,14 @@ Aplicar un filtro a la gráfica del movimiento NO es necesario, pues los peaks e
 
 Represento el número de picos por condición y batch. Dado que todos los videos duran el mismo tiempo, se puede asociar a la frecuencia.
 
-### Roundness
+### Circularity
 
-Usando la Roundness
+Usando la Circularity filtrada
 """
 
 # %%% Por condición
 
-Variable_plot = "Round"
+Variable_plot = "Circ_filt"
 peaks_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(
@@ -808,7 +1013,7 @@ peaks_df = (
             find_peaks(
                 x,
                 height=0.4,
-                prominence=0.08,
+                prominence=0.08,  # no cambia mucho si pongo 0.08
                 threshold=0.0,
                 distance=2,
                 width=1,  # para magnitudes 0-1
@@ -825,13 +1030,15 @@ grped_bplot = sns.catplot(
     y="N_peaks",
     hue="Fenotype",
     kind="box",
-    legend=False,
+    legend=True,
     showfliers=False,
     height=6,
     aspect=1.9,
     data=peaks_df,
     hue_order=["WT", "KO44", "KO179"],
 )
+
+# handles, labels = grped_bplot.get_legend_handles_labels()
 # make grouped stripplot
 grped_bplot = sns.stripplot(
     x="Batch",
@@ -855,13 +1062,13 @@ plt.show()
 # %%% [md]
 """
 He visualizado la gráfica anterior cambiando el valor de `height` en el intervalo 0.1-0.9 y
-no cambia hasta 0.8, el cual es ya un valor extremo para Roundness. Lo mismo con `prominence`en el
+no cambia hasta 0.8, el cual es ya un valor extremo para Circ. Lo mismo con `prominence`en el
 intervalo 0.01-0,6 y es invariante hasta valores extremos a partir de 0.4 (altura del pico)
 
 ### Conclusión
 
 El método funciona correctamente, pero hay mucha variabilidad interbatch. Aunque los WT son similares en la mayoria de batches.
-Recomiendo repasar las gráficas de los peces comparandolas con las fotos de microscopia y ver que videos contienen defectos. También es necesario aumentar la N
+Recomiendo repasar las gráficas de los peces comparandolas con las fotos de microscopia y ver que videos contienen defectos. 
 """
 
 # %% Intro FFT y Periodograma [md]
