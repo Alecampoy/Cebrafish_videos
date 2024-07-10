@@ -26,11 +26,11 @@ x = 1.5 * np.sin(2 * np.pi * freq * t)
 freq = 2
 x += 3 * np.sin(2 * np.pi * freq * t)
 
-freq = 7
-x += 2 * np.sin(2 * np.pi * freq * t)
+# freq = 7
+# x += 2 * np.sin(2 * np.pi * freq * t)
 
-x += 5
-x += np.random.normal(1, 1, sr * 10)
+# x += 5
+# x += np.random.normal(1, 1, sr * 10)
 
 x = x - np.mean(x)
 
@@ -147,12 +147,13 @@ plt.tight_layout()
 plt.show()
 
 # %% Pulsed signal
+from scipy.signal import detrend
 
 # Parameters
-frequency = 2.5  # Frequency of the pulses (in Hz)
-pulse_width = 0.01  # Width of each pulse (in seconds)
+frequency = 1.5  # Frequency of the pulses (in Hz)
+pulse_width = 0.15  # Width of each pulse (in seconds)
 amplitude = 2  # Amplitude of the pulses
-duration = 6  # Duration of the signal (in seconds)
+duration = 10  # Duration of the signal (in seconds)
 sampling_rate = 1000  # Sampling rate (in Hz)
 
 # Time array
@@ -162,23 +163,36 @@ t = np.arange(0, duration, 1 / sampling_rate)
 signal = amplitude * np.where(np.sin(2 * np.pi * frequency * t) > 0, 1, 0)
 signal = np.where((t % (1 / frequency)) < pulse_width, signal, 0).astype("float64")
 # signal = signal.astype("float64") + 1 * (np.sin(2 * np.pi * 1.3 * t))
-signal += np.random.normal(1, 0.2, duration * sampling_rate)
-signal = signal - np.mean(signal)
+# signal += np.random.normal(1, 0.2, duration * sampling_rate)
+# signal = signal - np.mean(signal)
 
+frequency = 2.2  # Frequency of the pulses (in Hz)
+pulse_width = 0.15  # Width of each pulse (in seconds)
+amplitude = 2  # Amplitude of the pulses
+signal2 = amplitude * np.where(np.sin(2 * np.pi * frequency * t) > 0, 1, 0)
+signal2 = np.where((t % (1 / frequency)) < pulse_width, signal2, 0).astype("float64")
+
+signal = signal + signal2
+signal = signal.clip(0, 2)
+signal = detrend(signal)
 
 # Plotting the signal
 plt.plot(t, signal)
 plt.title("Pulsed Signal")
 plt.xlabel("Time (s)")
+
 plt.ylabel("Amplitude")
 plt.grid(True)
 plt.show()
 
 "# %%% FFT"
 
-X = fft.fft(signal, norm="backward")
+X = fft.rfft(signal, norm="backward")
 N = len(signal)
-freq = fft.fftfreq(N, 1 / sampling_rate)
+freq = fft.rfftfreq(N, 1 / sampling_rate)
+
+# filtro
+# X[abs(freq > 2.300)] = 0
 
 psd = np.abs(X) ** 2 / (sampling_rate * N)
 # aquii esta la clave de la normalización. Por ello estudiar esto. Tambien usar la fft completa y no rfft para evitar problemas con parserval
@@ -192,13 +206,13 @@ plt.ylabel("FFT Amplitude |X(freq)|**2")
 plt.xlim(-0.1, 6)
 
 plt.subplot(122)
-plt.plot(t, fft.ifft(X), "r")
+plt.plot(t, fft.irfft(X), "r")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.tight_layout()
 plt.show()
 
-# %% same but convolved
+# %% Pulsed and convolved
 
 # Parameters
 frequency = 7  # Frequency of the pulses (in Hz)

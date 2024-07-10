@@ -171,44 +171,11 @@ Encuentro que hay peces que apenas dan coletazos, de este modo su gráfica tiene
 
 STD_Rango = (
     df.groupby(["Batch", "Fenotype", "Fish"])
-    .Circ_filt.agg(
+    .Circ.agg(
         STD=lambda x: x.std(), Rango=lambda x: x.max() - x.min(), n_obs=lambda x: len(x)
     )
     .dropna()
 )
-
-# %%%% Plot STD
-
-grped_bplot = sns.catplot(
-    x="Batch",
-    y="STD",
-    hue="Fenotype",
-    kind="box",
-    showfliers=False,
-    legend=False,
-    height=6,
-    aspect=1.9,
-    data=STD_Rango,
-    hue_order=["WT", "KO44", "KO179"],
-)
-# make grouped stripplot
-grped_bplot = sns.stripplot(
-    x="Batch",
-    y="STD",
-    hue="Fenotype",
-    jitter=0.18,
-    dodge=True,
-    marker="o",
-    color="black",
-    # palette="Set2",
-    data=STD_Rango,
-    hue_order=["WT", "KO44", "KO179"],
-)
-handles, labels = grped_bplot.get_legend_handles_labels()
-
-grped_bplot.set_title("STD de la Circularity")
-plt.legend(handles[0:3], labels[0:3])
-plt.show()
 
 
 # %%%% Plot Rango
@@ -240,14 +207,14 @@ grped_bplot = sns.stripplot(
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
-grped_bplot.set_title("STD de la Circularity")
+grped_bplot.set_title("Rango de la Circularity")
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %%% Rango [md]
 
 """
-En la grafica del rango se ven claramente los peces anómalos, recomiendo explorar el DF y eliminarlos
+En la grafica del rango se ven claramente los peces anómalos, recomiendo explorar el DF y eliminarlos. La STD no creo que aporte esta información, ya que los peces que se mueven poco la tendrán baja a pesar de ser funcionales
 """
 
 
@@ -588,7 +555,7 @@ def normalize_group(group, variable):
         three_max_avg - three_min_avg
     )
     # Ensure all values are between 0 and 1
-    group[variable + "_norm"] = group[variable].clip(0, 1)
+    group[variable + "_norm"] = group[variable + "_norm"].clip(0, 1)
     return group
 
 
@@ -968,23 +935,23 @@ Es interesante ver como funciona sobre todos los gusanos
 
 # %%% Peak finder a todos los Zebra
 
-# df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
+df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
 
-# i=0
-# for f in sorted(set(df.unique_fish)):
-#     i+=1
-#     if i>30:
-#         break
-#     fish_temp = df[df.unique_fish == f].Circ_filt  # ajustar estos parametros
-#     peaks, _ = find_peaks(
-#         fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
-#     )
+i = 0
+for f in sorted(set(df.unique_fish)):
+    i += 1
+    if i > 30:
+        break
+    fish_temp = df[df.unique_fish == f].Circ_filt  # ajustar estos parametros
+    peaks, _ = find_peaks(
+        fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
+    )
 
-#     plt.plot(fish_temp.values)
-#     plt.plot(peaks, fish_temp.iloc[peaks], "2", markersize=24)
-#     plt.title(f)
-#     plt.show()
-#     # time.sleep(0.5)
+    plt.plot(fish_temp.values)
+    plt.plot(peaks, fish_temp.iloc[peaks], "2", markersize=24)
+    plt.title(f)
+    plt.show()
+    # time.sleep(0.5)
 
 # %%% [md]
 """
@@ -1088,14 +1055,11 @@ En lugar de contar el número de picos, voy a usar transformar las señales al d
 """
 
 # %%% Zebra Ejemplo FFT - Analisis de Frecuencias del movimiento para un Pez Zebra
-# la duracion debe estar ajustada para cada sample por haber eliminado los NA. comprobar la duración del video y calular como se eliminan los NA: mejor imputarlos que borrarlos. Los videos tienen 1550 frames
-
-zebra_temp = df[
-    (df.Batch == "batch 10") & (df.Fenotype == "KO179") & (df.Fish == "ZebraF_6")
-]
 
 
-signal = zebra_temp.Round.values  # signal as array
+zebra_temp = df.loc[("batch 11", "KO179", "ZebraF_1")]
+
+signal = zebra_temp.Feret_inv_filt_norm.values  # signal as array
 # smooth signal
 
 # to avoid the signal at the first fourier coefficient F(0) we should substract offset
@@ -1110,7 +1074,9 @@ N_points = len(signal)  # lenght signal
 time_points = zebra_temp.Time
 
 
-def plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f="Zebra"):
+def plot_fft_filter(
+    signal, sample_rate, time_step, N_points, time_points, f="Zebra", filtro_psd=0.1
+):
     # FFT
     zebra_fft = fft.fft(signal, norm="backward")
     # Calculos para frequencias en seg pare representar en el eje X
@@ -1123,11 +1089,12 @@ def plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f="Ze
     # Filtrado FFT - Filtro por la psd
     zebra_fft_fil = np.array(zebra_fft)
     # # upper power limit
-    # zebra_fft_fil[zebra_psd > 0.030] = 0
+    # zebra_fft_fil[zebra_psd > 0.2] = 0
     # # lower power limit
-    zebra_fft_fil[zebra_psd < 0.05e-6] = 0
+    zebra_fft_fil[zebra_psd < filtro_psd * max(zebra_psd)] = 0
     # bandpass filter
-    zebra_fft_fil[abs(zebra_freqs > 0.5)] = 0
+    zebra_fft_fil[abs(zebra_freqs > 0.6)] = 0  # frecuencia máxima
+    zebra_fft_fil[abs(zebra_freqs < 0.01)] = 0  # frecuencia máxima
     zebra_fil_psd = np.abs(zebra_fft_fil) ** 2 / (sample_rate * N_points)
 
     # Plot
@@ -1138,7 +1105,9 @@ def plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f="Ze
 
     sns.lineplot(x=time_points, y=signal, ax=axes[0, 0], color="r")
     sns.lineplot(x=fft_plot_x, y=zebra_psd[0 : len(fft_plot_x)], ax=axes[0, 1])
-    sns.lineplot(x=fft_plot_x, y=zebra_fil_psd[0 : len(fft_plot_x)], ax=axes[1, 0])
+    sns.lineplot(
+        x=fft_plot_x, y=zebra_fil_psd[0 : len(fft_plot_x)], ax=axes[1, 0]
+    ).set_xlim(-0.05, 1.1)
     # same limit for the filtered fft
     axes[1, 0].set_ylim(axes[0, 1].get_ylim())
     sns.lineplot(
@@ -1155,26 +1124,127 @@ def plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f="Ze
     plt.show()
 
 
-plot_fft_filter(signal, sample_rate, time_step, N_points, time_points)
+plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, filtro_psd=0.2)
 
-# %%% FFT filter for every zebra
+# %%%% FFT filter for every zebra
 
-df["unique_fish"] = (
-    df.Batch.astype(str) + "_" + df.Fenotype.astype(str) + "_" + df.Fish.astype(str)
+# df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
+
+# # Filtro para ver por batch
+# dfa = df.loc["batch 11"]
+
+
+# for f in sorted(set(dfa.unique_fish)):
+#     signal = dfa[dfa.unique_fish == f].Circ_filt_norm.values  # ajustar estos parametros
+#     signal = detrend(signal, axis=0)
+#     sample_rate = 9  # frames / s
+#     time_step = 1 / sample_rate
+#     N_points = len(signal)
+#     # t = np.arange(0, N_points/sample_rate, time_step)
+#     time_points = zebra_temp.Time
+#     plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f)
+
+# %%%% [md]
+"""
+Puede que haya un problema con el filtrado pensando en detectar las frecuencias . para señales que tienen pocos picos, la frecuencia se puede calcular mas o menos, pero las interferencias de las señas tratan de ajustar los picos, dando una PSD algo más alta para frecuencias mayores que posiblemente no sean significativas. tengo que estudiar esto un poco más, pero el efecto es que la FFT modela la forma de la señal y no las frecuencias de los coletazos
+
+para un pez que da 1 coletazo la freq es 1/173=0.006Hz seria la fr min
+para la maxima, un pez que da1 coletazo en 3 frames = 3Hz seria fr max, aunque arriba la he filtrado para 
+
+"""
+# %%%% [md]
+"""
+No tengo muy claro que este sistema funcione para de verdad detectar las frecuencias a las que da los coletazos. La FT trata de ajustar la forma de la señal y no sus frecuencias, por lo que hay interferencias. Aún así puedo probar el agrupamiento por batch, pero creo que es mejor probar la autocorrelation y el periodograma antes
+"""
+# %%% Generación de la señal cuadrada [md]
+"""
+Con objeto de evitar los problemas dados por que la FT encuentra frecuencias que modelan las señales y enmascara las frecuencias de movimientos, voy a generar una señal cuadrada donde cada valor de señal será un coletazo detectado con los picos
+"""
+
+# %%%% Señal cuadrada a 1 Zebra
+
+Variable = "Circ_filt"
+# Variable = "Perim_inv_filt"
+# Variable = "Feret_inv_filt"
+
+df_temp = df.loc[("batch 7", "KO44", "ZebraF_1"), Variable]
+
+peaks, _ = find_peaks(
+    df_temp, height=0.3, prominence=0.01, threshold=0.0, distance=2, width=1
 )
 
-# Filtro para ver por batch
-dfa = df[df.Batch == "batch 7"]
+signal2 = np.zeros(len(df_temp))
+signal2[peaks] = 1
+signal2[peaks + 1] = 1  # para que tengan una longitud los altos de la señal
+signal2 = signal2 - np.mean(signal2)
 
-for f in sorted(set(dfa.unique_fish)):
-    signal = dfa[dfa.unique_fish == f].Round.values  # ajustar estos parametros
-    signal = detrend(signal, axis=0)
-    sample_rate = 9  # frames / s
-    time_step = 1 / sample_rate
-    N_points = len(signal)
-    # t = np.arange(0, N_points/sample_rate, time_step)
-    time_points = zebra_temp.Time
-    plot_fft_filter(signal, sample_rate, time_step, N_points, time_points, f)
+plt.plot(df_temp.values)
+plt.plot(signal2, "r")
+plt.title("Señal cuadrada modulada", size=20)
+plt.show()
+
+# %%%% [md]
+"""
+Ahora se puede hacer la FT sobre esta señal y buscamos las frecuencias
+"""
+
+# %%%% FFT sobre la señal cuadrada
+
+plot_fft_filter(signal2, sample_rate, time_step, N_points, time_points, filtro_psd=0.2)
+
+# %%%% [md]
+"""
+En este caso tenemos unas frecuencias, vamos a calcularlo para cada zebra y agregar por condición
+"""
+# %%% Agregación FT señales cuadradas
+
+
+def señal_cuadrada(group):
+    peaks, _ = find_peaks(
+        group, height=0.3, prominence=0.01, threshold=0.0, distance=2, width=1
+    )
+    signal2 = np.zeros(len(group))
+    signal2[peaks] = 1
+    signal2[peaks + 1] = 1  # para que tengan una longitud los altos de la señal
+    signal2 = signal2 - np.mean(signal2)
+
+    return signal2
+
+
+df2 = df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)[Variable_plot].apply(
+    señal_cuadrada
+)
+
+
+Variable_plot = "Circ_filt"
+df2 = (
+    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
+    .apply(
+        lambda x: len(
+            find_peaks(
+                x,
+                height=0.4,
+                prominence=0.08,  # no cambia mucho si pongo 0.08
+                threshold=0.0,
+                distance=2,
+                width=1,  # para magnitudes 0-1
+                # x,height=0.005,prominence=0.002,threshold=0.0,distance=2,width=1,  # para perimetro_inv
+            )[0]
+        )
+    )
+    .reset_index()
+    .rename(columns={Variable_plot: "N_peaks"})
+)
+
+
+# %% Periodograma
+
+# %% Lomb-scarle Periodogram
+
+# %% Autocorrelation
+
+# %% DFT de la ACF
+
 
 # %% CODIGO GUSANOS
 
