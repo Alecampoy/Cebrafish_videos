@@ -1093,7 +1093,7 @@ def plot_fft_filter(
     # # lower power limit
     zebra_fft_fil[zebra_psd < filtro_psd * max(zebra_psd)] = 0
     # bandpass filter
-    zebra_fft_fil[abs(zebra_freqs > 0.6)] = 0  # frecuencia máxima
+    zebra_fft_fil[abs(zebra_freqs > 3)] = 0  # frecuencia máxima
     zebra_fft_fil[abs(zebra_freqs < 0.01)] = 0  # frecuencia máxima
     zebra_fil_psd = np.abs(zebra_fft_fil) ** 2 / (sample_rate * N_points)
 
@@ -1167,7 +1167,7 @@ Variable = "Circ_filt"
 # Variable = "Perim_inv_filt"
 # Variable = "Feret_inv_filt"
 
-df_temp = df.loc[("batch 7", "KO44", "ZebraF_1"), Variable]
+df_temp = df.loc[("batch 7", "WT", "ZebraF_3"), Variable]
 
 peaks, _ = find_peaks(
     df_temp, height=0.3, prominence=0.01, threshold=0.0, distance=2, width=1
@@ -1224,19 +1224,9 @@ df2.set_index(["Batch", "Fenotype", "Fish"], inplace=True)
 sample_rate = 9  # frames / s
 time_step = 1 / sample_rate  # Delta t
 N_points = 1550  # lenght signal
-time_points = df.loc[("batch 11", "KO179", "ZebraF_1")].Time
 
 
-def fft_filter(
-    group,
-    variable,
-    sample_rate,
-    time_step,
-    N_points,
-    time_points,
-    f="Zebra",
-    filtro_psd=0.1,
-):
+def fft_filter(group, variable, sample_rate, time_step, N_points, filtro_psd=0.1):
     signal = detrend(group[variable].values, axis=0)
     # FFT
     zebra_fft = fft.fft(signal, norm="backward")
@@ -1251,10 +1241,10 @@ def fft_filter(
     # # lower power limit
     zebra_fft_fil[zebra_psd < filtro_psd * max(zebra_psd)] = 0
     # bandpass filter
-    zebra_fft_fil[abs(zebra_freqs > 0.6)] = 0  # frecuencia máxima
+    zebra_fft_fil[abs(zebra_freqs > 3)] = 0  # frecuencia máxima
     zebra_fft_fil[abs(zebra_freqs < 0.01)] = 0  # frecuencia máxima
     zebra_fil_psd = np.abs(zebra_fft_fil) ** 2 / (sample_rate * N_points)
-    group["PSD"] = zebra_fil_psd
+    group["PSD"] = zebra_fil_psd / max(zebra_fil_psd)
     group["freqs"] = zebra_freqs
     return group
 
@@ -1265,9 +1255,66 @@ df2 = df2.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     sample_rate,
     time_step,
     N_points,
-    time_points,
-    filtro_psd=0.2,
+    filtro_psd=0.1,
 )
+
+df2 = (
+    df2.loc[(df2.freqs >= 0.005) & (df2.freqs <= 3)]
+    .drop("Circ_filt", axis=1)
+    .reset_index()
+)
+
+# Variable = "Circ_filt"
+# df_temp = df2.loc[("batch 7", "KO44", "ZebraF_1")]
+# plt.plot(df_temp.PSD.values)
+# plt.title("Señal cuadrada modulada", size=20)
+# plt.show()
+
+# %%%% plot por batch
+for b in set(df2.Batch):
+    temp_plot = df2.loc[df2.Batch == b]
+
+    sns.lineplot(
+        data=temp_plot,
+        x="freqs",
+        y="PSD",
+        hue="Fenotype",
+        hue_order=["WT", "KO44", "KO179"],
+        estimator="mean",
+        errorbar=("ci", 80),
+    )
+    plt.show()
+
+# %%% Plot de todas las PSD
+
+# g = sns.FacetGrid(
+#     df2,
+#     hue="Fenotype",
+#     hue_order=["WT", "KO44", "KO179"],
+#     row="Batch",
+#     palette="pastel",
+#     sharex="col",
+#     sharey=False,
+#     height=4,
+#     aspect=4,
+# )
+
+# # g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+# # fontsize=24, fontdict={"weight": "bold"})
+
+# g.map_dataframe(
+#     sns.lineplot,
+#     estimator="mean",
+#     x="freqs",
+#     y="PSD",
+#     errorbar=("ci", 80),
+# )
+
+# g.add_legend()
+# g.set_axis_labels(fontsize=20)
+# g.fig.suptitle("Averaged distribution of radial position relative to edge")
+# plt.subplots_adjust(top=0.95)
+# plt.show()
 
 
 # %% Periodograma

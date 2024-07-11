@@ -39,6 +39,7 @@ warnings.filterwarnings("ignore")
 
 # %% Lectura Archivos [md]
 """
+El archivo WT2 del batch 6 esta roto, cogerlo del disco duro y otros mas, recopiarlos del disco duro
 # Lectura de Archivos
 Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
@@ -261,9 +262,9 @@ Como se recalculan las distancias entre 2 frames, es posible que una posición o
 for i in range(10):
     # Imputación en las columnas que tienen medidas
     df.loc[(df.DF == "DF1") & (df.dist > 220), ("X", "Y", "Mean-Distance")] = np.nan
-    df.loc[(df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")] = (
-        np.nan
-    )  # ya el tamaño de los pocillso son diferentes
+    df.loc[
+        (df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")
+    ] = np.nan  # ya el tamaño de los pocillso son diferentes
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
