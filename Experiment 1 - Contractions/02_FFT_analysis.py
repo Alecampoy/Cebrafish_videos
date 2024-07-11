@@ -1196,7 +1196,7 @@ plot_fft_filter(signal2, sample_rate, time_step, N_points, time_points, filtro_p
 """
 En este caso tenemos unas frecuencias, vamos a calcularlo para cada zebra y agregar por condición
 """
-# %%% Agregación FT señales cuadradas
+# %%% Construcción de señales cuadradas
 
 
 def señal_cuadrada(group):
@@ -1205,35 +1205,68 @@ def señal_cuadrada(group):
     )
     signal2 = np.zeros(len(group))
     signal2[peaks] = 1
-    signal2[peaks + 1] = 1  # para que tengan una longitud los altos de la señal
-    signal2 = signal2 - np.mean(signal2)
-
+    signal2[peaks + 1] = 1
+    # signal2 = signal2 - np.mean(signal2)
     return signal2
 
 
-df2 = df.groupby(["Batch", "Fenotype", "Fish"], as_index=False)[Variable_plot].apply(
-    señal_cuadrada
-)
-
-
-Variable_plot = "Circ_filt"
 df2 = (
-    df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-    .apply(
-        lambda x: len(
-            find_peaks(
-                x,
-                height=0.4,
-                prominence=0.08,  # no cambia mucho si pongo 0.08
-                threshold=0.0,
-                distance=2,
-                width=1,  # para magnitudes 0-1
-                # x,height=0.005,prominence=0.002,threshold=0.0,distance=2,width=1,  # para perimetro_inv
-            )[0]
-        )
-    )
+    df.groupby(["Batch", "Fenotype", "Fish"], as_index=True)[Variable_plot]
+    .apply(señal_cuadrada)
+    .dropna()
     .reset_index()
-    .rename(columns={Variable_plot: "N_peaks"})
+)
+df2 = df2.explode(Variable_plot, ignore_index=False)
+df2.set_index(["Batch", "Fenotype", "Fish"], inplace=True)
+
+# %%% Calculo de la FFT para cada zebra
+
+sample_rate = 9  # frames / s
+time_step = 1 / sample_rate  # Delta t
+N_points = 1550  # lenght signal
+time_points = df.loc[("batch 11", "KO179", "ZebraF_1")].Time
+
+
+def fft_filter(
+    group,
+    variable,
+    sample_rate,
+    time_step,
+    N_points,
+    time_points,
+    f="Zebra",
+    filtro_psd=0.1,
+):
+    signal = detrend(group[variable].values, axis=0)
+    # FFT
+    zebra_fft = fft.fft(signal, norm="backward")
+    # Calculos para frequencias en seg pare representar en el eje X
+    zebra_freqs = fft.fftfreq(N_points, time_step)
+    # Power spectral density
+    zebra_psd = np.abs(zebra_fft) ** 2 / (sample_rate * N_points)
+    # Filtrado FFT - Filtro por la psd
+    zebra_fft_fil = np.array(zebra_fft)
+    # # upper power limit
+    # zebra_fft_fil[zebra_psd > 0.2] = 0
+    # # lower power limit
+    zebra_fft_fil[zebra_psd < filtro_psd * max(zebra_psd)] = 0
+    # bandpass filter
+    zebra_fft_fil[abs(zebra_freqs > 0.6)] = 0  # frecuencia máxima
+    zebra_fft_fil[abs(zebra_freqs < 0.01)] = 0  # frecuencia máxima
+    zebra_fil_psd = np.abs(zebra_fft_fil) ** 2 / (sample_rate * N_points)
+    group["PSD"] = zebra_fil_psd
+    group["freqs"] = zebra_freqs
+    return group
+
+
+df2 = df2.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    fft_filter,
+    Variable_plot,
+    sample_rate,
+    time_step,
+    N_points,
+    time_points,
+    filtro_psd=0.2,
 )
 
 
