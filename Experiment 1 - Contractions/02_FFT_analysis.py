@@ -171,7 +171,7 @@ Encuentro que hay peces que apenas dan coletazos, de este modo su gráfica tiene
 
 STD_Rango = (
     df.groupby(["Batch", "Fenotype", "Fish"])
-    .Circ.agg(
+    .Round.agg(
         STD=lambda x: x.std(), Rango=lambda x: x.max() - x.min(), n_obs=lambda x: len(x)
     )
     .dropna()
@@ -186,12 +186,13 @@ grped_bplot = sns.catplot(
     hue="Fenotype",
     kind="box",
     showfliers=False,
-    legend=False,
+    legend=True,
     height=6,
     aspect=1.9,
     data=STD_Rango,
     hue_order=["WT", "KO44", "KO179"],
 )
+
 # make grouped stripplot
 grped_bplot = sns.stripplot(
     x="Batch",
@@ -199,16 +200,17 @@ grped_bplot = sns.stripplot(
     hue="Fenotype",
     jitter=0.18,
     dodge=True,
+    legend=False,
     marker="o",
     color="black",
     # palette="Set2",
     data=STD_Rango,
     hue_order=["WT", "KO44", "KO179"],
 )
-handles, labels = grped_bplot.get_legend_handles_labels()
+# handles, labels = grped_bplot.get_legend_handles_labels()
 
 grped_bplot.set_title("Rango de la Circularity")
-plt.legend(handles[0:3], labels[0:3])
+# plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
 # %%% Rango [md]
@@ -444,7 +446,7 @@ def apply_median_filter(group_df, column, new_column_name, sigma=4.0):
     return group_df
 
 
-df_temp = df.loc[("batch 11", "WT", "ZebraF_1")]
+df_temp = df.loc[("batch 11", "WT", "ZebraF_4")]
 df_temp = apply_gaussian_filter(
     df_temp, column="Feret_inv", new_column_name="Feret_inv_filt", sigma=2
 )
@@ -919,7 +921,7 @@ Variable = "Circ_filt"
 df_temp = df.loc[("batch 7", "KO44", "ZebraF_1"), Variable]
 
 peaks, _ = find_peaks(
-    df_temp, height=0.3, prominence=0.008, threshold=0.0, distance=2, width=1
+    df_temp, height=0.4, prominence=0.03, threshold=0.0, distance=2, width=1
 )  # ajustar estos parametros
 # he comprobado que algun gusano realiza contracciones y extensiones en 2 frames, por lo que distance = 1 & width = 1
 
@@ -938,13 +940,13 @@ Es interesante ver como funciona sobre todos los gusanos
 df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
 
 i = 0
-for f in sorted(set(df.unique_fish)):
+for f in sorted(set(df.loc["batch 7"].unique_fish)):
     i += 1
     if i > 30:
         break
     fish_temp = df[df.unique_fish == f].Circ_filt  # ajustar estos parametros
     peaks, _ = find_peaks(
-        fish_temp, height=0.4, prominence=0.08, threshold=0.0, distance=2, width=1
+        fish_temp, height=0.4, prominence=0.02, threshold=0.0, distance=2, width=1
     )
 
     plt.plot(fish_temp.values)
@@ -980,7 +982,7 @@ peaks_df = (
             find_peaks(
                 x,
                 height=0.4,
-                prominence=0.08,  # no cambia mucho si pongo 0.08
+                prominence=0.02,  # no cambia mucho si pongo 0.08
                 threshold=0.0,
                 distance=2,
                 width=1,  # para magnitudes 0-1
@@ -988,6 +990,7 @@ peaks_df = (
             )[0]
         )
     )
+    .dropna()
     .reset_index()
     .rename(columns={Variable_plot: "N_peaks"})
 )
@@ -1156,7 +1159,9 @@ para la maxima, un pez que da1 coletazo en 3 frames = 3Hz seria fr max, aunque a
 """
 No tengo muy claro que este sistema funcione para de verdad detectar las frecuencias a las que da los coletazos. La FT trata de ajustar la forma de la señal y no sus frecuencias, por lo que hay interferencias. Aún así puedo probar el agrupamiento por batch, pero creo que es mejor probar la autocorrelation y el periodograma antes
 """
-# %%% Generación de la señal cuadrada [md]
+
+
+# %%% FT sobre señal cuadrada [md]
 """
 Con objeto de evitar los problemas dados por que la FT encuentra frecuencias que modelan las señales y enmascara las frecuencias de movimientos, voy a generar una señal cuadrada donde cada valor de señal será un coletazo detectado con los picos
 """
@@ -1196,7 +1201,7 @@ plot_fft_filter(signal2, sample_rate, time_step, N_points, time_points, filtro_p
 """
 En este caso tenemos unas frecuencias, vamos a calcularlo para cada zebra y agregar por condición
 """
-# %%% Construcción de señales cuadradas
+# %%%% Construcción de señales cuadradas
 
 
 def señal_cuadrada(group):
@@ -1219,7 +1224,7 @@ df2 = (
 df2 = df2.explode(Variable_plot, ignore_index=False)
 df2.set_index(["Batch", "Fenotype", "Fish"], inplace=True)
 
-# %%% Calculo de la FFT para cada zebra
+# %%%% Calculo de la FFT para cada zebra
 
 sample_rate = 9  # frames / s
 time_step = 1 / sample_rate  # Delta t
@@ -1228,6 +1233,7 @@ N_points = 1550  # lenght signal
 
 def fft_filter(group, variable, sample_rate, time_step, N_points, filtro_psd=0.1):
     signal = detrend(group[variable].values, axis=0)
+    # signal /= np.std(signal)
     # FFT
     zebra_fft = fft.fft(signal, norm="backward")
     # Calculos para frequencias en seg pare representar en el eje X
@@ -1270,9 +1276,31 @@ df2 = (
 # plt.title("Señal cuadrada modulada", size=20)
 # plt.show()
 
+# %%%% Bining de la FFT para simplificarla
+
+
+def aggregate_n_rows(group, n=4):
+    # Aggregate columns differently
+    aggregated = group.groupby(group.index // n).agg(
+        {
+            "PSD": "sum",  # Sum the 'Value1' column
+            "freqs": "mean",  # Average the 'Value2' column
+        }
+    )
+    return aggregated
+
+
+df2_bin = (
+    df2.groupby(["Batch", "Fenotype", "Fish"], as_index=True)
+    .apply(lambda x: aggregate_n_rows(x, n=3))
+    .dropna()
+    .reset_index()
+)
+
+
 # %%%% plot por batch
-for b in set(df2.Batch):
-    temp_plot = df2.loc[df2.Batch == b]
+for b in set(df2_bin.Batch):
+    temp_plot = df2_bin.loc[df2_bin.Batch == b]
 
     sns.lineplot(
         data=temp_plot,
@@ -1283,6 +1311,7 @@ for b in set(df2.Batch):
         estimator="mean",
         errorbar=("ci", 80),
     )
+    plt.title(b, size=20)
     plt.show()
 
 # %%% Plot de todas las PSD
