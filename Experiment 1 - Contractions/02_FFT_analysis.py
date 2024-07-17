@@ -1041,18 +1041,11 @@ El método funciona correctamente, pero hay mucha variabilidad interbatch. Aunqu
 Recomiendo repasar las gráficas de los peces comparandolas con las fotos de microscopia y ver que videos contienen defectos. 
 """
 
-# %% Intro FFT y Periodograma [md]
-"""
-# Fourier Transform & Periodogram
-
-En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición. Usaré la transformada de Fourier para encontrar las frecuencias más fuertes en el dominio de frecuencias y lo traspasaremos a periodos. Repetiré el estudio usando el Periodograma de XXXX. Complementaré el estudio tratando de usar una Wavelet Transformation para convertir los picos en una señal más sinosoidal.
-
-"""
 # %% FFT [md]
 """
 # Fourier Transform & Periodogram
 
-En lugar de contar el número de picos, voy a usar transformar las señales al dominio de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición experimental
+En lugar de contar el número de picos, voy a usar transformar las señales al dominios de las frecuencias. Con esto busco encontrar frecuencias más fuertes para alguna condición. Usaré la transformada de Fourier para encontrar las frecuencias más fuertes en el dominio de frecuencias y lo traspasaremos a periodos. Repetiré el estudio usando el Periodograma de XXXX. Complementaré el estudio tratando de usar una Wavelet Transformation para convertir los picos en una señal más sinosoidal.
 
 ## Ejemplo FFT 1 pez
 """
@@ -1358,7 +1351,7 @@ df2_fft = df2.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
 
 df2_fft = (
     df2_fft.loc[(df2_fft.freqs >= 0.01) & (df2_fft.freqs <= 3)]
-    .drop("Circ_filt", axis=1)
+    # .drop("Circ_filt", axis=1)
     .reset_index()
 )
 
@@ -1419,13 +1412,13 @@ Según el libro de FFT analisis este método es más adecuado para señales rand
 
 Variable = "Circ_filt"
 
-df_temp = df.loc[("batch 7", "WT", "ZebraF_4"), Variable]
+df_temp = df.loc[("batch 7", "WT", "ZebraF_2"), Variable]
 
 ventanas = ["boxcar", "blackman", "hann", "flattop", "nuttall"]
 for ventana in ventanas:
     x_period, y_period = periodogram(
         df_temp.values,
-        detrend="linear",
+        detrend="constant",
         fs=sample_rate,
         return_onesided=True,
         axis=0,
@@ -1443,121 +1436,102 @@ for ventana in ventanas:
 Parece que según la ventana puede funcionar mejor que la FFT, lo voy a probar
 """
 
+# %%% Periodograma a todos los cebra
 
-# %% Lomb-scarle Periodogram
-
-# %% Autocorrelation
-
-# %% DFT de la ACF
+sample_rate = 9  # frames / s
+N_points = 1550  # lenght signal
 
 
-# %% CODIGO GUSANOS
-
-
-# %%%% FFT DF para todos los gusanos
-# coimprobar como funciona con el codigo de los gusanos para ver si interesa replicarlo
-sample_rate = 900 / 60
-max_freq = 6
-rate_N = 500
-x_scaled = np.linspace(0.00, max_freq, rate_N)
-
-# WT
-fft_scaled_WT = pd.DataFrame()
-fft_scaled_WT.insert(0, "Freq", x_scaled)
-fft_scaled_WT = fft_scaled_WT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        x_temp = df[["Curvatura"]][df.Gusano == g]
-        duration_temp = np.int(len(x_temp) / sample_rate)
-        N_points = len(x_temp)
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        x_fft = rfftfreq(N_points, 1 / sample_rate)
-        g_fft_interp = np.interp(x_scaled, x_fft, np.abs(g_fft).reshape(-1), right=99)
-        fft_scaled_WT.insert(len(fft_scaled_WT.columns), g, g_fft_interp)
-# MUT
-fft_scaled_MUT = pd.DataFrame()
-fft_scaled_MUT.insert(0, "Freq", x_scaled)
-fft_scaled_MUT = fft_scaled_MUT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        x_temp = df[["Curvatura"]][df.Gusano == g]
-        duration_temp = np.int(len(x_temp) / sample_rate)
-        N_points = len(x_temp)
-        g_fft = rfft(detrend(x_temp, axis=0), axis=0, norm="forward")
-        x_fft = rfftfreq(N_points, 1 / sample_rate)
-        g_fft_interp = np.interp(x_scaled, x_fft, np.abs(g_fft).reshape(-1), right=99)
-        fft_scaled_MUT.insert(len(fft_scaled_MUT.columns), g, g_fft_interp)
-funciones_analisis.agrupamiento_gusanos_fft(fft_scaled_MUT, "MUT")
-funciones_analisis.agrupamiento_gusanos_fft(fft_scaled_WT, "CONTROL")
-
-
-# %%%% plot Medias
-
-plt.plot(x_scaled, fft_scaled_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
-    x_scaled,
-    (fft_scaled_WT.Media - fft_scaled_WT.SEM),
-    (fft_scaled_WT.Media + fft_scaled_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(x_scaled, fft_scaled_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    x_scaled,
-    (fft_scaled_MUT.Media - fft_scaled_MUT.SEM),
-    (fft_scaled_MUT.Media + fft_scaled_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
-)
-
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Suma
-
-plt.plot(x_scaled, fft_scaled_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(x_scaled, fft_scaled_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-# %%%% plot Max
-
-plt.plot(x_scaled, fft_scaled_WT.Max, linewidth=0.8, color="blue")
-plt.plot(x_scaled, fft_scaled_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Frecuency (Hz)")
-plt.show()
-
-
-# %% Periodograma gusano y 'Curvatura'
-# %%% funcion periodogram (usa FFT)
-# Creo que no interesa de este modo ya que tenemos la FFT calculada antes
-
-ventanas = ["boxcar", "blackman", "hann", "flattop", "nuttall"]
-
-
-for ventana in ventanas:
+def periodograma(group, variable, sample_rate, filtro_psd=0.1):
     x_period, y_period = periodogram(
-        detrend(x, axis=0),
+        group[variable],
+        detrend="constant",
         fs=sample_rate,
-        nfft=300,
+        return_onesided=False,
         axis=0,
-        window=ventana,
+        window="flattop",
         scaling="spectrum",
     )
+    # power filter
+    y_period[y_period < filtro_psd * max(y_period)] = 0
+    # bandpass filter
+    # y_period[abs(x_period > 3)] = 0  # frecuencia máxima
+    # y_period[abs(x_period < 0.01)] = 0  # frecuencia máxima
+    group[("PSD_" + variable)] = y_period  # / max(zebra_fil_psd)
+    group["freqs"] = x_period
+    return group
 
-    plt.plot(x_period, y_period)
-    plt.xlabel("Frecuency (Hz)")
-    plt.title("Función periodograma (usa FFT) y una ventana " + ventana)
+
+Variable = "Circ_filt"
+
+df_periodogram = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
+    periodograma,
+    Variable,
+    sample_rate,
+    filtro_psd=0.000001,
+)
+
+df_periodogram = df_periodogram.loc[
+    (df_periodogram.freqs >= 0.01) & (df_periodogram.freqs <= 3),
+    ("PSD_" + Variable, "freqs"),
+].reset_index()
+
+# %%%% Bining de la FFT para simplificarla
+
+
+def aggregate_n_rows(group, n=4):
+    # Aggregate columns differently
+    aggregated = group.groupby(group.index // n).agg(
+        {
+            "PSD_" + Variable: "sum",  # Sum the 'Value1' column
+            "freqs": "mean",  # Average the 'Value2' column
+        }
+    )
+    return aggregated
+
+
+df_periodogram_bin = (
+    df_periodogram.groupby(["Batch", "Fenotype", "Fish"], as_index=True)
+    .apply(lambda x: aggregate_n_rows(x, n=8))
+    .dropna()
+    .reset_index()
+)
+
+
+# %%%% plot por batch
+for b in df_periodogram.Batch.sort_values().unique():
+    temp_plot = df_periodogram.loc[df_periodogram.Batch == b]
+
+    sns.lineplot(
+        data=temp_plot,
+        x="freqs",
+        y="PSD_" + Variable,
+        hue="Fenotype",
+        hue_order=["WT", "KO44", "KO179"],
+        estimator="median",
+        errorbar=("ci", 80),
+    )
+    plt.title(b, size=20)
     plt.show()
 
+# %%%% [md]
+"""
+Del mismo modo que la FFT, el resultado es ruidoso y poco concluyente, a pesar de que en este caso si se aprecian más altas frecuencias para los WT en algunos batches. Voy a probar con el Lomb-Scarle, ya que pienso que su ajuste por frecuencias es el más adecuado para encontrar frecuencias en las señales que tenemos, debido a que ajusta por minimos cuadrados señales periodicas y no mediante el paso al dominio de las frecuencias
+"""
+# %% Lomb-scarle Periodogram
 
-# %% Lomb-Scargle Periodogram
-periods = np.linspace(0.00001, 10, 1000)
-f_periodogram = 2 * np.pi / periods
+
+Variable = "Circ_filt"
+
+df_temp = df.loc[("batch 7", "WT", "ZebraF_2"), ("Time", Variable)]
+
+periods = np.linspace(0.01, 3, 20)
+f_periodogram = 2 * np.pi / periods  # Periodos en segundos
 y_periodogram = lombscargle(
-    t, detrend(x.Curvatura, axis=0), f_periodogram, normalize=True
+    df_temp.Time.values,
+    detrend(df_temp[Variable].values, axis=0),
+    periods,
+    normalize=True,
 )
 
 plt.plot(periods, y_periodogram)
@@ -1565,166 +1539,27 @@ plt.xlabel("Period (Seg)")
 plt.title("Función lombscargle -> ajusta por LSE")
 plt.show()
 
-# hacer para todos los gusanos y sumar
+# %%% ajustando periodos, pero creo que no es adecuado
 
-# %% Periodogramas por condición
-# %%% Funcion periodogram conteniendo todos los gusano
+Variable = "Circ_filt"
 
-# ventanas = ["boxcar","blackman","hann","flattop","nuttall"]
+df_temp = df.loc[("batch 7", "WT", "ZebraF_2"), ("Time", Variable)]
 
-ventana = "flattop"
-N_points = 500
-x_fft = rfftfreq(N_points, 1 / sample_rate)
-
-# generación de un df para todos los WT y otro para todos los mutantes
-# en el que cada columna es periodograma de ese gusano en concreto
-# WT
-periodograms_F_WT = pd.DataFrame()
-periodograms_F_WT.insert(0, "Freq", x_fft)
-periodograms_F_WT = periodograms_F_WT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        x_period, y_period = periodogram(
-            g_temp,
-            fs=sample_rate,
-            nfft=N_points,
-            axis=0,
-            window=ventana,
-            scaling="density",
-        )
-        periodograms_F_WT.insert(len(periodograms_F_WT.columns), g, y_period)
-# MUT
-periodograms_F_MUT = pd.DataFrame()
-periodograms_F_MUT.insert(0, "Freq", x_fft)
-periodograms_F_MUT = periodograms_F_MUT.set_index("Freq")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        x_period, y_period = periodogram(
-            g_temp,
-            fs=sample_rate,
-            nfft=N_points,
-            axis=0,
-            window=ventana,
-            scaling="density",
-        )
-        periodograms_F_MUT.insert(len(periodograms_F_MUT.columns), g, y_period)
-# agrupamiento de las las funciones según
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_F_WT, "CONTROL")
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_F_MUT, "MUT")
-
-
-# %%%% plot Medias
-
-plt.plot(x_fft, periodograms_F_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
-    x_fft,
-    (periodograms_F_WT.Media - periodograms_F_WT.SEM),
-    (periodograms_F_WT.Media + periodograms_F_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(x_fft, periodograms_F_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    x_fft,
-    (periodograms_F_MUT.Media - periodograms_F_MUT.SEM),
-    (periodograms_F_MUT.Media + periodograms_F_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
-)
-
-plt.xlabel("Period (Seg)")
-plt.show()
-
-# %%%% plot Suma
-
-plt.plot(x_fft, periodograms_F_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(x_fft, periodograms_F_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
-
-# %%%% plot Max
-
-plt.plot(x_fft, periodograms_F_WT.Max, linewidth=0.8, color="blue")
-plt.plot(x_fft, periodograms_F_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
-
-
-# %%% Lomb-Scargle Periodograma conteniendo todos los gusanos
-
-# Periodos a explorar con lombscargle, el segundo parámetro es el valor máximo
-periods = np.linspace(
-    2 / sample_rate, 10, 5000
-)  # el valor minimo viene dado de modo que
-# el valor maximo de la frecuencia cumpla el teorema de Nyquist -> Sample_rate = 2*freq_max
-f_periodogram_LS = 2 * np.pi / periods
-
-# generación de un df para todos los WT y otro para todos los mutantes
-# en el que cada columna es periodograma de ese gusano en concreto
-# WT
-periodograms_LS_WT = pd.DataFrame()
-periodograms_LS_WT.insert(0, "W", f_periodogram_LS)
-periodograms_LS_WT = periodograms_LS_WT.set_index("W")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "CONTROL":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        t_temp = df["T_seg"][df.Gusano == g]
-        temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
-        periodograms_LS_WT.insert(len(periodograms_LS_WT.columns), g, temp_LS)
-# MUT
-periodograms_LS_MUT = pd.DataFrame()
-periodograms_LS_MUT.insert(0, "W", f_periodogram_LS)
-periodograms_LS_MUT = periodograms_LS_MUT.set_index("W")
-for g in set(df.Gusano):
-    if g[0 : g.index(" ")] == "MUT":
-        g_temp = detrend(df.Curvatura[df.Gusano == g].to_numpy(), axis=0)
-        t_temp = df["T_seg"][df.Gusano == g]
-        temp_LS = lombscargle(t_temp, g_temp, f_periodogram_LS, normalize=True)
-        periodograms_LS_MUT.insert(len(periodograms_LS_MUT.columns), g, temp_LS)
-# agrupamiento de las las funciones según
-
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_LS_WT, "CONTROL")
-funciones_analisis.agrupamiento_gusanos_fft(periodograms_LS_MUT, "MUT")
-
-
-# %%%% plot Medias
-
-plt.plot(periods, periodograms_LS_WT.Media, linewidth=0.8, color="blue")
-plt.fill_between(
+periods = np.linspace(0.01, 3, 1000)
+f_periodogram = 2 * np.pi / periods  # Periodos en segundos
+y_periodogram = lombscargle(
+    df_temp.Time.values,
+    detrend(df_temp[Variable].values, axis=0),
     periods,
-    (periodograms_LS_WT.Media - periodograms_LS_WT.SEM),
-    (periodograms_LS_WT.Media + periodograms_LS_WT.SEM),
-    color="blue",
-    linewidth=0.1,
-    alpha=0.2,
-)
-plt.plot(periods, periodograms_LS_MUT.Media, linewidth=0.8, color="orange")
-plt.fill_between(
-    periods,
-    (periodograms_LS_MUT.Media - periodograms_LS_MUT.SEM),
-    (periodograms_LS_MUT.Media + periodograms_LS_MUT.SEM),
-    color="orange",
-    linewidth=0.1,
-    alpha=0.2,
+    normalize=True,
 )
 
+plt.plot(periods, y_periodogram)
 plt.xlabel("Period (Seg)")
+plt.title("Función lombscargle -> ajusta por LSE")
 plt.show()
 
-# %%%% plot Suma
 
-plt.plot(periods, periodograms_LS_WT.Suma, linewidth=0.8, color="blue")
-plt.plot(periods, periodograms_LS_MUT.Suma, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
+# %% Autocorrelation
 
-# %%%% plot Max
-
-plt.plot(periods, periodograms_LS_WT.Max, linewidth=0.8, color="blue")
-plt.plot(periods, periodograms_LS_MUT.Max, linewidth=0.8, color="orange")
-plt.xlabel("Period (Seg)")
-plt.show()
+# %% Estadistica sobre tiempo promedio entre coletazos
