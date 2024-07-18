@@ -503,6 +503,7 @@ df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
 df = df.groupby(["Batch", "Fenotype", "Fish"], group_keys=False).apply(
     apply_gaussian_filter, column="Perim_inv", new_column_name="Perim_inv_filt", sigma=2
 )
+
 # %% Análisis Overview[md]
 """
 # Análisis
@@ -1520,13 +1521,12 @@ Del mismo modo que la FFT, el resultado es ruidoso y poco concluyente, a pesar d
 """
 # %% Lomb-scarle Periodogram
 
-
 Variable = "Circ_filt"
 
 df_temp = df.loc[("batch 7", "WT", "ZebraF_2"), ("Time", Variable)]
 
-periods = np.linspace(0.01, 3, 20)
-f_periodogram = 2 * np.pi / periods  # Periodos en segundos
+periods = np.linspace(0.01, 3, 100)
+T_periodogram = 2 * np.pi / periods  # Periodos en segundos
 y_periodogram = lombscargle(
     df_temp.Time.values,
     detrend(df_temp[Variable].values, axis=0),
@@ -1539,27 +1539,79 @@ plt.xlabel("Period (Seg)")
 plt.title("Función lombscargle -> ajusta por LSE")
 plt.show()
 
-# %%% ajustando periodos, pero creo que no es adecuado
+# %%% LS to every Zebra
+
+
+def LS(group, Variable, N_freqs=100, filtro_psd=0.1):
+    freqs = np.linspace(0.01, 3, N_freqs)
+    y_periodogram = lombscargle(
+        group.Time.values,
+        detrend(group[Variable].values, axis=0),
+        freqs,
+        normalize=True,
+    )
+    # power filter
+    y_periodogram[y_periodogram < filtro_psd * max(y_periodogram)] = 0
+    result_df = pd.DataFrame({"freqs": freqs, "y_periodogram": y_periodogram})
+    return result_df
+
 
 Variable = "Circ_filt"
 
-df_temp = df.loc[("batch 7", "WT", "ZebraF_2"), ("Time", Variable)]
-
-periods = np.linspace(0.01, 3, 1000)
-f_periodogram = 2 * np.pi / periods  # Periodos en segundos
-y_periodogram = lombscargle(
-    df_temp.Time.values,
-    detrend(df_temp[Variable].values, axis=0),
-    periods,
-    normalize=True,
+df_LS = (
+    df.groupby(["Batch", "Fenotype", "Fish"], group_keys=True)
+    .apply(
+        LS,
+        Variable,
+        N_freqs=80,
+        filtro_psd=0.2,
+    )
+    .reset_index()
 )
 
-plt.plot(periods, y_periodogram)
-plt.xlabel("Period (Seg)")
-plt.title("Función lombscargle -> ajusta por LSE")
-plt.show()
+# %%% Plot every condition
+for b in df_LS.Batch.sort_values().unique():
+    temp_plot = df_LS.loc[df_LS.Batch == b]
 
+    sns.lineplot(
+        data=temp_plot,
+        x="freqs",
+        y="y_periodogram",
+        hue="Fenotype",
+        hue_order=["WT", "KO44", "KO179"],
+        estimator="median",
+        errorbar=("ci", 80),
+    )
+    plt.title(b, size=20)
+    plt.show()
+
+# %%% [md]
+"""
+No ha funcionado para nada, posiblemente por la cantidad de ruido que hay y que estamos ajustando una señal sinosoida. Quizas tendria más sentido una señal cuadrada. Creo que el error esta en que los picos no se ajustan bien. Se podría arreglar mirando la ACF o mirando la ACF de la señal cuadrada. Pero de momento lo aparco
+"""
 
 # %% Autocorrelation
 
-# %% Estadistica sobre tiempo promedio entre coletazos
+Variable = "Circ_filt"
+
+df_temp = df.loc[("batch 13", "WT", "ZebraF_3"), ("Time", Variable)]
+
+from statsmodels.graphics.tsaplots import plot_acf
+
+plot_acf(df_temp.Circ_filt, lags=200)  # data: your time series
+# lags: number of 'periods' you will like to investigate
+
+plt.show()
+
+sns.lineplot(data=df_temp, x="Time", y="Circ_filt")
+plt.show()
+
+# %%% [md]
+"""
+No tengo muy claro que este sistema vaya a funcionar tampoco, ya que esta costando sacar las frecuencias de coletazos del pez. Pero se podría probar la ACF agregada o filtrando los lags altos. tambien la ACF de la señal cuadrada. Pero estoy un poco harto y lo voy a dejar aparcado a un futuro.
+
+"""
+# %% Estadistica sobre tiempo promedio entre coletazos [md]
+"""
+Como ultimo recurso, voy a calcular el tiempo promedio entre coletazos y con el realizar una estadistica con las distribuciones exponenciales, gamma o poisson
+"""
