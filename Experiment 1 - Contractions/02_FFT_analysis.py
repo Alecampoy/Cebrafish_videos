@@ -1587,7 +1587,7 @@ for b in df_LS.Batch.sort_values().unique():
 
 # %%% [md]
 """
-No ha funcionado para nada, posiblemente por la cantidad de ruido que hay y que estamos ajustando una señal sinosoida. Quizas tendria más sentido una señal cuadrada. Creo que el error esta en que los picos no se ajustan bien. Se podría arreglar mirando la ACF o mirando la ACF de la señal cuadrada. Pero de momento lo aparco
+No ha funcionado para nada, posiblemente por la cantidad de ruido que hay y que estamos ajustando una señal sinosoida. Quizas tendria más sentido una señal cuadrada. Creo que el error esta en que los picos no se ajustan bien. Se podría arreglar usando una transformada wavelet o mirando la ACF o mirando la ACF de la señal cuadrada. Pero de momento lo aparco
 """
 
 # %% Autocorrelation
