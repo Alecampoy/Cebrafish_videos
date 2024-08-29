@@ -26,4 +26,4 @@ Macro process the images previous to the tracking
 Marta needs videos from a high speed acquisition camera
 
 
-XXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXxx
