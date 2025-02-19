@@ -165,7 +165,7 @@ El Zebra WT 1 tiene un video de la mitad de frames. Como esta totalmente quieto,
 
 # %% Filtrado de peces anomalos o muertos [md]
 """
-Encuentro que hay peces que apenas dan coletazos, de este modo su gráfica tiene ruido, pero no aplica a una apropiada señal de un coletazo. Para ver cuales son y eliminarlos voy a calcular su std y su rango, ya que estos serán anormalmente bajos
+Encuentro que hay peces que apenas dan coletazos, de este modo su gráfica tiene ruido, pero no aplica a una apropiada señal de un coletazo. Para ver cuales son y eliminarlos voy a calcular su rango, ya que estos serán anormalmente bajos
 """
 # %%% STD y Rango de Circularity
 
@@ -216,14 +216,14 @@ plt.show()
 # %%% Rango [md]
 
 """
-En la grafica del rango se ven claramente los peces anómalos, recomiendo explorar el DF y eliminarlos. La STD no creo que aporte esta información, ya que los peces que se mueven poco la tendrán baja a pesar de ser funcionales
+En la grafica del rango se ven claramente los peces anómalos, recomiendo explorar el DF y eliminarlos. 
 """
 
 
 # %% Distancia Recorrida [md]
 """
 ## Distancia Recorrida
-Se calcula la distancia que recorre el pez a lo largo del video y se gráfica por batch
+Se calcula la distancia que recorre el pez a lo largo del video y se gráfica por batch. No se si este calculo tiene sentido porque no he discutido la movilidad que pueden tener los peces para este experimento.
 """
 
 # %%% Calculo de la distancia
@@ -409,7 +409,7 @@ g.set_axis_labels(fontsize=20)
 g.fig.suptitle(
     "Evolución temporal de todas las variables para un pez de ejemplo",
     fontsize=24,
-    fontdict={"weight": "bold"},
+    fontdict={"fontweight": "bold"},
 )
 g.fig.subplots_adjust(top=0.97)
 # sns.set(font_scale=2)
@@ -919,7 +919,7 @@ Variable = "Circ_filt"
 # Variable = "Perim_inv_filt"
 # Variable = "Feret_inv_filt"
 
-df_temp = df.loc[("batch 7", "KO44", "ZebraF_1"), Variable]
+df_temp = df.loc[("batch 7", "WT", "ZebraF_2"), Variable]
 
 peaks, _ = find_peaks(
     df_temp, height=0.4, prominence=0.03, threshold=0.0, distance=2, width=1
@@ -928,7 +928,7 @@ peaks, _ = find_peaks(
 
 plt.plot(df_temp.values)
 plt.plot(peaks, df_temp.iloc[peaks], "2", markersize=24)
-plt.title("Picos encontrados sobre la Roundness", size=20)
+plt.title("Picos encontrados sobre la Circ_filt", size=20)
 plt.show()
 
 # %%% [md]
@@ -958,7 +958,7 @@ df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
 
 # %%% [md]
 """
-Cuando visualizo las gráficas de todos los Zebra, todos los picos están bien encontrados.
+Cuando visualizo las gráficas de todos los Zebra, todos los picos están bien encontrados -no mostrado.
 
 Aplicar un filtro a la gráfica del movimiento NO es necesario, pues los peaks estan bien encontrados
 """
@@ -1613,5 +1613,5 @@ No tengo muy claro que este sistema vaya a funcionar tampoco, ya que esta costan
 """
 # %% Estadistica sobre tiempo promedio entre coletazos [md]
 """
-Como ultimo recurso, voy a calcular el tiempo promedio entre coletazos y con el realizar una estadistica con las distribuciones exponenciales, gamma o poisson
+Como ultimo recurso, podría calcular el tiempo promedio entre coletazos y con el realizar una estadistica con las distribuciones exponenciales, gamma o poisson
 """

@@ -11,7 +11,7 @@
 from IPython import get_ipython
 
 # limpia variables y librerias antiguas
-# get_ipython().magic("reset -sf")
+get_ipython().magic("reset -sf")
 
 import warnings, math
 import pandas as pd
@@ -44,7 +44,6 @@ El archivo WT2 del batch 6 esta roto, cogerlo del disco duro y otros mas, recopi
 Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
 """
-
 # %%% Load Files batches 1-11
 
 if platform.system() == "Windows":
@@ -339,7 +338,7 @@ grped_bplot = sns.stripplot(
 )
 
 handles, labels = grped_bplot.get_legend_handles_labels()
-grped_bplot.axes.legend(handles[0:3], labels[0:3], title="Fenotype", loc="upper right")
+# grped_bplot.axes.legend(handles[0:3], labels[0:3], title="Fenotype", loc="upper right")
 
 # Set title for the plot
 grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
@@ -381,7 +380,7 @@ grped_bplot = sns.stripplot(
 )
 
 handles, labels = grped_bplot.get_legend_handles_labels()
-grped_bplot.axes.legend(handles[0:3], labels[0:3], title="Fenotype", loc="upper right")
+# grped_bplot.axes.legend(handles[0:3], labels[0:3], title="Fenotype", loc="upper right")
 
 # Set title for the plot
 grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
@@ -393,7 +392,7 @@ plt.show()
 los batches tomados con distinto set-up no son comparables ya que el tamaño del pixel y de la petri no es el mismo. Se podría calibrar si fuera necesario.
 """
 
-# %% Posición del Pez sobre el video [md]
+# %% Posición del Pez en el pocillo a lo largo del video [md]
 """ 
 # Posición del Zebra en el Pocillo
 A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima que la posición que mantiene el Zebra es comportamental, por lo que vamos a estudiar que posición mantiene con respecto al borde d=0 hasta el centro d=1. (Dado que existe simetria radial, solo usamos la distancia respecto al borde)
@@ -476,7 +475,7 @@ Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo
 
 """
 
-# %%%% Dibujado con Histplot por Batch
+# %%%% Hitograma por batch sin ponderar
 
 g = sns.FacetGrid(
     data=df.reset_index(),
@@ -564,11 +563,11 @@ plt.show()
 
 # %%%% [md]
 """
-Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso en el caso en el que no están ponderados.  
+Este gráfico muestra la densidad de probabilidad para cada condición y batch, normalizada para cada condición. He agregado los Zebra ya que como cada uno dura lo mismo, puede hacerse ya que todos tendrán el mismo peso en el caso en el que no están ponderados. Debería estar normalizado por la función 'sns.histplot' 
 
 El problema de la distribución ponderada por ser radial viene, creo, del hecho de que *se están agregando todos los peces conjuntamente*. Un pez anomalo va a tener un peso muy fuerte en este gráfico.
 
-Se hace necesario ver los peces independientemente
+*Se hace necesario ver los peces independientemente*
 
 En los casos en los que la distribución de una condición es significativamente diferente a las otras habria que estudiar que la contribución individual de cada Zebra sea razonablemente similar, y no que un solo Zebra sea el que produce la desviacion del histograma o PDF. Lo vemos
 """
@@ -581,6 +580,45 @@ df_temp2 = df.loc[(batch, "KO44")].reset_index()
 
 nbins = 10
 
+# f = sns.histplot(
+#     data=df_temp,
+#     x="Dist_border",
+#     hue="Fish",
+#     multiple="stack",
+#     common_norm=True,
+#     element="poly",
+#     stat="density",
+#     binrange=[0, 1],
+#     bins=nbins,
+#     palette="Blues",
+#     alpha=0.4,
+#     legend=True
+# )
+
+
+# g = sns.histplot(
+#     data=df_temp2,
+#     x="Dist_border",
+#     hue="Fish",
+#     multiple="stack",
+#     element="step",
+#     common_norm=True,
+#     stat="density",
+#     binrange=[0, 1],
+#     bins=nbins,
+#     palette="Oranges",
+#     alpha=0.3,
+#     legend=False
+# )
+# g.set_title("Stacked histogram of radial position for "+batch)
+
+# plt.show()
+
+
+# Create a new figure and axis
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Plot 1: Blue histogram
 sns.histplot(
     data=df_temp,
     x="Dist_border",
@@ -593,9 +631,29 @@ sns.histplot(
     bins=nbins,
     palette="Blues",
     alpha=0.4,
+    ax=ax,
+    legend=False,  # Disable default legend for manual handling
 )
 
-g = sns.histplot(
+# Get unique categories for Fish in df_temp
+fish_categories_temp = df_temp["Fish"].unique()
+
+# Manually create legend for Plot 1 (Blue)
+blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
+blue_legend_elements = [
+    plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
+    for i, cat in enumerate(fish_categories_temp)
+]
+legend1 = ax.legend(
+    handles=blue_legend_elements,
+    loc="upper left",
+    bbox_to_anchor=(1.05, 1.2),
+    title="WT",
+)
+plt.gca().add_artist(legend1)  # Add the first legend manually
+
+# Plot 2: Orange histogram
+sns.histplot(
     data=df_temp2,
     x="Dist_border",
     hue="Fish",
@@ -607,10 +665,33 @@ g = sns.histplot(
     bins=nbins,
     palette="Oranges",
     alpha=0.3,
+    ax=ax,
+    legend=False,  # Disable default legend for manual handling
 )
-g.set_title("Stacked histogram of radial position relative to edge")
 
+# Get unique categories for Fish in df_temp2
+fish_categories_temp2 = df_temp2["Fish"].unique()
+
+# Manually create legend for Plot 2 (Orange)
+orange_palette = sns.color_palette("Oranges", len(fish_categories_temp2))
+orange_legend_elements = [
+    plt.Line2D([0], [0], color=orange_palette[i], lw=4, label=cat)
+    for i, cat in enumerate(fish_categories_temp2)
+]
+legend2 = ax.legend(
+    handles=orange_legend_elements,
+    loc="upper left",
+    bbox_to_anchor=(1.05, 0.4),
+    title="KO44",
+)
+
+# Set the title and layout
+ax.set_title("Stacked histogram of radial position for " + batch)
+plt.tight_layout()
+
+# Show the plot
 plt.show()
+
 
 # %%% [md]
 """
@@ -625,6 +706,42 @@ df_temp2 = df.loc[(batch, "KO44")].reset_index()
 
 nbins = 10
 
+# sns.histplot(
+#     data=df_temp,
+#     x="Dist_border",
+#     hue="Fish",
+#     multiple="stack",
+#     common_norm=True,
+#     element="poly",
+#     stat="density",
+#     weights="weights_a_ind",  # wheight calculados
+#     binrange=[0, 1],
+#     bins=nbins,
+#     palette="Blues",
+#     alpha=0.4,
+# )
+
+# g = sns.histplot(
+#     data=df_temp2,
+#     x="Dist_border",
+#     hue="Fish",
+#     multiple="stack",
+#     element="step",
+#     common_norm=True,
+#     stat="density",
+#     weights="weights_a_ind",
+#     binrange=[0, 1],
+#     bins=nbins,
+#     palette="Oranges",
+#     alpha=0.3,
+# )
+# g.set_title("Stacked histogram of radial position relative to edge")
+
+# plt.show()
+# Create a new figure and axis
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Plot 1: Blue histogram
 sns.histplot(
     data=df_temp,
     x="Dist_border",
@@ -632,30 +749,72 @@ sns.histplot(
     multiple="stack",
     common_norm=True,
     element="poly",
+    weights="weights_a_ind",
     stat="density",
-    weights="weights_a_ind",  # wheight calculados
     binrange=[0, 1],
     bins=nbins,
     palette="Blues",
     alpha=0.4,
+    ax=ax,
+    legend=False,  # Disable default legend for manual handling
 )
 
-g = sns.histplot(
+# Get unique categories for Fish in df_temp
+fish_categories_temp = df_temp["Fish"].unique()
+
+# Manually create legend for Plot 1 (Blue)
+blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
+blue_legend_elements = [
+    plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
+    for i, cat in enumerate(fish_categories_temp)
+]
+legend1 = ax.legend(
+    handles=blue_legend_elements,
+    loc="upper left",
+    bbox_to_anchor=(1.05, 1.2),
+    title="WT",
+)
+plt.gca().add_artist(legend1)  # Add the first legend manually
+
+# Plot 2: Orange histogram
+sns.histplot(
     data=df_temp2,
     x="Dist_border",
     hue="Fish",
     multiple="stack",
     element="step",
     common_norm=True,
-    stat="density",
     weights="weights_a_ind",
+    stat="density",
     binrange=[0, 1],
     bins=nbins,
     palette="Oranges",
     alpha=0.3,
+    ax=ax,
+    legend=False,  # Disable default legend for manual handling
 )
-g.set_title("Stacked histogram of radial position relative to edge")
 
+# Get unique categories for Fish in df_temp2
+fish_categories_temp2 = df_temp2["Fish"].unique()
+
+# Manually create legend for Plot 2 (Orange)
+orange_palette = sns.color_palette("Oranges", len(fish_categories_temp2))
+orange_legend_elements = [
+    plt.Line2D([0], [0], color=orange_palette[i], lw=4, label=cat)
+    for i, cat in enumerate(fish_categories_temp2)
+]
+legend2 = ax.legend(
+    handles=orange_legend_elements,
+    loc="upper left",
+    bbox_to_anchor=(1.05, 0.4),
+    title="KO44",
+)
+
+# Set the title and layout
+ax.set_title("Ponderated Stacked histogram of radial position for " + batch)
+plt.tight_layout()
+
+# Show the plot
 plt.show()
 
 
@@ -741,11 +900,11 @@ g.map_dataframe(
     estimator="mean",
     x="bins",
     y="hist",
-    errorbar=("ci", 80),
+    errorbar=("ci", 90),
 )
 
-g.add_legend()
-g.set_axis_labels(fontsize=20)
+g.add_legend(title="Fenotype", fontsize=30, markerscale=5)
+g.set_axis_labels(fontsize=25)
 g.fig.suptitle("Averaged distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
@@ -818,14 +977,12 @@ Variable_plot = "Dist_border"
 threshold = 0.15
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
-    .apply(lambda x: (x < threshold).sum())
+    .agg(
+        boder_time=lambda x: (x < threshold).sum(),
+        boder_time_cent=lambda x: 100 * (x < threshold).sum() / len(x),
+    )
     .reset_index()
-    .rename(columns={Variable_plot: "boder_time"})
-).dropna()
-
-time_over_Thr["boder_time_cent"] = (
-    100 * time_over_Thr.boder_time / 4202
-)  # longitud del video
+)  # .dropna()
 
 # a = sns.boxplot(x="Fenotype", y="contracted_perc", data=time_over_Thr)
 # a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
@@ -840,7 +997,7 @@ grped_bplot = sns.catplot(
     data=time_over_Thr,
     hue="Fenotype",
     kind="box",
-    legend=False,
+    legend=True,
     showfliers=False,
     height=6,
     aspect=1.9,
@@ -856,16 +1013,17 @@ grped_bplot = sns.stripplot(
     dodge=True,
     marker="o",
     color="black",
+    legend=False,
     # palette="Set2",
     hue_order=["WT", "KO44", "KO179"],
 )
-handles, labels = grped_bplot.get_legend_handles_labels()
+
 grped_bplot.set_title(
-    "Porcentaje del tiempo que pasa el gusano cerca del borde - Threshold = "
+    "Porcentaje del tiempo que pasa el pez cerca del borde - Threshold = "
     + str(threshold),
     size=20,
 )
-plt.legend(handles[0:3], labels[0:3])
+
 plt.show()
 
 
