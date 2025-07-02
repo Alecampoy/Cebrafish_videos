@@ -33,7 +33,7 @@ list= getFileList (dir);
 Results = createFolder(dir, "Results");
 
 Start_time = getTime(); // to inform how long does it take to process the folder
-setBatchMode(false);
+setBatchMode(true);
 
 // 0.1 Loop to open and process each file
 imagen = 0;
