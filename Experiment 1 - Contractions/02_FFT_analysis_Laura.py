@@ -74,7 +74,7 @@ for f in files:
             2, "Fish", "ZebraF_" + re.search("(\d+)(.\wif_results)", f.lower()).group(1)
         )
         if bool(re.search("laura", f.lower())):
-            csv["Batch"] = csv["Batch"] + "_Laura"
+            csv["Batch"] = csv["Batch"] + "_L"
         df.append(csv)
         del (csv, f)
 
@@ -490,7 +490,7 @@ g.set_axis_labels(fontsize=20)
 g.fig.suptitle(
     "Evolución temporal de todas las variables para un pez de ejemplo",
     fontsize=24,
-    fontdict={"weight": "bold"},
+    fontweight="bold"
 )
 g.fig.subplots_adjust(top=0.97)
 # sns.set(font_scale=2
@@ -925,7 +925,7 @@ Variable = "Circ_filt"
 # Variable = "Perim_inv_filt"
 # Variable = "Feret_inv_filt"
 
-df_temp = df.loc[("batch 7", "WT", "ZebraF_2"), Variable]
+df_temp = df.loc[("batch 2_Laura", "WT", "ZebraF_4"), Variable]
 
 peaks, _ = find_peaks(
     df_temp, height=0.4, prominence=0.03, threshold=0.0, distance=2, width=1
@@ -1570,7 +1570,7 @@ df_LS = (
         LS,
         Variable,
         N_freqs=80,
-        filtro_psd=0.2,
+        filtro_psd=0.1,
     )
     .reset_index()
 )
@@ -1621,3 +1621,6 @@ No tengo muy claro que este sistema vaya a funcionar tampoco, ya que esta costan
 """
 Como ultimo recurso, podría calcular el tiempo promedio entre coletazos y con el realizar una estadistica con las distribuciones exponenciales, gamma o poisson
 """
+
+# %%
+print("finitooooo")
