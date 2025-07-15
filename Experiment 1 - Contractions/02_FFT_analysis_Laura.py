@@ -102,10 +102,10 @@ df["Batch"] = pd.Categorical(
         "batch 12",
         "batch 13",
         "batch 14",
-        "batch 1_Laura",
-        "batch 2_Laura",
-        "batch 3_Laura",
-        "batch 4_Laura",
+        "batch 1_L",
+        "batch 2_L",
+        "batch 3_L",
+        "batch 4_L",
     ],
     ordered=True,
 )
@@ -925,7 +925,7 @@ Variable = "Circ_filt"
 # Variable = "Perim_inv_filt"
 # Variable = "Feret_inv_filt"
 
-df_temp = df.loc[("batch 2_Laura", "WT", "ZebraF_4"), Variable]
+df_temp = df.loc[("batch 2_L", "WT", "ZebraF_4"), Variable]
 
 peaks, _ = find_peaks(
     df_temp, height=0.4, prominence=0.03, threshold=0.0, distance=2, width=1
