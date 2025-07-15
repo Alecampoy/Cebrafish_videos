@@ -46,7 +46,7 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 # %%% Load Files
 
 if platform.system() == "Windows":
-    folder_path = "p:\\CABD\\Lab Ozren\\Marta Fernandez\\Experimento Coletazos\\"
+    folder_path = "p:\\CABD\\Lab Ozren\\datos csv\\Experimento Coletazos\\"
 else:
     folder_path = (
         "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/"
@@ -73,6 +73,8 @@ for f in files:
         csv.insert(
             2, "Fish", "ZebraF_" + re.search("(\d+)(.\wif_results)", f.lower()).group(1)
         )
+        if bool(re.search("laura", f.lower())):
+            csv["Batch"] = csv["Batch"] + "_Laura"
         df.append(csv)
         del (csv, f)
 
@@ -100,6 +102,10 @@ df["Batch"] = pd.Categorical(
         "batch 12",
         "batch 13",
         "batch 14",
+        "batch 1_Laura",
+        "batch 2_Laura",
+        "batch 3_Laura",
+        "batch 4_Laura",
     ],
     ordered=True,
 )
