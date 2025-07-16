@@ -1,5 +1,6 @@
 // this macro cuts the wells in the videos acquired with the sony camera
 roiManager("reset");
+run("Collect Garbage");
 image = getImageID();
 dir = getDirectory("Choose a Directory to save all images");
 
@@ -25,10 +26,10 @@ height = 449;
 // condiciones 
 //condiciones = newArray("WT1", "WT2", "WT3", "WT4", "WT5", "WT6");
 //condiciones = newArray("WT7", "WT8", "WT9", "WT10", "WT11", "WT12");
-condiciones = newArray("KO44_1", "KO44_2", "KO44_3", "KO44_4", "KO44_5", "KO44_6");
+//condiciones = newArray("KO44_1", "KO44_2", "KO44_3", "KO44_4", "KO44_5", "KO44_6");
 //condiciones = newArray("KO44_7", "KO44_8", "KO44_9", "KO44_10", "KO44_11", "KO44_12");
 //condiciones = newArray("KO179_1", "KO179_2", "KO179_3", "KO179_4", "KO179_5", "KO179_6");
-//condiciones = newArray("KO179_7", "KO179_8", "KO179_9", "KO179_10", "KO179_11", "KO179_12");
+condiciones = newArray("KO179_7", "KO179_8", "KO179_9", "KO179_10", "KO179_11", "KO179_12");
 //condiciones = newArray("KO44_13", "KO44_14", "KO44_15", "KO44_16", "KO44_17", "KO44_18");
 //condiciones = newArray("KO44_19", "KO44_20", "KO44_21", "KO44_22", "KO44_23", "KO44_24");
 //condiciones = newArray("KO179_25", "KO179_26", "KO179_27", "KO179_28", "KO179_29", "KO179_30");
