@@ -1,5 +1,6 @@
 // this macro cuts the wells in the videos acquired with the sony camera
 roiManager("reset");
+
 image = getImageID();
 
 
@@ -9,16 +10,16 @@ X0 = xpoints[0];
 Y0 = ypoints[0];
 
 // rectangle size
-proxy = true;
+proxy = false;
 if (proxy == true) {
 gap_little = 13;
 gap_big = 350;
 width = 310;
 height = 310;
 } else {
-gap_little = 30;
-gap_big = 543;
-width = 448;
+gap_little = 16;
+gap_big = 532;
+width = 465;
 height = 449;
 }
 
