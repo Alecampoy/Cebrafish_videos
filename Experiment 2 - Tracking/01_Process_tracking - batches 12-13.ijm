@@ -29,8 +29,8 @@ setBatchMode(false);
 run("Options...", "iterations=1 count=1 black");
  // Set black binary bckg
 setBackgroundColor(0, 0, 0);
-run("Set Measurements...", "area mean perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
-print("Frame;X;Y;Mean-Distance;Time"); // header of the result file in the Log window
+run("Set Measurements...", "area mean centroid center perimeter fit shape feret's area_fraction stack redirect=None decimal=2");
+print("Frame;X;Y;Mean-Distance;Time;Pocillo_XM;Pocillo_YM;Pocillo_diam"); // header of the result file in the Log window
 
 // Parent Folder to process all batches
 
@@ -76,6 +76,12 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		roiManager("Add");
 		run("Fit Circle");
 		roiManager("Add");
+		roiManager("Measure");
+		pocillo_XM = getResult("XM", 0);
+		pocillo_YM = getResult("YM", 0);
+		pocillo_diam = getResult("Feret", 0);
+		run("Clear Results");
+		roiManager("Select", roiManager("count")-1); // selecciona la ultima para que se ejecute la acción
 		run("Create Mask");
 		run("Distance Map");
 		distance_map=getImageID();
@@ -111,28 +117,28 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 				// start selecting rois
 				// keep only the littles roi, probably the fish
 				run("Measure");
-				if (nResults >=2 && t !=0) {
-					roiManager("reset"); // clean the roi for further filtering of the big particles
-					run("Clear Results"); // cleaned for analyzed particles
-					selectImage(original);
-					run("Select None");
-					Stack.setSlice(t+1);
-					run("Find Maxima...", "prominence="+strict_value+" strict output=[Maxima Within Tolerance]");
-					temp_2_results = getImageID();
-					run("Analyze Particles...", "size=0-Infinity display add");
-					selectWindow("Results");
-					Area_column = Table.getColumn("Area");
-					indices_min = Array.findMinima(Area_column, 0);
-					if (Area_column[indices_min[0]] < 108) {
-						roiManager("Select", indices_min[0]);
-						setBackgroundColor(0, 0, 0);
-						run("Clear Outside");
+					if (nResults >=2 && t !=0) { // creo que este if es para quedarme solo con un elemento en caso que aparezcan varios, sospecho que no se usa
+						roiManager("reset"); // clean the roi for further filtering of the big particles
+						run("Clear Results"); // cleaned for analyzed particles
+						selectImage(original);
 						run("Select None");
-						run("Find Maxima...", "prominence=100 output=[Point Selection]");
+						Stack.setSlice(t+1);
+						run("Find Maxima...", "prominence="+strict_value+" strict output=[Maxima Within Tolerance]");
+						temp_2_results = getImageID();
+						run("Analyze Particles...", "size=0-Infinity display add");
+						selectWindow("Results");
+						Area_column = Table.getColumn("Area");
+						indices_min = Array.findMinima(Area_column, 0);
+						if (Area_column[indices_min[0]] < 108) {
+							roiManager("Select", indices_min[0]);
+							setBackgroundColor(0, 0, 0);
+							run("Clear Outside");
+							run("Select None");
+							run("Find Maxima...", "prominence=100 output=[Point Selection]");
+							}
+						selectImage(temp_2_results);
+						close();
 						}
-					selectImage(temp_2_results);
-					close();
-					}
 				// common measurement of distance map
 					run("Clear Results");
 					selectImage(distance_map);
@@ -175,7 +181,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 				}
 
 	// 2.3.5 Write the results of the frame in the table			
-				print(frame+";"+X+";"+Y+";"+Distance_edge+";"+time);
+				print(frame+";"+X+";"+Y+";"+Distance_edge+";"+time+";"+pocillo_XM+";"+pocillo_YM+";"+pocillo_diam);
 
 // 3. Draw result on the original at this frame
 	// 3.1 Get the frame image to print the results
@@ -230,7 +236,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		selectWindow("Log");
 		saveAs("Text", Results+title+"_Results.csv");
 		print("\\Clear");
-		print("Frame;X;Y;Mean-Distance;Time");  // header of the result file  in the Log window
+		print("Frame;X;Y;Mean-Distance;Time;Pocillo_XM;Pocillo_YM;Pocillo_diam"); // header of the result file in the Log window
 		close("*");
 		roiManager("reset"); 
 		run("Clear Results");
