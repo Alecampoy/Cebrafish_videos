@@ -106,8 +106,6 @@ df["Batch"] = pd.Categorical(
         "batch 2_L",
         "batch 3_L",
         "batch 4_L",
-        "batch 5_L",
-
     ],
     ordered=True,
 )
@@ -198,7 +196,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=STD_Rango,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 
 # make grouped stripplot
@@ -213,7 +211,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=STD_Rango,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 # handles, labels = grped_bplot.get_legend_handles_labels()
 
@@ -330,7 +328,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=Dist_filt,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -343,7 +341,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=Dist_filt,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
@@ -543,7 +541,7 @@ df_temp = df.loc[("batch 13", "KO44", "ZebraF_1")]
 Variable_plot = "Feret_inv_filt"
 
 g = sns.lineplot(data=df_temp, x="Time", y=Variable_plot)
-g.axhline(0.006, color="red")
+g.axhline(0.008, color="red")
 g.set_title("Threshold on " + Variable_plot, size=25)
 plt.show()
 
@@ -615,7 +613,7 @@ grped_bplot = sns.catplot(
     showfliers=False,
     height=6,
     aspect=1.9,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -628,7 +626,7 @@ grped_bplot = sns.stripplot(
     marker="o",
     color="black",
     # palette="Set2",
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 grped_bplot.set_title(
@@ -709,7 +707,7 @@ for thr in np.arange(0.2, 1.01, 0.01):  # iteración sobre el threshold
 threshold_result["hue"] = threshold_result.Batch + " - " + threshold_result.Fenotype
 
 df_plot = threshold_result[
-    threshold_result["Fenotype"].isin(["KO185"])
+    threshold_result["Fenotype"].isin(["KO44"])
 ]  # filtro para lo que se quiere repesentar
 df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
 df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
@@ -948,21 +946,21 @@ Es interesante ver como funciona sobre todos los gusanos
 
 df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
 
-i = 0
-for f in sorted(set(df.loc["batch 4_L"].unique_fish)):
-    i += 1
-    if i > 48:
-        break
-    fish_temp = df[df.unique_fish == f].Circ_filt  # ajustar estos parametros
-    peaks, _ = find_peaks(
-        fish_temp, height=0.4, prominence=0.02, threshold=0.0, distance=2, width=1
-    )
+# i = 0
+# for f in sorted(set(df.loc["batch 7"].unique_fish)):
+#     i += 1
+#     if i > 30:
+#         break
+#     fish_temp = df[df.unique_fish == f].Circ_filt  # ajustar estos parametros
+#     peaks, _ = find_peaks(
+#         fish_temp, height=0.4, prominence=0.02, threshold=0.0, distance=2, width=1
+#     )
 
-    plt.plot(fish_temp.values)
-    plt.plot(peaks, fish_temp.iloc[peaks], "2", markersize=24)
-    plt.title(f)
-    plt.show()
-time.sleep(0.5)
+#     plt.plot(fish_temp.values)
+#     plt.plot(peaks, fish_temp.iloc[peaks], "2", markersize=24)
+#     plt.title(f)
+#     plt.show()
+# time.sleep(0.5)
 
 # %%% [md]
 """
@@ -983,15 +981,15 @@ Usando la Circularity filtrada
 
 # %%% Por condición
 
-Variable_plot = "area_inv"
+Variable_plot = "Circ_filt"
 peaks_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(
         lambda x: len(
             find_peaks(
                 x,
-                height=0.04,
-                prominence=0.002,  # no cambia mucho si pongo 0.08
+                height=0.4,
+                prominence=0.02,  # no cambia mucho si pongo 0.08
                 threshold=0.0,
                 distance=2,
                 width=1,  # para magnitudes 0-1
@@ -1004,10 +1002,6 @@ peaks_df = (
     .rename(columns={Variable_plot: "N_peaks"})
 )
 
-peaks_df = peaks_df.loc[peaks_df["Batch"].str.contains("_L", na=False)].copy()
-peaks_df["Batch"] = peaks_df["Batch"].cat.remove_unused_categories()
-
-
 grped_bplot = sns.catplot(
     x="Batch",
     y="N_peaks",
@@ -1018,7 +1012,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=peaks_df,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 
 # handles, labels = grped_bplot.get_legend_handles_labels()
@@ -1033,7 +1027,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=peaks_df,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 l = plt.legend(handles[0:3], labels[0:3])
