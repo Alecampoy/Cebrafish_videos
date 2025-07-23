@@ -18,7 +18,7 @@ width = 310;
 height = 310;
 } else {
 gap_little = 16;
-gap_big = 529;
+gap_big = 525;
 width = 465;
 height = 449;
 }
