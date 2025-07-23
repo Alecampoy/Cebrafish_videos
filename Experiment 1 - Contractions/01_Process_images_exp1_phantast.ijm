@@ -222,7 +222,7 @@ for (i=0; i<list.length; i++){
 // 4. Save the results
 	// 4.1 Save the result stack image
 		selectWindow("Stack_Result");
-		run("Scale...", "x=0.38 y=0.38 z=1.0 interpolation=Bilinear fill process create");
+		run("Scale...", "x=0.33 y=0.33 z=1.0 interpolation=Bilinear fill process create");
 		rename(title+"_result");
 		saveAs("Tiff", Results+title+"_segment.tif");
 		
