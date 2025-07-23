@@ -18,7 +18,7 @@ width = 310;
 height = 310;
 } else {
 gap_little = 16;
-gap_big = 532;
+gap_big = 529;
 width = 465;
 height = 449;
 }
@@ -58,3 +58,6 @@ roiManager("add");
 selectImage(image);
 makeRectangle(X0 + gap_big + gap_little, Y0 + gap_little, width, height);
 roiManager("add");
+
+roiManager("show all without labels");
+//roiManager("reset");
