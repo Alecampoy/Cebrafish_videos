@@ -107,7 +107,8 @@ df["Batch"] = pd.Categorical(
         "batch 3_L",
         "batch 4_L",
         "batch 5_L",
-
+        "batch 6_L",
+        "batch 7_L",
     ],
     ordered=True,
 )
@@ -198,7 +199,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=STD_Rango,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 
 # make grouped stripplot
@@ -213,7 +214,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=STD_Rango,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 # handles, labels = grped_bplot.get_legend_handles_labels()
 
@@ -330,7 +331,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=Dist_filt,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -343,7 +344,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=Dist_filt,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
@@ -351,7 +352,7 @@ handles, labels = grped_bplot.get_legend_handles_labels()
 grped_bplot.set_title(
     "Distancia Suavizada Recorrida por el Zebrafish durante el video (px)"
 )
-plt.legend(handles[0:3], labels[0:3])
+plt.legend()
 plt.show()
 
 # %%% [md]
@@ -417,7 +418,7 @@ g.set_axis_labels(fontsize=20)
 g.fig.suptitle(
     "Evolución temporal de todas las variables para un pez de ejemplo",
     fontsize=24,
-    fontdict={"fontweight": "bold"},
+    fontdict={"weight": "bold"},
 )
 g.fig.subplots_adjust(top=0.97)
 # sns.set(font_scale=2)
@@ -492,7 +493,7 @@ g.set_axis_labels(fontsize=20)
 g.fig.suptitle(
     "Evolución temporal de todas las variables para un pez de ejemplo",
     fontsize=24,
-    fontweight="bold"
+    fontweight="bold",
 )
 g.fig.subplots_adjust(top=0.97)
 # sns.set(font_scale=2
@@ -615,7 +616,7 @@ grped_bplot = sns.catplot(
     showfliers=False,
     height=6,
     aspect=1.9,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -628,7 +629,7 @@ grped_bplot = sns.stripplot(
     marker="o",
     color="black",
     # palette="Set2",
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 grped_bplot.set_title(
@@ -949,7 +950,7 @@ Es interesante ver como funciona sobre todos los gusanos
 df["unique_fish"] = [" ".join(tup) for tup in df.index.values]
 
 i = 0
-for f in sorted(set(df.loc["batch 4_L"].unique_fish)):
+for f in sorted(set(df.loc["batch 6_L", "KO185"].unique_fish)):
     i += 1
     if i > 48:
         break
@@ -983,15 +984,15 @@ Usando la Circularity filtrada
 
 # %%% Por condición
 
-Variable_plot = "area_inv"
+Variable_plot = "Circ_filt"
 peaks_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .apply(
         lambda x: len(
             find_peaks(
                 x,
-                height=0.04,
-                prominence=0.002,  # no cambia mucho si pongo 0.08
+                height=0.4,
+                prominence=0.02,  # no cambia mucho si pongo 0.08
                 threshold=0.0,
                 distance=2,
                 width=1,  # para magnitudes 0-1
@@ -1018,7 +1019,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=peaks_df,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 
 # handles, labels = grped_bplot.get_legend_handles_labels()
@@ -1033,10 +1034,10 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=peaks_df,
-    hue_order=["WT", "KO44", "KO179","KO185"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
-l = plt.legend(handles[0:3], labels[0:3])
+l = plt.legend(handles[0:4], labels[0:4])
 grped_bplot.set_title("Number of peaks using " + Variable_plot)
 # plt.figure(figsize=(19,8))
 plt.show()
