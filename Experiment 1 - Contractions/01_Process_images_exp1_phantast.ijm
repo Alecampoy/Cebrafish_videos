@@ -38,7 +38,7 @@ setBatchMode(true);
 // 0.1 Loop to open and process each file
 imagen = 0;
 for (i=0; i<list.length; i++){
-	if (endsWith(list[i], "if")){
+	if (endsWith(list[i], "tif")){
 		imagen = imagen+1;
 
 // 0.2 Open and get data

@@ -112,10 +112,11 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 			selectImage(original);
 			run("Select None");
 			Stack.setSlice(t+1);
-			wait(32);
+			wait(25);
 			if (STRICT == true) {run("Find Maxima...", "prominence="+strict_value+" strict output=[Point Selection]");
 				// start selecting rois
 				// keep only the littles roi, probably the fish
+				wait(25);
 				run("Measure");
 					if (nResults >=2 && t !=0) { // creo que este if es para quedarme solo con un elemento en caso que aparezcan varios, sospecho que no se usa
 						roiManager("reset"); // clean the roi for further filtering of the big particles
@@ -127,8 +128,14 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 						temp_2_results = getImageID();
 						run("Analyze Particles...", "size=0-Infinity display add");
 						selectWindow("Results");
+						wait(25);
 						Area_column = Table.getColumn("Area");
-						indices_min = Array.findMinima(Area_column, 0);
+						if (Area_column.length == 1) {
+    					indices_min = newArray(0); // Manually create array with index 0
+    					indices_min[0]=0;
+						} else {
+  						  indices_min = Array.findMinima(Area_column, 0, 0);
+						}
 						if (Area_column[indices_min[0]] < 108) {
 							roiManager("Select", indices_min[0]);
 							setBackgroundColor(0, 0, 0);
