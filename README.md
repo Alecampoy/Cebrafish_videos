@@ -1,9 +1,7 @@
 # Cebrafish_videos
  Measure the temporal evolution of cebrafish videos
  
- Se acabaron las vacaciones!
- 
- User: Marta Fernandez
+ User: Marta Fernandez - Laura Martinez
  
 # Experiment 1: Number of contractions in videos
  
