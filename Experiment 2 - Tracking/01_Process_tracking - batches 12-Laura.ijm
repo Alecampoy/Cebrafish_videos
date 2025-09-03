@@ -23,7 +23,7 @@ run("Clear Results");
 print("\\Clear");
 roiManager("reset");
 Start_time = getTime(); // to inform how long does it take to process the folder
-setBatchMode(false);
+setBatchMode(true);
 
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black");
@@ -42,8 +42,8 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 
 	// Folder with the files
 	list= getFileList(dir); // lista con los archivos que se van a procesar
-	if (STRICT == true) {Results = createFolder(dir, "Results_strict_"+strict_value);}
-	else {Results = createFolder(dir, "Results");}
+	if (STRICT == true) {Results = createFolder(dir, list_parent[j]+"Results_strict_"+strict_value);}
+	else {Results = createFolder(dir, list_parent[j]+"Results");}
 
 // 1. Loop to open and process each file
 	for (i=0; i<list.length; i++){
@@ -112,11 +112,11 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 			selectImage(original);
 			run("Select None");
 			Stack.setSlice(t+1);
-			wait(25);
+			wait(15);
 			if (STRICT == true) {run("Find Maxima...", "prominence="+strict_value+" strict output=[Point Selection]");
 				// start selecting rois
 				// keep only the littles roi, probably the fish
-				wait(25);
+				wait(15);
 				run("Measure");
 					if (nResults >=2 && t !=0) { // creo que este if es para quedarme solo con un elemento en caso que aparezcan varios, sospecho que no se usa
 						roiManager("reset"); // clean the roi for further filtering of the big particles
@@ -128,7 +128,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 						temp_2_results = getImageID();
 						run("Analyze Particles...", "size=0-Infinity display add");
 						selectWindow("Results");
-						wait(25);
+						wait(15);
 						Area_column = Table.getColumn("Area");
 						if (Area_column.length == 1) {
     					indices_min = newArray(0); // Manually create array with index 0
@@ -159,7 +159,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 			else { // NO STRICT
 				run("Find Maxima...", "prominence=100 output=[Point Selection]");	// no strict, considers the fish the brightest point
 				selectImage(distance_map);
-				wait(32);
+				wait(15);
 				run("Restore Selection");
 				run("Measure");
 				run("Select None");
@@ -170,7 +170,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 			if (t==0) {X="NA"; X_0="NA";} // to avoid an error in following 'if'. It behaves different as in python where only the first argument is evaluated if false
 			selectWindow("Results");
 				if (nResults == 1) {
-					wait(32);	
+					wait(15);	
 					if (t>0 && X != "NA") {X_0=X; Y_0=Y;} //to draw a line later, avoiding the NA to draw a line not appropiate.
 					frame = t+1;
 					X = getResultString("X", 0);
@@ -179,7 +179,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 					time = frame/6; // 6 fps
 					
 				} else { 
-					wait(32);
+					wait(15);
 					frame = t+1;
 					X = "NA";
 					Y = "NA";
