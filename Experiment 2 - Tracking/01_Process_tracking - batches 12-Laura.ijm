@@ -15,7 +15,7 @@
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
 STRICT = true; // argumento de find maxima
-if (STRICT == true) {strict_value = 11;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
+if (STRICT == true) {strict_value = 12;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 // 0.0 Clean previous data in FIJI
 run("Close All");
@@ -23,7 +23,7 @@ run("Clear Results");
 print("\\Clear");
 roiManager("reset");
 Start_time = getTime(); // to inform how long does it take to process the folder
-setBatchMode(false);
+setBatchMode(true);
 
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black");
@@ -47,22 +47,22 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 // 1. Loop to open and process each file
 	for (i=0; i<list.length; i++){
 		if (endsWith(list[i], ".tif")){
-	
+
 		// 1.2 Open and get data
 		title=list[i];
 		open(dir+title);
 		run("Select None");
 		rename("original");
 		original = getImageID();
-		
+
 		// 1.3 Get dimensions
 		getDimensions(width, height, channels, slices, frames);
 		getPixelSize(unit, pw, ph, pd);
 		frame_interval = 1/6; // number of frames of the acquisition videos per second
-				
+
 // 2. Process files
 		// 2.1 generate the distance map
-		selectImage(original);
+		selectImage(original); // aqui esta el espacio confuso
 		Stack.setSlice(slices/2);
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=1");
@@ -70,10 +70,10 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Gamma...", "value=1.42");
 		run("Gaussian Blur...", "sigma=1");
 		run("Subtract Background...", "rolling=50 light");
-		wand=24;
+		wand=27;
 		doWand(width/2, height/2, wand, "4-connected");
 		List.setMeasurements;
-  		pocillo_XM = List.getValue("XM");
+		pocillo_XM = List.getValue("XM");
 		pocillo_YM = List.getValue("YM");
 		pocillo_diam = List.getValue("Feret");
 		roiManager("Add");
@@ -84,10 +84,10 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Distance Map");
 		distance_map=getImageID();
 		rename("distance_map");
-		
+
 		// 2.2 process of the original image
 		selectImage(original);
-		run("Gaussian Blur...", "sigma=1 stack"); 
+		run("Gaussian Blur...", "sigma=1 stack");
 		run("Z Project...", "projection=Median");
 		rename("median_proyection");
 		run("Invert");
@@ -100,9 +100,9 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 1);
 		mean_bck = getValue("Mean raw");
-		run("Enlarge...", "enlarge=12");
+		run("Enlarge...", "enlarge=11");
 		setBackgroundColor(mean_bck, mean_bck, mean_bck);
-		run("Clear Outside", "stack"); 
+		run("Clear Outside", "stack");
 		run("Select None");
 		
 		// 2.2.1 proyección para pintar el resultado
@@ -121,8 +121,10 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 				run("Find Maxima...", "prominence="+strict_value+" strict output=[Point Selection]");
 				wait(5);
 				// compruebo el numero de puntos-maxima que ha detectado. Quiero garantizar que hay uno 1
-				getSelectionCoordinates(x, y);
-				n_results = x.length;
+				if (selectionType() != -1) {
+					getSelectionCoordinates(x, y);
+					n_results = x.length;}
+				else {n_results == 0}
 				if (n_results >=2 && t !=0) { // ccuando se detectan puntos en el borde del pocillo, este bucle puede corregirlos,
 					// lo que hace es encontrar la superficie segmentada en find maxima y quedarse solo con la más pequeña que corresponde al pez
 					roiManager("reset");
