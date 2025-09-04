@@ -65,7 +65,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		getPixelSize(unit, pw, ph, pd);
 		frame_interval = 1/6; // number of frames of the acquisition videos per second
 
-// 2. Process files
+// 2. Process all files
 		// 2.1 generate the distance map
 		selectImage(original);
 		Stack.setSlice(slices/2);
