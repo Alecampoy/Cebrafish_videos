@@ -99,8 +99,8 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Invert", "stack");
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 1);
-		run("Enlarge...", "enlarge=12");
 		mean_bck = getValue("Mean raw");
+		run("Enlarge...", "enlarge=12");
 		setBackgroundColor(mean_bck, mean_bck, mean_bck);
 		run("Clear Outside", "stack"); 
 		run("Select None");
@@ -123,9 +123,9 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 				// compruebo el numero de puntos-maxima que ha detectado. Quiero garantizar que hay uno 1
 				getSelectionCoordinates(x, y);
 				n_results = x.length;
-				if (n_results >=2 && t !=0) { // creo que este if es para quedarme solo con un elemento en caso que aparezcan varios, sospecho que no se usa        
-					roiManager("reset"); 
-					run("Clear Results"); 
+				if (n_results >=2 && t !=0) { // ccuando se detectan puntos en el borde del pocillo, este bucle puede corregirlos,
+					// lo que hace es encontrar la superficie segmentada en find maxima y quedarse solo con la más pequeña que corresponde al pez
+					roiManager("reset");
 					selectImage(original);
 					run("Select None");
 					Stack.setSlice(t+1);
@@ -136,23 +136,23 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 					wait(5);
 					Area_column = Table.getColumn("Area");
 					if (Area_column.length == 1) {
-					indices_min = newArray(0); // Manually create array with index 0
-					indices_min[0]=0;
+						indices_min = newArray(0); // Manually create array with index 0
+						indices_min[0]=0;
 					} else {
 						  indices_min = Array.findMinima(Area_column, 0, 0);
-						}
-						if (Area_column[indices_min[0]] < 108) {
-							roiManager("Select", indices_min[0]);
-							setBackgroundColor(0, 0, 0);
-							run("Clear Outside");
-							run("Select None");
-							run("Find Maxima...", "prominence=100 output=[Point Selection]");
-							}
-						selectImage(temp_2_results);
-						close();
-				} // fin del if sospechoso
+					}
+					if (Area_column[indices_min[0]] < 108) {
+						roiManager("Select", indices_min[0]);
+						setBackgroundColor(0, 0, 0);
+						run("Clear Outside");
+						run("Select None");
+						run("Find Maxima...", "prominence=100 output=[Point Selection]"); // selecciona el unico area segmentada
+					}
+					selectImage(temp_2_results);
+					close();
+					run("Clear Results");
+				} // fin del if de corrección
 			} // Finish strict = true
-			
 			else { // NO STRICT considers the brightest point
 				run("Find Maxima...", "prominence=100 output=[Point Selection]");
 				getSelectionCoordinates(x, y);
@@ -196,7 +196,8 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 				roiManager("Select", 0);
 				run("Draw", "slice");
 				run("Select None");
-			} else {setForegroundColor(255, 0, 0);}  // draw in red
+				setForegroundColor(255, 0, 0);// draw in red the rest
+			}
 			// pinto solo si la medida ha sido correcta
 			if (n_results == 1 && t>0 && X_0 != "NA" && X != "NA"){
 				setForegroundColor(255, 0, 0);  // draw in red
@@ -230,7 +231,7 @@ print("\\Clear");
 print("Terminado");
 Finish_time = getTime();
 Time_used = Finish_time - Start_time;
-print("It took =", Time_used/(60000 * 60), "h to finish the proccess");
+print("It took = ", Time_used/(60000 * 60), " h to finish the proccess");
 
 
 //Functions
