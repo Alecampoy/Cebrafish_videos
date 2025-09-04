@@ -14,9 +14,11 @@
  * 
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
-STRICT = true; // argumento de find maxima
+
+STRICT = true; // argumento de find maxima
 if (STRICT == true) {strict_value = 12;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
-
+
+
 // 0.0 Clean previous data in FIJI
 run("Close All");
 run("Clear Results");
@@ -39,9 +41,12 @@ list_parent =  getFileList (dir_parent); // lista de las carpetas en dir_parent
 
 for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches, llega hasta abajo
 	dir = dir_parent+list_parent[j]; // carpeta con las peliculas
-	// Folder with the files
-	list= getFileList(dir); // lista con los archivos que se van a procesar
-	if (STRICT == true) {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);}
+
+	// Folder with the files
+	list= getFileList(dir);
+ // lista con los archivos que se van a procesar
+	if (STRICT == true) {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);
+}
 	else {Results = createFolder(dir, list_parent[j]+"Results");}
 
 // 1. Loop to open and process each file
@@ -62,7 +67,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 
 // 2. Process files
 		// 2.1 generate the distance map
-		selectImage(original); // aqui esta el espacio confuso
+		selectImage(original);
 		Stack.setSlice(slices/2);
 		run("Duplicate...", "title=well_edge");
 		run("Gaussian Blur...", "sigma=1");
@@ -171,13 +176,13 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		// 2.4 Get the measurements avoiding errors
 			if (t==0) {X="NA"; X_0="NA";} // to avoid an error in following 'if' clauses to paint the result
 			// selectWindow("Results");
-			if (n_results == 1) { // medida correcta cuando tenemos solo un Punto
+			if (n_results == 1) { // medida correcta cuando tenemos solo un Punto
 				wait(5);	
 				if (t>0 && X != "NA") {X_0=X; Y_0=Y;} //to draw a line later, avoiding the NA to draw a line
 				X = toString(List.getValue("X"));
 				Y = toString(List.getValue("Y"));
 				Distance_edge = toString(List.getValue("Mean")); // mean represent the distance to the edge is the mean value of the distance map
-			} else { // more than 1 selection
+			} else { // more than 1 selection
 				wait(5);
 				X = "NA";
 				Y = "NA";
