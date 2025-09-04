@@ -70,7 +70,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Gamma...", "value=1.42");
 		run("Gaussian Blur...", "sigma=1");
 		run("Subtract Background...", "rolling=50 light");
-		wand=27;
+		wand=20;
 		doWand(width/2, height/2, wand, "4-connected");
 		List.setMeasurements;
 		pocillo_XM = List.getValue("XM");
