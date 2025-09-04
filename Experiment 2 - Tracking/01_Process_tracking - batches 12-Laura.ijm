@@ -129,7 +129,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 				if (selectionType() != -1) {
 					getSelectionCoordinates(x, y);
 					n_results = x.length;}
-				else {n_results == 0}
+				else {n_results == 0;}
 				if (n_results >=2 && t !=0) { // ccuando se detectan puntos en el borde del pocillo, este bucle puede corregirlos,
 					// lo que hace es encontrar la superficie segmentada en find maxima y quedarse solo con la más pequeña que corresponde al pez
 					roiManager("reset");
