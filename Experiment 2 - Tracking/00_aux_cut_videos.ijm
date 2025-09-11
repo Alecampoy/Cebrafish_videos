@@ -1,5 +1,5 @@
 // this macro cuts the wells in the videos acquired with the sony camera
-roiManager("reset");
+//roiManager("reset");
 run("Collect Garbage");
 image = getImageID();
 dir = getDirectory("Choose a Directory to save all images");
@@ -12,7 +12,7 @@ Y0 = ypoints[0];
 // rectangle size
 proxy = false;
 if (proxy == true) {
-gap_little = 13;
+gap_little = 12;
 gap_big = 350;
 width = 310;
 height = 310;
@@ -41,7 +41,7 @@ condiciones = newArray("WT1", "WT2", "WT3", "WT4", "WT5", "WT6");
 // well 1
 selectImage(image);
 makeRectangle(X0 - width - gap_little, Y0 - height - gap_little, width, height);
-run("Duplicate...", "duplicate range=500-6100 title="+condiciones[0]);
+run("Duplicate...", "duplicate range=600-6200 title="+condiciones[0]);
 run("8-bit");
 saveAs("tiff", dir+condiciones[0]);
 close();
