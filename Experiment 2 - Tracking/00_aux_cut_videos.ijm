@@ -12,7 +12,7 @@ Y0 = ypoints[0];
 // rectangle size
 proxy = false;
 if (proxy == true) {
-gap_little = 12;
+gap_little = 11;
 gap_big = 350;
 width = 310;
 height = 310;
@@ -92,4 +92,4 @@ saveAs("tiff", dir+condiciones[5]);
 close();
 run("Collect Garbage");
 
-print("finito");
+print("finito"+condiciones[5]);
