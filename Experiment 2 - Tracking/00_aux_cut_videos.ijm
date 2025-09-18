@@ -26,7 +26,7 @@ height = 449;
 
 // condiciones 
 //condiciones = newArray("WT1", "WT2", "WT3", "WT4", "WT5", "WT6");
-condiciones = newArray("WT7", "WT8", "WT9", "WT10", "WT11", "WT12");
+//condiciones = newArray("WT7", "WT8", "WT9", "WT10", "WT11", "WT12");
 //condiciones = newArray("KO44_1", "KO44_2", "KO44_3", "KO44_4", "KO44_5", "KO44_6");
 //condiciones = newArray("KO44_7", "KO44_8", "KO44_9", "KO44_10", "KO44_11", "KO44_12");
 //condiciones = newArray("KO179_1", "KO179_2", "KO179_3", "KO179_4", "KO179_5", "KO179_6");

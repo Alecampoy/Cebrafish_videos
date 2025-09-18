@@ -418,7 +418,7 @@ g.set_axis_labels(fontsize=20)
 g.fig.suptitle(
     "Evolución temporal de todas las variables para un pez de ejemplo",
     fontsize=24,
-    fontdict={"weight": "bold"},
+    fontdict={"fontweight": "bold"},
 )
 g.fig.subplots_adjust(top=0.97)
 # sns.set(font_scale=2)
@@ -1008,6 +1008,9 @@ peaks_df = (
 peaks_df = peaks_df.loc[peaks_df["Batch"].str.contains("_L", na=False)].copy()
 peaks_df["Batch"] = peaks_df["Batch"].cat.remove_unused_categories()
 
+peaks_df["Batch"] = peaks_df["Batch"].str[:-2]
+peaks_df = peaks_df.loc[peaks_df["Batch"].isin(["batch 4", "batch 5", "batch 6", "batch 7"]), :]
+
 
 grped_bplot = sns.catplot(
     x="Batch",
@@ -1022,6 +1025,9 @@ grped_bplot = sns.catplot(
     hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 
+# get the underlying Axes - chatgpt
+ax = grped_bplot.ax
+
 # handles, labels = grped_bplot.get_legend_handles_labels()
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -1035,10 +1041,12 @@ grped_bplot = sns.stripplot(
     # palette="Set2",
     data=peaks_df,
     hue_order=["WT", "KO44", "KO179", "KO185"],
+    legend=False
 )
-handles, labels = grped_bplot.get_legend_handles_labels()
-l = plt.legend(handles[0:4], labels[0:4])
+#handles, labels = grped_bplot.get_legend_handles_labels()
+#l = plt.legend(handles[0:4], labels[0:4])
 grped_bplot.set_title("Number of peaks using " + Variable_plot)
+ax.set_ylim(-3, 66)
 # plt.figure(figsize=(19,8))
 plt.show()
 
