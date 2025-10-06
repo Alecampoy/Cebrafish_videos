@@ -15,8 +15,8 @@
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
 
-STRICT = true; // argumento de find maxima
-if (STRICT == true) {strict_value = 10;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
+STRICT = false; // argumento de find maxima
+if (STRICT == true) {strict_value = 44;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 
 // 0.0 Clean previous data in FIJI
@@ -43,11 +43,12 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 	dir = dir_parent+list_parent[j]; // carpeta con las peliculas
 
 	// Folder with the files
-	list= getFileList(dir);
- // lista con los archivos que se van a procesar
+	list= getFileList(dir); // lista con los archivos que se van a procesar
+	
+	// carpeta para guardar resultados
 	if (STRICT == true) {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);
-}
-	else {Results = createFolder(dir, list_parent[j]+"Results");}
+	}
+	else {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])+"Results_NO_strict");}
 
 // 1. Loop to open and process each file
 	for (i=0; i<list.length; i++){
@@ -75,7 +76,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		run("Gamma...", "value=1.42");
 		run("Gaussian Blur...", "sigma=1");
 		run("Subtract Background...", "rolling=50 light");
-		wand=20;
+		wand=19;
 		doWand(width/2, height/2, wand, "4-connected");
 		List.setMeasurements;
 		pocillo_XM = List.getValue("XM");
