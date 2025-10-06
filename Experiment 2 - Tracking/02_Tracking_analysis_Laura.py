@@ -44,105 +44,47 @@ El archivo WT2 del batch 6 esta roto, cogerlo del disco duro y otros mas, recopi
 Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
 """
-# %%% Load Files batches 1-11
-
-if platform.system() == "Windows":
-    folder_path = "P:\CABD\Lab Ozren\Marta Fernandez\Behavioral Assays Batches 1-11 Results\Experimento Tracking"
-else:
-    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Behavioral Assays Batches 1-11 Results/Experimento Tracking/"
-
-files = get_files_in_folder(folder_path)
-
-df1 = []
-for f in files:
-    if ".csv" in f:
-        csv = pd.read_csv(f, sep=";")
-        csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
-        csv.insert(1, "Fenotype", re.search("(KO\d*|WT)", f.upper()).group(1))
-        if csv.Batch.iloc[1] == "batch 7":
-            csv.insert(2, "Fish", "ZebraF_" + re.search("(Ko |Wt )(\d+)", f).group(2))
-        else:
-            csv.insert(
-                2, "Fish", "ZebraF_" + re.search("(\d+)(.mp4)", f.lower()).group(1)
-            )
-        df1.append(csv)
-        del (csv, f)
-
-df1 = pd.concat(df1)
-df1.Time = (df1.Frame - 1) / 5  # 5 fps
-# df1 = df1.drop(df1.columns[-1], axis=1)
-
-
-# renombro KO a KO44 para el batch 6 y 7
-df1.loc[df1.Fenotype == "KO", "Fenotype"] = "KO44"
-df1.loc[df1.Fenotype == "KO 44", "Fenotype"] = "KO44"
-df1.loc[df1.Fenotype == "KO 179", "Fenotype"] = "KO179"
-
-df1["DF"] = "DF1"  # Para identificar el grupo de batches
-
-elements = round(
-    pd.crosstab(index=df1.Batch, columns=df1.Fenotype) / 4200
-)  # divided by lengh of the video
-print(str(elements).replace(".0", "").replace("],", "]\n"))
-
-# %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
-# aparecen como cadena de texto en la columna frame
-# df1["Frame"] = pd.to_numeric(df1["Frame"], errors="coerce")
-# df1 = df1.dropna(subset=["Frame"], how="any", axis=0)
-
 
 # %%% Load batches 12-14
 
 if platform.system() == "Windows":
-    folder_path = "P:\CABD\Lab Ozren\Marta Fernandez\Behavioral Assays Batches 12-14 Results\Experimento Tracking"
+    folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Laura"
 else:
-    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Behavioral Assays Batches 12-14 Results/Experimento Tracking/"
+    folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/datos csv\Experimento Tracking\Batches Laura"
 
 files = get_files_in_folder(folder_path)
 
-df2 = []
+df = []
 for f in files:
     if ".csv" in f:
         csv = pd.read_csv(f, sep=";")
         csv.insert(0, "Batch", re.search("batch \d+", f.lower()).group(0))
         csv.insert(1, "Fenotype", re.search("(KO\d*|WT)", f.upper()).group(1))
         csv.insert(2, "Fish", "ZebraF_" + re.search("(\d+)(.tif)", f.lower()).group(1))
-        df2.append(csv)
+        df.append(csv)
         del (csv, f)
 
-df2 = pd.concat(df2)
-df2.Time = (df2.Frame - 1) / 6  # 6 fps
-# df2 = df2.drop(df2.columns[-1], axis=1)
-
-df2["DF"] = "DF2"  # Para identificalo luego
+df = pd.concat(df)
+df.Time = (df.Frame - 1) / 6  # 6 fps
+# df = df.drop(df.columns[-1], axis=1)
 
 elements = round(
-    pd.crosstab(index=df2.Batch, columns=df2.Fenotype) / 5601
+    pd.crosstab(index=df.Batch, columns=df.Fenotype) / 5601
 )  # divided by lengh of the video
 print(str(elements).replace(".0", "").replace("],", "]\n"))
 
-# %%%% Eliminar filas que no son una medida correcta por algún motivo de ImageJ
-# aparecen como cadena de texto en la columna frame
-# df2["Frame"] = pd.to_numeric(df2["Frame"], errors="coerce")
-# df2 = df2.dropna(subset=["Frame"], how="any", axis=0)
-
-
-# %%% Union DF de los distintos batches
-"""
-Ojo, el fps de ambas muestras no es el mismo, por lo que hay que considerarlo a la hora de sacar resultados
-"""
-df = pd.concat([df1, df2])  # .reset_index(drop=True)
 
 df["Batch"] = pd.Categorical(
     df["Batch"],
     categories=[
+        "batch 1",
+        "batch 2",
+        "batch 3",
+        "batch 4",
+        "batch 5",
         "batch 6",
         "batch 7",
         "batch 8",
-        "batch 11",
-        "batch 12",
-        "batch 13",
-        "batch 14",
     ],
     ordered=True,
 )
@@ -170,8 +112,15 @@ NAs_barplot = sns.catplot(
     legend=True,
 )
 
-NAs_barplot.set_xticklabels(rotation=45, size=333)
-NAs_barplot.set_xlabels("Fish", fontsize=15)
+# Loop through all axes in the FacetGrid
+for ax in NAs_barplot.axes.flatten():
+    # Force update of tick labels from the data
+    ax.set_xticks(range(len(NAs["Fish"].unique())))
+    ax.set_xticklabels(NAs["Fish"].unique(), rotation=45, ha='right')
+    ax.tick_params(axis='x', which='major', pad=10)
+    ax.set_xlabel("Fish", fontsize=14)
+
+plt.tight_layout()
 plt.show()
 
 # %%% NA Impute
