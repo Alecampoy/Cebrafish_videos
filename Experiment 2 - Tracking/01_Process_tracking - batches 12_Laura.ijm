@@ -15,7 +15,7 @@
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
 
-STRICT = false; // argumento de find maxima
+STRICT = true; // argumento de find maxima
 if (STRICT == true) {strict_value = 44;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 
@@ -25,7 +25,7 @@ run("Clear Results");
 print("\\Clear");
 roiManager("reset");
 Start_time = getTime(); // to inform how long does it take to process the folder
-setBatchMode(false);
+setBatchMode(true);
 
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black");
