@@ -141,14 +141,14 @@ df = (
     .droplevel(0)
 )
 
-df_temp = df.loc[("batch 13", "KO179", "ZebraF_34")]
+df_temp = df.loc[("batch 5", "KO179", "ZebraF_4")]
 
 # %%% [md]
 """
 Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido miles de frames. Se han imputado
 """
 
-# %% Variables auxiliares
+# %% SEGUIR AQUI calculando la distancia Variables auxiliares
 """
 Con el dataset limpio genero unas variables auxiliares. La más importante es la distancia al borde (o al centro) normalizada a 1
 """
