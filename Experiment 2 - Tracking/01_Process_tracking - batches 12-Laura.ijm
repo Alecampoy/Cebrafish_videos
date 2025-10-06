@@ -44,6 +44,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 
 	// Folder with the files
 	list= getFileList(dir); // lista con los archivos que se van a procesar
+	
 	// carpeta para guardar resultados
 	if (STRICT == true) {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);}
 	else {Results = createFolder(dir, list_parent[j]+"Results_NO_strict");}
