@@ -25,7 +25,7 @@ run("Clear Results");
 print("\\Clear");
 roiManager("reset");
 Start_time = getTime(); // to inform how long does it take to process the folder
-setBatchMode(true);
+setBatchMode(false);
 
 // 0.1 Set measurements
 run("Options...", "iterations=1 count=1 black");
@@ -47,7 +47,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 	
 	// carpeta para guardar resultados
 	if (STRICT == true) {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);}
-	else {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])+"Results_NO_strict");}
+	else {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_NO_strict");}
 
 // 1. Loop to open and process each file
 	for (i=0; i<list.length; i++){
