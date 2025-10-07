@@ -46,8 +46,8 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 	list= getFileList(dir); // lista con los archivos que se van a procesar
 	
 	// carpeta para guardar resultados
-	if (STRICT == true) {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);}
-	else {Results = createFolder(dir, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_NO_strict");}
+	if (STRICT == true) {Results = createFolder(dir_parent, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);}
+	else {Results = createFolder(dir_parent, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_NO_strict");}
 
 // 1. Loop to open and process each file
 	for (i=0; i<list.length; i++){
@@ -176,7 +176,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 			selectImage(distance_map);
 			wait(5);			
 			run("Restore Selection");
-			List.setMeasurements; // equivalent to run("Measure"); pero sin generar la ventana de la tabla - más rapido
+			List.setMeasurements; // equivalent to run("Measure"); pero sin generar la ventana de la tabla - más rapido
 			run("Select None");
 
 		// 2.4 Get the measurements avoiding errors
