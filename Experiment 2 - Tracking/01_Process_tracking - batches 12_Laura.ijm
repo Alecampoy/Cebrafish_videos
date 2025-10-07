@@ -43,10 +43,12 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 	dir = dir_parent+list_parent[j]; // carpeta con las peliculas
 
 	// Folder with the files
-	list= getFileList(dir); // lista con los archivos que se van a procesar
+	list= getFileList(dir);
+ // lista con los archivos que se van a procesar
 	
 	// carpeta para guardar resultados
-	if (STRICT == true) {Results = createFolder(dir_parent, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);}
+	if (STRICT == true) {Results = createFolder(dir_parent, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_strict_"+strict_value);
+}
 	else {Results = createFolder(dir_parent, substring(list_parent[j],0,lengthOf(list_parent[j])-10)+"_Results_NO_strict");}
 
 // 1. Loop to open and process each file
@@ -135,7 +137,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 					getSelectionCoordinates(x, y);
 					n_results = x.length;}
 				else {n_results == 0;}
-				if (n_results >=2 && t !=0) { // ccuando se detectan puntos en el borde del pocillo, este bucle puede corregirlos,
+				if (n_results >=2 && t !=0) { // cuando se detectan puntos en el borde del pocillo, este bucle puede corregirlos,
 					// lo que hace es encontrar la superficie segmentada en find maxima y quedarse solo con la más pequeña que corresponde al pez
 					roiManager("reset");
 					selectImage(original);
@@ -176,7 +178,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 			selectImage(distance_map);
 			wait(5);			
 			run("Restore Selection");
-			List.setMeasurements; // equivalent to run("Measure"); pero sin generar la ventana de la tabla - más rapido
+			List.setMeasurements; // equivalent to run("Measure") pero sin generar la ventana de la tabla - más rapido
 			run("Select None");
 
 		// 2.4 Get the measurements avoiding errors
