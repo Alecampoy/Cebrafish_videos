@@ -16,7 +16,7 @@
 
 
 STRICT = true; // argumento de find maxima
-if (STRICT == true) {strict_value = 44;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
+if (STRICT == true) {strict_value = 40;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 
 // 0.0 Clean previous data in FIJI
@@ -92,7 +92,12 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 
 		// 2.2 process of the original image
 		selectImage(original);
+		run("Select None");
+		roiManager("Select", 1); // voy a usar gaussian solamente fuera de la selección del pocillo
+		run("Enlarge...", "enlarge=-1");
+		run("Make Inverse");
 		run("Gaussian Blur...", "sigma=1 stack");
+		run("Select None");
 		run("Z Project...", "projection=Median");
 		rename("median_proyection");
 		run("Invert");
@@ -105,7 +110,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 1);
 		mean_bck = getValue("Mean raw");
-		run("Enlarge...", "enlarge=11");
+		run("Enlarge...", "enlarge=18");
 		setBackgroundColor(mean_bck, mean_bck, mean_bck);
 		run("Clear Outside", "stack");
 		run("Select None");
@@ -153,6 +158,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 						setBackgroundColor(0, 0, 0);
 						run("Clear Outside");
 						run("Select None");
+						roiManager("reset");
 						run("Find Maxima...", "prominence=100 output=[Point Selection]"); // selecciona el unico area segmentada
 					}
 					selectImage(temp_2_results);
@@ -170,7 +176,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 			selectImage(distance_map);
 			wait(5);			
 			run("Restore Selection");
-			List.setMeasurements; // equivalent to run("Measure");
+			List.setMeasurements; // equivalent to run("Measure"); pero sin generar la ventana de la tabla - más rapido
 			run("Select None");
 
 		// 2.4 Get the measurements avoiding errors
