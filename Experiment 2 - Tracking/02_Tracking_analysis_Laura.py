@@ -48,7 +48,8 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 # %%% Load batches 12-14
 
 if platform.system() == "Windows":
-    folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Laura"
+    #folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Lauraaaaaa"
+    folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\\test"
 else:
     folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/datos csv\Experimento Tracking\Batches Laura"
 
@@ -74,17 +75,29 @@ elements = round(
 print(str(elements).replace(".0", "").replace("],", "]\n"))
 
 
+# df["Batch"] = pd.Categorical(
+#     df["Batch"],
+#     categories=[
+#         "batch 1",
+#         "batch 2",
+#         "batch 3",
+#         "batch 4",
+#         "batch 5",
+#         "batch 6",
+#         "batch 7",
+#         "batch 8",
+#     ],
+#     ordered=True,
+# )
+
+#%%
+
 df["Batch"] = pd.Categorical(
     df["Batch"],
     categories=[
-        "batch 1",
-        "batch 2",
         "batch 3",
-        "batch 4",
-        "batch 5",
-        "batch 6",
-        "batch 7",
-        "batch 8",
+        "batch 44",
+        "batch 70",
     ],
     ordered=True,
 )
@@ -141,37 +154,31 @@ df = (
     .droplevel(0)
 )
 
-df_temp = df.loc[("batch 5", "KO179", "ZebraF_4")]
 
 # %%% [md]
 """
 Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido miles de frames. Se han imputado
 """
 
-# %% SEGUIR AQUI calculando la distancia Variables auxiliares
+# %% calculando la distancia Variables auxiliares
 """
 Con el dataset limpio genero unas variables auxiliares. La más importante es la distancia al borde (o al centro) normalizada a 1
 """
 
 # Para evaluar la distancia al borde de 0 (border) a 1 (center)
-df["Dist_border"] = 0  # Crea la columna
+df["Dist_border_dmap"] = df["Mean-Distance"] / 170  # valor del radio del pocillo medido de las imagenes
 
-df.loc[df["DF"] == "DF1", "Dist_border"] = (
-    df.loc[df["DF"] == "DF1", "Mean-Distance"] / 254
-)  # Radio del pocillo para batches hasta el 11, medido con un macro
-df.loc[df["DF"] == "DF2", "Dist_border"] = (
-    df.loc[df["DF"] == "DF2", "Mean-Distance"] / 169
-)  # valor del radio del pocillo medido de las imagenes para batches 12-14
+df["Dist_center_dmap"] = abs(df["Dist_border_dmap"] - 1)
 
-df["Dist_center"] = abs(df["Dist_border"] - 1)
-# Variable auxiliar
-# df["Feno_Batch"] = df.Fenotype.astype(str) + "_" + df.Batch.astype(str)
+# Calculo la distancia y la normalizo con respecto al radio del pocillo -calculado con el Feret-
+df["Dist_center_feret"] = np.sqrt((df["X"] - df["Pocillo_XM"])**2 +
+                                  (df["Y"] - df["Pocillo_YM"])**2) / (df["Pocillo_diam"]/2)
 
 # Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto.
 # Tambien, para evitar problemas con las distribuciones, voy a quitar los valores límite 0 y 1
-df.loc[df.Dist_border >= 1, "Dist_border"] = 0.9999
-df.loc[df.Dist_border <= 0, "Dist_border"] = 0.0001
-
+df.loc[df.Dist_border_dmap >= 1, "Dist_border_dmap"] = 0.9999
+df.loc[df.Dist_border_dmap <= 0, "Dist_border_dmap"] = 0.0001
+df.loc[df.Dist_center_feret >= 1, "Dist_border_dmap"] = 0.9999
 
 # %% Filtrado de datos debido a detección de otras particulas[md]
 """
@@ -184,19 +191,17 @@ df["X_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).X.diff()
 df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
 df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
-df_temp = df.loc[("batch 12", "KO44", "ZebraF_15")].reset_index()
-# df_temp = df[
-#     (df.Batch == "batch 12") & (df.Fenotype == "KO44") & (df.Fish == "ZebraF_15")
-# ]
+# ejemplo de la distribución de los saltos entre frames
+df_temp = df.loc[("batch 3", "KO44", "ZebraF_6")].reset_index()
 
-g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
+g = sns.histplot(data=df_temp, x="dist", stat="count", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
 # g.set_yscale('log')
 plt.yscale("log")
 plt.show()
 # %%% [md]
 """
-Se aprecia como hay movimientos que la distancia recorrida es muy alta. Esto solo puede deberse a un error en la detección del gusano. Considero que 220px o 180px -según batches- es el límite de salto por frame, aunque bien podrían ser menos.
+Se aprecia como hay movimientos en los que la distancia recorrida es muy alta. Esto solo puede deberse a un error en la detección del gusano u otra particula. Considero 180px es el límite de salto por frame, aunque bien podrían ser menos.
 Se eliminan e imputan.
 """
 
@@ -209,10 +214,7 @@ Como se recalculan las distancias entre 2 frames, es posible que una posición o
 # Para ambos DF
 for i in range(10):
     # Imputación en las columnas que tienen medidas
-    df.loc[(df.DF == "DF1") & (df.dist > 220), ("X", "Y", "Mean-Distance")] = np.nan
-    df.loc[(df.DF == "DF2") & (df.dist > 180), ("X", "Y", "Mean-Distance")] = (
-        np.nan
-    )  # ya el tamaño de los pocillso son diferentes
+    df.loc[(df.dist > 180), ("X", "Y", "Mean-Distance")] = np.nan 
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -224,12 +226,25 @@ for i in range(10):
     df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
 
-df_temp = df.loc[("batch 12", "KO44", "ZebraF_15")].reset_index()
+df_temp = df.loc[("batch 3", "KO44", "ZebraF_6")].reset_index()
 
 g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
 g.set_yscale("log")
 plt.show()
+
+# %%% Recalculo las distancias 
+
+df["Dist_border_dmap"] = df["Mean-Distance"] / 170  
+
+df["Dist_center_dmap"] = abs(df["Dist_border_dmap"] - 1)
+
+df["Dist_center_feret"] = np.sqrt((df["X"] - df["Pocillo_XM"])**2 +
+                                  (df["Y"] - df["Pocillo_YM"])**2) / (df["Pocillo_diam"]/2)
+
+df.loc[df.Dist_border_dmap >= 1, "Dist_border_dmap"] = 0.9999
+df.loc[df.Dist_border_dmap <= 0, "Dist_border_dmap"] = 0.0001
+df.loc[df.Dist_center_feret >= 1, "Dist_border_dmap"] = 0.9999
 
 
 # %% Distancia Recorrida [md]
@@ -250,52 +265,11 @@ Dist = (
 )  # .reset_index()
 
 Dist = Dist.loc[
-    Dist != 0
+    Dist != np.nan
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 
-# %%% Box-plot 6-11
 
-batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
-# batches_2_plot = ["batch 12", "batch 13", "batch 14"]
-df_plot = Dist.loc[(batches_2_plot)].reset_index()
-df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
-
-grped_bplot = sns.catplot(
-    x="Batch",
-    y="dist",
-    hue="Fenotype",
-    kind="box",
-    showfliers=False,
-    height=6,
-    aspect=1.9,
-    data=df_plot,
-    hue_order=["WT", "KO44", "KO179"],
-)
-# make grouped stripplot
-grped_bplot = sns.stripplot(
-    x="Batch",
-    y="dist",
-    hue="Fenotype",
-    jitter=0.18,
-    dodge=True,
-    legend=False,
-    marker="o",
-    color="black",
-    # palette="Set2",
-    data=df_plot,
-    hue_order=["WT", "KO44", "KO179"],
-)
-
-handles, labels = grped_bplot.get_legend_handles_labels()
-# grped_bplot.axes.legend(handles[0:3], labels[0:3], title="Fenotype", loc="upper right")
-
-# Set title for the plot
-grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
-
-plt.show()
-
-
-# %%% Box-plot 12-14
+# %%% Box-plot 
 
 # batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
 batches_2_plot = ["batch 12", "batch 13", "batch 14"]
