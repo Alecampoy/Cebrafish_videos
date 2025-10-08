@@ -260,7 +260,7 @@ Se calcula la distancia que recorre el pez a lo largo del video y se gráfica po
 Dist = (
     df.dropna()
     .groupby(["Batch", "Fenotype", "Fish"], as_index=True)
-    .dist.sum(min_count=0)
+    .dist.sum(min_count=100)
     .round()
 )  # .reset_index()
 
@@ -269,7 +269,7 @@ Dist = Dist.loc[
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 
 
-# %%% Box-plot 
+# %%% SEGUIR AQUI Box-plot 
 
 # batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
 batches_2_plot = ["batch 12", "batch 13", "batch 14"]
