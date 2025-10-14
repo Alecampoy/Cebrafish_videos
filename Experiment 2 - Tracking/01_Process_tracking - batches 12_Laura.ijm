@@ -15,7 +15,7 @@
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
 
-STRICT = true; // argumento de find maxima
+STRICT = false; // argumento de find maxima
 if (STRICT == true) {strict_value = 40;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 
