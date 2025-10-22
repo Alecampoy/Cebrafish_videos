@@ -48,7 +48,7 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 # %%% Load batches 12-14
 
 if platform.system() == "Windows":
-    #folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Lauraaaaaa"
+    # folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Lauraaaaaa"
     folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\\test"
 else:
     folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/datos csv\Experimento Tracking\Batches Laura"
@@ -90,7 +90,7 @@ print(str(elements).replace(".0", "").replace("],", "]\n"))
 #     ordered=True,
 # )
 
-#%%
+# %% solo para el test
 
 df["Batch"] = pd.Categorical(
     df["Batch"],
@@ -129,8 +129,8 @@ NAs_barplot = sns.catplot(
 for ax in NAs_barplot.axes.flatten():
     # Force update of tick labels from the data
     ax.set_xticks(range(len(NAs["Fish"].unique())))
-    ax.set_xticklabels(NAs["Fish"].unique(), rotation=45, ha='right')
-    ax.tick_params(axis='x', which='major', pad=10)
+    ax.set_xticklabels(NAs["Fish"].unique(), rotation=45, ha="right")
+    ax.tick_params(axis="x", which="major", pad=10)
     ax.set_xlabel("Fish", fontsize=14)
 
 plt.tight_layout()
@@ -166,19 +166,25 @@ Con el dataset limpio genero unas variables auxiliares. La más importante es la
 """
 
 # Para evaluar la distancia al borde de 0 (border) a 1 (center)
-df["Dist_border_dmap"] = df["Mean-Distance"] / 170  # valor del radio del pocillo medido de las imagenes
+df["Dist_border_dmap"] = (
+    df["Mean-Distance"] / 170
+)  # valor del radio del pocillo medido de las imagenes
 
 df["Dist_center_dmap"] = abs(df["Dist_border_dmap"] - 1)
 
 # Calculo la distancia y la normalizo con respecto al radio del pocillo -calculado con el Feret-
-df["Dist_center_feret"] = np.sqrt((df["X"] - df["Pocillo_XM"])**2 +
-                                  (df["Y"] - df["Pocillo_YM"])**2) / (df["Pocillo_diam"]/2)
+df["Dist_center_feret"] = np.sqrt(
+    (df["X"] - df["Pocillo_XM"]) ** 2 + (df["Y"] - df["Pocillo_YM"]) ** 2
+) / (df["Pocillo_diam"] / 2)
+
+df["Dist_border_feret"] = abs(df["Dist_center_feret"] - 1)
 
 # Ocurre que debido a los margenes de error, hay algunos pocillos que tienen el centro con un valor algo mayor que 1. Voy a imputar esto.
 # Tambien, para evitar problemas con las distribuciones, voy a quitar los valores límite 0 y 1
-df.loc[df.Dist_border_dmap >= 1, "Dist_border_dmap"] = 0.9999
+df.loc[df.Dist_border_dmap >= 1.000, "Dist_border_dmap"] = 0.9999
 df.loc[df.Dist_border_dmap <= 0, "Dist_border_dmap"] = 0.0001
-df.loc[df.Dist_center_feret >= 1, "Dist_border_dmap"] = 0.9999
+df.loc[df.Dist_center_feret >= 1.000, "Dist_center_feret"] = 0.9999
+df.loc[df.Dist_center_feret <= 0, "Dist_center_feret"] = 0.0001
 
 # %% Filtrado de datos debido a detección de otras particulas[md]
 """
@@ -212,9 +218,9 @@ Como se recalculan las distancias entre 2 frames, es posible que una posición o
 """
 
 # Para ambos DF
-for i in range(10):
+for i in range(15):
     # Imputación en las columnas que tienen medidas
-    df.loc[(df.dist > 180), ("X", "Y", "Mean-Distance")] = np.nan 
+    df.loc[(df.dist > 180), ("X", "Y", "Mean-Distance")] = np.nan
     # imputación por interpolación de los cercanos
     df[["X", "Y", "Mean-Distance"]] = df[["X", "Y", "Mean-Distance"]].interpolate(
         method="linear"
@@ -233,19 +239,24 @@ g.set_title("Distribution of frame movement of a single zebra")
 g.set_yscale("log")
 plt.show()
 
-# %%% Recalculo las distancias 
+"""
+Se aprecia en la gráfica como se han eliminado los saltos más allá del valor 180
+"""
 
-df["Dist_border_dmap"] = df["Mean-Distance"] / 170  
+# %%% Recalculo las distancias después de la imputación
+
+df["Dist_border_dmap"] = df["Mean-Distance"] / 170
 
 df["Dist_center_dmap"] = abs(df["Dist_border_dmap"] - 1)
 
-df["Dist_center_feret"] = np.sqrt((df["X"] - df["Pocillo_XM"])**2 +
-                                  (df["Y"] - df["Pocillo_YM"])**2) / (df["Pocillo_diam"]/2)
+df["Dist_center_feret"] = np.sqrt(
+    (df["X"] - df["Pocillo_XM"]) ** 2 + (df["Y"] - df["Pocillo_YM"]) ** 2
+) / (df["Pocillo_diam"] / 2)
 
-df.loc[df.Dist_border_dmap >= 1, "Dist_border_dmap"] = 0.9999
+df.loc[df.Dist_border_dmap >= 1.000, "Dist_border_dmap"] = 0.9999
 df.loc[df.Dist_border_dmap <= 0, "Dist_border_dmap"] = 0.0001
-df.loc[df.Dist_center_feret >= 1, "Dist_border_dmap"] = 0.9999
-
+df.loc[df.Dist_center_feret >= 1.000, "Dist_center_feret"] = 0.9999
+df.loc[df.Dist_center_feret <= 0, "Dist_center_feret"] = 0.0001
 
 # %% Distancia Recorrida [md]
 """
@@ -269,10 +280,10 @@ Dist = Dist.loc[
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 
 
-# %%% SEGUIR AQUI Box-plot 
+# %%% Box-plot
 
 # batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
-batches_2_plot = ["batch 12", "batch 13", "batch 14"]
+batches_2_plot = ["batch 3", "batch 44", "batch 70"]
 df_plot = Dist.loc[(batches_2_plot)].reset_index()
 df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
 
@@ -310,15 +321,10 @@ grped_bplot.axes.set_title("Distancia Total Recorrida por el Zebrafish (px)")
 
 plt.show()
 
-# %%%% [md]
-"""
-los batches tomados con distinto set-up no son comparables ya que el tamaño del pixel y de la petri no es el mismo. Se podría calibrar si fuera necesario.
-"""
-
 # %% Posición del Pez en el pocillo a lo largo del video [md]
 """ 
 # Posición del Zebra en el Pocillo
-A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima que la posición que mantiene el Zebra es comportamental, por lo que vamos a estudiar que posición mantiene con respecto al borde d=0 hasta el centro d=1. (Dado que existe simetria radial, solo usamos la distancia respecto al borde)
+A lo largo del video, el pez se posiciona en algún lugar de la placa. Se piensa que la posición que mantiene el Zebra es comportamental, por lo que vamos a estudiar que posición mantiene con respecto al borde d=0 hasta el centro d=1. (Dado que existe simetria radial, solo usamos la distancia respecto al borde)
 """
 
 # %%% Histograma 1 Zebra [md]
@@ -326,12 +332,12 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se estima
 ## Histograma de 1 solo Pez
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
-# %%% Grafico Histograma 1 Zebra
-df_temp = df.loc[("batch 7", "WT", "ZebraF_6")].reset_index()
+# %%% SEGUIR AQUI Grafico Histograma 1 Zebra
+df_temp = df.loc[("batch 44", "WT", "ZebraF_6")].reset_index()
 
 nbins = 12
 g = sns.histplot(
-    data=df_temp, x="Dist_border", stat="density", binrange=[0, 1], bins=nbins
+    data=df_temp, x="Dist_center_feret", stat="density", binrange=[0, 1], bins=nbins
 )
 g.set_title("Distribution of radial position relative to edge of a single zebra")
 
