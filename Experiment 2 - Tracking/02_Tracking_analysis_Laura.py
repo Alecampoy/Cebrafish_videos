@@ -332,12 +332,12 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se piensa
 ## Histograma de 1 solo Pez
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
-# %%% SEGUIR AQUI Grafico Histograma 1 Zebra
-df_temp = df.loc[("batch 44", "WT", "ZebraF_6")].reset_index()
+# %%% Grafico Histograma 1 Zebra
+df_temp = df.loc[("batch 44", "WT", "ZebraF_5")].reset_index()
 
 nbins = 12
 g = sns.histplot(
-    data=df_temp, x="Dist_center_feret", stat="density", binrange=[0, 1], bins=nbins
+    data=df_temp, x="Dist_border_feret", stat="density", binrange=[0, 1], bins=nbins
 )
 g.set_title("Distribution of radial position relative to edge of a single zebra")
 
@@ -361,26 +361,26 @@ Dado que el pocillo es circular y estamos viendo la distribución de su posició
 # %%% Histograma con pesos
 
 # metodo pesos 1
-weights_r = 1 / (np.pi * (1 - df_temp.Dist_border.values))
-# dada la naturaleza radial de los datos y que la distribución va de 0 siendo el anillo más grande al anillo de menos area 1. Este método no funciona apropiadamente, ya que los valores limite (1, en el centro) generan un peso infinito (o que tiende a) y da problemas en la representación del histograma.
+weights_r = 1 / (np.pi * (1 - df_temp.Dist_border_feret.values))
+# dada la naturaleza radial de los datos y que la distribución va de 0 siendo el anillo más grande al anillo de menos area 1. Este método no funciona apropiadamente, ya que los valores limite (1, en el centro) generan un peso infinito (o que tiende a) y da problemas en la representación del histograma. Aunque esto se ha corregido imputando para que la distribución este contenida en [0.001, 0.999]
 
 # metodo pesos 2
-nbins = 10
+nbins = 12
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
 weights_a = (np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2)[::-1]
 # Diferencias del area de las circunferencias, este es el peso
 weights_a = -np.diff(weights_a)
 # bin al que pertenece cada observación, resto 1 ya que el limite es el valor de la derecha del bin, luego todos los valores mayores a 0 caen en el bin 1 y su peso corresponde al [0]. Por este motivo he eliminado los valores 0 y 1 y sustituido por 0.0001 y 0.9999
-bin_of_dist = np.searchsorted(bins, df_temp.Dist_border) - 1
+bin_of_dist = np.searchsorted(bins, df_temp.Dist_border_feret) - 1
 # peso que le corresponde a cada observación
 weights_a_ind = 1 / weights_a[bin_of_dist]
-# este método de pesos le da el mismo peso a cada observación según en que bin del histograma caiga, de este modo no hay problema en las observaciones de valor límite.
+# este método de pesos le da el mismo peso a cada observación según en que bin del histograma caiga, de este modo no hay problema en las observaciones de valor límite. Creo que es para hacer la inversa del area del anillo
 
 g = sns.histplot(
     data=df_temp,
-    x="Dist_border",
+    x="Dist_border_feret",
     stat="density",
-    weights=weights_a_ind,
+    weights=weights_r,
     binrange=[0, 1],
     bins=nbins,
 )
@@ -397,7 +397,7 @@ Un par de ejemplos significativos de la diferencia entre el histograma con y sin
 Hay que definir que pesos se usan. el problema con los pesos individuales `weights_r`es que para los valores extremos calcula un peso muy alto, por lo que creo que es mejor generar unos pesos para los bins y usar el mismo peso para todas las observaciones que caigan dentro del bin.
 """
 
-# %%% Hist. por Condición [md]
+# %%% Hist por Condición [md]
 """ 
 ## Histograma por Condición 
 Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo acumulando los histogramas. Esto no es un problema ya que los histogramas estan normalizados con density. 
@@ -423,7 +423,7 @@ g = sns.FacetGrid(
 
 g.map_dataframe(
     sns.histplot,
-    x="Dist_border",
+    x="Dist_border_feret",
     element="step",
     edgecolor="black",
     alpha=0.4,
@@ -441,7 +441,7 @@ g.fig.suptitle("Accumulated distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
 
-# %%%% Pesos para Ponderar  por la distribución radial por Batch
+# %%%% SEGUIR AQUI Pesos para Ponderar  por la distribución radial por Batch
 
 nbins = 10
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
