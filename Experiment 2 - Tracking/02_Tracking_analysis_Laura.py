@@ -441,7 +441,7 @@ g.fig.suptitle("Accumulated distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
 
-# %%%% SEGUIR AQUI Pesos para Ponderar  por la distribución radial por Batch
+# %%%% SEGUIR AQUI Calculo Pesos para Ponderar por la distribución radial por Batch
 
 nbins = 10
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
