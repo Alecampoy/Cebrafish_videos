@@ -406,6 +406,8 @@ Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo
 
 # %%%% Hitograma por batch sin ponderar
 
+nbins=12
+
 g = sns.FacetGrid(
     data=df.reset_index(),
     row="Batch",
@@ -429,7 +431,7 @@ g.map_dataframe(
     alpha=0.4,
     binrange=[0, 1],
     # cumulative=True,
-    bins=10,
+    bins=nbins,
     stat="density",
     common_norm=False,
     kde=False,
@@ -441,16 +443,20 @@ g.fig.suptitle("Accumulated distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.95)
 plt.show()
 
-# %%%% SEGUIR AQUI Calculo Pesos para Ponderar por la distribución radial por Batch
+# %%%% Calculo Pesos para Ponderar por la distribución radial por Batch
 
-nbins = 10
+# metodo pesos 1
+weights_r = 1 / (np.pi * (1 - df.Dist_border_feret.values))
+df["weights_r"] = weights_r
+
+# metodo pesos 1
 bins = np.arange(0, 1 + (1 / (nbins)), 1 / (nbins))
 weights_a = (np.pi * np.arange(0, 1 + (1 / (nbins)), 1 / (nbins)) ** 2)[::-1]
 weights_a = -np.diff(weights_a)
-bin_of_dist = np.searchsorted(bins, df.Dist_border) - 1
+bin_of_dist = np.searchsorted(bins, df.Dist_border_feret) - 1
 df["weights_a_ind"] = 1 / weights_a[bin_of_dist]
 
-df_temp = df.loc[("batch 12", "KO179", "ZebraF_23")].reset_index()
+df_temp = df.loc[("batch 44", "WT", "ZebraF_5")].reset_index()
 
 # %%%% Hist. ponderado por distribución radial
 
@@ -471,7 +477,7 @@ g = sns.FacetGrid(
 
 g.map_dataframe(
     sns.histplot,
-    x="Dist_border",
+    x="Dist_border_feret",
     element="step",
     edgecolor="black",
     alpha=0.5,
@@ -503,11 +509,11 @@ En los casos en los que la distribución de una condición es significativamente
 
 # %% Hist. apilado por Zebra
 # La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-batch = "batch 12"
-df_temp = df.loc[(batch, "WT")].reset_index()
+batch = "batch 44"
+df_temp = df.loc[(batch, "KO179")].reset_index()
 df_temp2 = df.loc[(batch, "KO44")].reset_index()
 
-nbins = 10
+nbins = 12
 
 # f = sns.histplot(
 #     data=df_temp,
@@ -550,7 +556,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 # Plot 1: Blue histogram
 sns.histplot(
     data=df_temp,
-    x="Dist_border",
+    x="Dist_border_feret",
     hue="Fish",
     multiple="stack",
     common_norm=True,
@@ -584,7 +590,7 @@ plt.gca().add_artist(legend1)  # Add the first legend manually
 # Plot 2: Orange histogram
 sns.histplot(
     data=df_temp2,
-    x="Dist_border",
+    x="Dist_border_feret",
     hue="Fish",
     multiple="stack",
     element="step",
@@ -629,7 +635,7 @@ Resulta un plot bastante sucio pero se aprecia la diferencia. Creo que una mejor
 Haciendo lo mismo de manera ponderada. *Recomiendo verlo para cada batch*
 """
 # %%% Hist. apilado ponderado por Zebra
-batch = "batch 12"
+batch = "batch 44"
 df_temp = df.loc[(batch, "WT")].reset_index()
 df_temp2 = df.loc[(batch, "KO44")].reset_index()
 
@@ -673,7 +679,7 @@ fig, ax = plt.subplots(figsize=(10, 6))
 # Plot 1: Blue histogram
 sns.histplot(
     data=df_temp,
-    x="Dist_border",
+    x="Dist_border_feret",
     hue="Fish",
     multiple="stack",
     common_norm=True,
@@ -708,7 +714,7 @@ plt.gca().add_artist(legend1)  # Add the first legend manually
 # Plot 2: Orange histogram
 sns.histplot(
     data=df_temp2,
-    x="Dist_border",
+    x="Dist_border_feret",
     hue="Fish",
     multiple="stack",
     element="step",
@@ -755,17 +761,17 @@ Otra alternativa es generar manualmente el histograma y representarlo con barras
 Nota a posteriori: lo siguiente podría realizarse usando un Density Kernel Estimator, que calcule la distribución y sumar las distribuciones.
 """
 
-# %%%% Generación Data Frame y agregación de histogramas
-nbins = 10  # int(round(math.log(5601, 2), 1))  # Numero de Bins siguiendo regla
+# %%%% SEGUIR AQUI Generación Data Frame y agregación de histogramas
+nbins = int(round(math.log(5601, 2), 1))  # Numero de Bins siguiendo regla
 
 
 def compute_histogram(group, nbins):
     hist, bin_edges = np.histogram(
-        group["Dist_border"].to_numpy(),
+        group["Dist_border_feret"].to_numpy(),
         range=[0, 1],
         bins=nbins,
         density=True,
-        weights=group["weights_a_ind"].to_numpy(),
+        weights=group["weights_r"].to_numpy(),
     )
     return pd.Series({"hist": hist, "bins": bin_edges})
 
@@ -786,7 +792,7 @@ distribution_df = distribution_df.explode(["hist", "bins"])
 distribution_df_agg = (
     distribution_df.groupby(["Batch", "Fenotype", "bins"])
     .agg(
-        mean_hist=("hist", np.median),
+        mean_hist=("hist", np.mean),
         sd_hist=("hist", np.std),
         confid_int=(
             "hist",
@@ -795,9 +801,7 @@ distribution_df_agg = (
                     confidence=0.90,
                     df=len(x) - 1,
                     loc=np.mean(x),
-                    scale=st.sem(
-                        x
-                    ),  # scale = 1 significa usar la media en luygar de la sem
+                    scale=c(x),  # scale = 1 significa usar la media en luygar de la sem
                 )
             ),
         ),
