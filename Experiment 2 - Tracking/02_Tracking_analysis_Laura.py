@@ -801,8 +801,8 @@ distribution_df_agg = (
                     confidence=0.90,
                     df=len(x) - 1,
                     loc=np.mean(x),
-                    scale=c(x),  # scale = 1 significa usar la media en luygar de la sem
-                )
+                    scale=st.sem(x)  # scale = 1 significa usar la media en luygar de la sem
+                    )
             ),
         ),
     )
@@ -833,7 +833,7 @@ g.map_dataframe(
     estimator="mean",
     x="bins",
     y="hist",
-    errorbar=("ci", 90),
+    errorbar=("sd", .5),
 )
 
 g.add_legend(title="Fenotype", fontsize=30, markerscale=5)
