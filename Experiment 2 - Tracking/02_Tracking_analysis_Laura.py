@@ -485,7 +485,7 @@ g.map_dataframe(
     # cumulative=True,
     bins=nbins,
     stat="density",
-    weights="weights_a_ind",
+    weights="weights_r",
     common_norm=False,
     kde=False,
     kde_kws={"bw_adjust": 0.8},
@@ -507,172 +507,24 @@ El problema de la distribución ponderada por ser radial viene, creo, del hecho 
 En los casos en los que la distribución de una condición es significativamente diferente a las otras habria que estudiar que la contribución individual de cada Zebra sea razonablemente similar, y no que un solo Zebra sea el que produce la desviacion del histograma o PDF. Lo vemos
 """
 
-# %% Hist. apilado por Zebra
-# La clave de estos histogramas es que cada sns.hisplot es una capa independiente
-batch = "batch 44"
-df_temp = df.loc[(batch, "KO179")].reset_index()
-df_temp2 = df.loc[(batch, "KO44")].reset_index()
+# %% Hist apilado ponderado por Zebra [md]
 
-nbins = 12
-
-# f = sns.histplot(
-#     data=df_temp,
-#     x="Dist_border",
-#     hue="Fish",
-#     multiple="stack",
-#     common_norm=True,
-#     element="poly",
-#     stat="density",
-#     binrange=[0, 1],
-#     bins=nbins,
-#     palette="Blues",
-#     alpha=0.4,
-#     legend=True
-# )
-
-
-# g = sns.histplot(
-#     data=df_temp2,
-#     x="Dist_border",
-#     hue="Fish",
-#     multiple="stack",
-#     element="step",
-#     common_norm=True,
-#     stat="density",
-#     binrange=[0, 1],
-#     bins=nbins,
-#     palette="Oranges",
-#     alpha=0.3,
-#     legend=False
-# )
-# g.set_title("Stacked histogram of radial position for "+batch)
-
-# plt.show()
-
-
-# Create a new figure and axis
-fig, ax = plt.subplots(figsize=(10, 6))
-
-# Plot 1: Blue histogram
-sns.histplot(
-    data=df_temp,
-    x="Dist_border_feret",
-    hue="Fish",
-    multiple="stack",
-    common_norm=True,
-    element="poly",
-    stat="density",
-    binrange=[0, 1],
-    bins=nbins,
-    palette="Blues",
-    alpha=0.4,
-    ax=ax,
-    legend=False,  # Disable default legend for manual handling
-)
-
-# Get unique categories for Fish in df_temp
-fish_categories_temp = df_temp["Fish"].unique()
-
-# Manually create legend for Plot 1 (Blue)
-blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
-blue_legend_elements = [
-    plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
-    for i, cat in enumerate(fish_categories_temp)
-]
-legend1 = ax.legend(
-    handles=blue_legend_elements,
-    loc="upper left",
-    bbox_to_anchor=(1.05, 1.2),
-    title="WT",
-)
-plt.gca().add_artist(legend1)  # Add the first legend manually
-
-# Plot 2: Orange histogram
-sns.histplot(
-    data=df_temp2,
-    x="Dist_border_feret",
-    hue="Fish",
-    multiple="stack",
-    element="step",
-    common_norm=True,
-    stat="density",
-    binrange=[0, 1],
-    bins=nbins,
-    palette="Oranges",
-    alpha=0.3,
-    ax=ax,
-    legend=False,  # Disable default legend for manual handling
-)
-
-# Get unique categories for Fish in df_temp2
-fish_categories_temp2 = df_temp2["Fish"].unique()
-
-# Manually create legend for Plot 2 (Orange)
-orange_palette = sns.color_palette("Oranges", len(fish_categories_temp2))
-orange_legend_elements = [
-    plt.Line2D([0], [0], color=orange_palette[i], lw=4, label=cat)
-    for i, cat in enumerate(fish_categories_temp2)
-]
-legend2 = ax.legend(
-    handles=orange_legend_elements,
-    loc="upper left",
-    bbox_to_anchor=(1.05, 0.4),
-    title="KO44",
-)
-
-# Set the title and layout
-ax.set_title("Stacked histogram of radial position for " + batch)
-plt.tight_layout()
-
-# Show the plot
-plt.show()
-
-
-# %%% [md]
 """
 Resulta un plot bastante sucio pero se aprecia la diferencia. Creo que una mejor alternativa será representar unicamente la condición y el batch de interes para ver la intra-distribución de los Zebra y ver que son razonablemente homogeneos y no se debe a un Zebra Oulier.   
 
-Haciendo lo mismo de manera ponderada. *Recomiendo verlo para cada batch*
+Haciendolo de manera ponderada. *Recomiendo verlo para cada batch*
 """
-# %%% Hist. apilado ponderado por Zebra
-batch = "batch 44"
+# %%% SEGÜIR AQUIHist apilado ponderado por Zebra
+"""OJO que me he dado cuenta que la funcion plot considera la density total, y creo que es diferente que la density de la de un zebra en concreto, y por eso tengo seguramente variabilidad en los resutlados. Comprobarlo y ver como seria lo mas adecuado. hacerme una tabla en papel. esto tambien puede ser la diferencia con los intervalos significativos y que no sea lo mismo"""
+
+
+batch = "batch 70"
 df_temp = df.loc[(batch, "WT")].reset_index()
-df_temp2 = df.loc[(batch, "KO44")].reset_index()
+df_temp2 = df.loc[(batch, "KO179", ["ZebraF_8", "ZebraF_9"])].reset_index()
+df_temp2 = df.loc[(batch, "KO179")].reset_index()
 
-nbins = 10
+nbins = 12
 
-# sns.histplot(
-#     data=df_temp,
-#     x="Dist_border",
-#     hue="Fish",
-#     multiple="stack",
-#     common_norm=True,
-#     element="poly",
-#     stat="density",
-#     weights="weights_a_ind",  # wheight calculados
-#     binrange=[0, 1],
-#     bins=nbins,
-#     palette="Blues",
-#     alpha=0.4,
-# )
-
-# g = sns.histplot(
-#     data=df_temp2,
-#     x="Dist_border",
-#     hue="Fish",
-#     multiple="stack",
-#     element="step",
-#     common_norm=True,
-#     stat="density",
-#     weights="weights_a_ind",
-#     binrange=[0, 1],
-#     bins=nbins,
-#     palette="Oranges",
-#     alpha=0.3,
-# )
-# g.set_title("Stacked histogram of radial position relative to edge")
-
-# plt.show()
 # Create a new figure and axis
 fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -681,10 +533,10 @@ sns.histplot(
     data=df_temp,
     x="Dist_border_feret",
     hue="Fish",
-    multiple="stack",
+    multiple="layer", # puede cambiarse a stack
     common_norm=True,
     element="poly",
-    weights="weights_a_ind",
+    weights="weights_r",
     stat="density",
     binrange=[0, 1],
     bins=nbins,
@@ -716,10 +568,10 @@ sns.histplot(
     data=df_temp2,
     x="Dist_border_feret",
     hue="Fish",
-    multiple="stack",
+    multiple="layer",
     element="step",
     common_norm=True,
-    weights="weights_a_ind",
+    weights="weights_r",
     stat="density",
     binrange=[0, 1],
     bins=nbins,
@@ -753,18 +605,18 @@ plt.tight_layout()
 plt.show()
 
 
-# %% Normalización manual histograma [md]
+# %% Comparación de histogramas [md]
 """
-### Normalización manual histograma
-Otra alternativa es generar manualmente el histograma y representarlo con barras de error (intervalo de confianza al 80%).
+### Comparación histogramas
+Otra alternativa es generar manualmente el histograma y representarlo con barras de error (intervalo de confianza o sem).
 
 Nota a posteriori: lo siguiente podría realizarse usando un Density Kernel Estimator, que calcule la distribución y sumar las distribuciones.
 """
 
-# %%%% SEGUIR AQUI Generación Data Frame y agregación de histogramas
+# %%%% Generación Data Frame y agregación de histogramas
 nbins = int(round(math.log(5601, 2), 1))  # Numero de Bins siguiendo regla
 
-
+# funcion para calcular el hitograma con pesos
 def compute_histogram(group, nbins):
     hist, bin_edges = np.histogram(
         group["Dist_border_feret"].to_numpy(),
@@ -775,7 +627,7 @@ def compute_histogram(group, nbins):
     )
     return pd.Series({"hist": hist, "bins": bin_edges})
 
-
+# DF con la altura del bin para cada zebra
 distribution_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])
     .apply(compute_histogram, nbins)
@@ -788,7 +640,13 @@ distribution_df["bins"] = distribution_df["bins"].apply(
 )  # Para que bins tenga el mismo numero de elementos que 'hist'
 distribution_df = distribution_df.explode(["hist", "bins"])
 
-# ahora agrego y calculo la media de cada bin para cada histograma, aunque no lo uso
+# Prueba con la anova, dibujho valores extremos para tenerlos
+# mask=(distribution_df.Fenotype=="WT") & (distribution_df.bins==0)
+# distribution_df.loc[mask, "hist"]= np.random.randint(7, 23, size=mask.sum())
+
+
+# Agregación y calculo de la media de cada bin para cada histograma, aunque no lo uso despues
+# Este DF contiene los intervalos de un test estadistico
 distribution_df_agg = (
     distribution_df.groupby(["Batch", "Fenotype", "bins"])
     .agg(
@@ -810,8 +668,40 @@ distribution_df_agg = (
     .dropna()
 )
 
+# DF con el valor de una anova para cada bin.
+    
+def anova_by_fenotype(x):
+    # x es la serie "hist" dentro de cada grupo Batch+bins
+    # obtenemos los valores de hist separados por fenotype
+    subgroups = [group["hist"].values for _, group in x.groupby("Fenotype")]
+    if len(subgroups) > 1:
+        return st.f_oneway(*subgroups).pvalue
+    else:
+        return np.nan  # si solo hay un fenotype no podemos calcular ANOVA
+
+# Aplicamos groupby
+distribution_df_anova = (
+    distribution_df.groupby(["Batch", "bins"])
+    .apply(lambda g: pd.Series({
+        "mean_hist": g["hist"].mean(),
+        "sd_hist": g["hist"].std(),
+        "confid_int": np.ptp(
+            st.t.interval(
+                confidence=0.90,
+                df=len(g["hist"]) - 1,
+                loc=g["hist"].mean(),
+                scale=st.sem(g["hist"]))),
+        "anova_pval": anova_by_fenotype(g)})
+        )
+    ).reset_index().dropna()
+
+distribution_df_anova["p_val_sig"] = distribution_df_anova["anova_pval"] < 0.05
+
+
+
 # %%%% Plot de la agregación de histogramas como linea con margen ci 80
 # Lo represento como una linea para ver los errores
+
 
 g = sns.FacetGrid(
     distribution_df,
@@ -821,7 +711,7 @@ g = sns.FacetGrid(
     palette="pastel",
     sharex="col",
     sharey=False,
-    height=4,
+    height=3,
     aspect=4,
 )
 
@@ -833,7 +723,7 @@ g.map_dataframe(
     estimator="mean",
     x="bins",
     y="hist",
-    errorbar=("sd", .5),
+    errorbar=("sd", 1),
 )
 
 g.add_legend(title="Fenotype", fontsize=30, markerscale=5)
