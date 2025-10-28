@@ -160,7 +160,7 @@ df = (
 Este análisis se ha realizado usando strict. Hay NAs pero nigun pez tiene demasiados si consideramos que hemos medido miles de frames. Se han imputado
 """
 
-# %% calculando la distancia Variables auxiliares
+# %% Calculo de la distancia - Variables auxiliares
 """
 Con el dataset limpio genero unas variables auxiliares. La más importante es la distancia al borde (o al centro) normalizada a 1
 """
@@ -485,7 +485,7 @@ g.map_dataframe(
     # cumulative=True,
     bins=nbins,
     stat="density",
-    weights="weights_r",
+    weights="weights_a_ind",
     common_norm=False,
     kde=False,
     kde_kws={"bw_adjust": 0.8},
@@ -519,8 +519,9 @@ Haciendolo de manera ponderada. *Recomiendo verlo para cada batch*
 
 
 batch = "batch 70"
+Fenotype="KO179"
 df_temp = df.loc[(batch, "WT")].reset_index()
-df_temp2 = df.loc[(batch, "KO179", ["ZebraF_8", "ZebraF_9"])].reset_index()
+df_temp2 = df.loc[(batch, Fenotype, ["ZebraF_8", "ZebraF_9"])].reset_index()
 df_temp2 = df.loc[(batch, "KO179")].reset_index()
 
 nbins = 12
@@ -528,40 +529,40 @@ nbins = 12
 # Create a new figure and axis
 fig, ax = plt.subplots(figsize=(10, 6))
 
-# Plot 1: Blue histogram
-sns.histplot(
-    data=df_temp,
-    x="Dist_border_feret",
-    hue="Fish",
-    multiple="layer", # puede cambiarse a stack
-    common_norm=True,
-    element="poly",
-    weights="weights_r",
-    stat="density",
-    binrange=[0, 1],
-    bins=nbins,
-    palette="Blues",
-    alpha=0.4,
-    ax=ax,
-    legend=False,  # Disable default legend for manual handling
-)
+# # Plot 1: Blue histogram
+# sns.histplot(
+#     data=df_temp,
+#     x="Dist_border_feret",
+#     hue="Fish",
+#     multiple="layer", # puede cambiarse a stack
+#     common_norm=True,
+#     element="poly",
+#     weights="weights_r",
+#     stat="density",
+#     binrange=[0, 1],
+#     bins=nbins,
+#     palette="Blues",
+#     alpha=0.4,
+#     ax=ax,
+#     legend=False,  # Disable default legend for manual handling
+# )
 
-# Get unique categories for Fish in df_temp
-fish_categories_temp = df_temp["Fish"].unique()
+# # Get unique categories for Fish in df_temp
+# fish_categories_temp = df_temp["Fish"].unique()
 
-# Manually create legend for Plot 1 (Blue)
-blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
-blue_legend_elements = [
-    plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
-    for i, cat in enumerate(fish_categories_temp)
-]
-legend1 = ax.legend(
-    handles=blue_legend_elements,
-    loc="upper left",
-    bbox_to_anchor=(1.05, 1.2),
-    title="WT",
-)
-plt.gca().add_artist(legend1)  # Add the first legend manually
+# # Manually create legend for Plot 1 (Blue)
+# blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
+# blue_legend_elements = [
+#     plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
+#     for i, cat in enumerate(fish_categories_temp)
+# ]
+# legend1 = ax.legend(
+#     handles=blue_legend_elements,
+#     loc="upper left",
+#     bbox_to_anchor=(1.05, 1.2),
+#     title="WT",
+# )
+# plt.gca().add_artist(legend1)  # Add the first legend manually
 
 # Plot 2: Orange histogram
 sns.histplot(
@@ -571,8 +572,8 @@ sns.histplot(
     multiple="layer",
     element="step",
     common_norm=True,
-    weights="weights_r",
-    stat="density",
+    weights="weights_a_ind",
+    stat="probability",
     binrange=[0, 1],
     bins=nbins,
     palette="Oranges",
@@ -594,7 +595,7 @@ legend2 = ax.legend(
     handles=orange_legend_elements,
     loc="upper left",
     bbox_to_anchor=(1.05, 0.4),
-    title="KO44",
+    title=Fenotype,
 )
 
 # Set the title and layout
