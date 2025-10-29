@@ -514,7 +514,7 @@ Resulta un plot bastante sucio pero se aprecia la diferencia. Creo que una mejor
 
 Haciendolo de manera ponderada. *Recomiendo verlo para cada batch*
 """
-# %%% SEGÜIR AQUIHist apilado ponderado por Zebra
+# %%% Hist apilado ponderado por Zebra
 """OJO que me he dado cuenta que la funcion plot considera la density total, y creo que es diferente que la density de la de un zebra en concreto, y por eso tengo seguramente variabilidad en los resutlados. Comprobarlo y ver como seria lo mas adecuado. hacerme una tabla en papel. esto tambien puede ser la diferencia con los intervalos significativos y que no sea lo mismo"""
 
 
@@ -530,46 +530,46 @@ nbins = 12
 fig, ax = plt.subplots(figsize=(10, 6))
 
 # # Plot 1: Blue histogram
-# sns.histplot(
-#     data=df_temp,
-#     x="Dist_border_feret",
-#     hue="Fish",
-#     multiple="layer", # puede cambiarse a stack
-#     common_norm=True,
-#     element="poly",
-#     weights="weights_r",
-#     stat="density",
-#     binrange=[0, 1],
-#     bins=nbins,
-#     palette="Blues",
-#     alpha=0.4,
-#     ax=ax,
-#     legend=False,  # Disable default legend for manual handling
-# )
+sns.histplot(
+    data=df_temp,
+    x="Dist_border_feret",
+    hue="Fish",
+    multiple="stack", # puede cambiarse a stack
+    common_norm=True,
+    element="poly",
+    weights="weights_a_ind",
+    stat="probability",
+    binrange=[0, 1],
+    bins=nbins,
+    palette="Blues",
+    alpha=0.4,
+    ax=ax,
+    legend=False,  # Disable default legend for manual handling
+)
 
-# # Get unique categories for Fish in df_temp
-# fish_categories_temp = df_temp["Fish"].unique()
+# Get unique categories for Fish in df_temp
+fish_categories_temp = df_temp["Fish"].unique()
 
-# # Manually create legend for Plot 1 (Blue)
-# blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
-# blue_legend_elements = [
-#     plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
-#     for i, cat in enumerate(fish_categories_temp)
-# ]
-# legend1 = ax.legend(
-#     handles=blue_legend_elements,
-#     loc="upper left",
-#     bbox_to_anchor=(1.05, 1.2),
-#     title="WT",
-# )
-# plt.gca().add_artist(legend1)  # Add the first legend manually
+# Manually create legend for Plot 1 (Blue)
+blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
+blue_legend_elements = [
+    plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
+    for i, cat in enumerate(fish_categories_temp)
+]
+legend1 = ax.legend(
+    handles=blue_legend_elements,
+    loc="upper left",
+    bbox_to_anchor=(1.05, 1.05),
+    title="WT",
+)
+plt.gca().add_artist(legend1)  # Add the first legend manually
 
 # Plot 2: Orange histogram
 sns.histplot(
     data=df_temp2,
     x="Dist_border_feret",
     hue="Fish",
-    multiple="layer",
+    multiple="stack",
     element="step",
     common_norm=True,
     weights="weights_a_ind",
@@ -624,7 +624,7 @@ def compute_histogram(group, nbins):
         range=[0, 1],
         bins=nbins,
         density=True,
-        weights=group["weights_r"].to_numpy(),
+        weights=group["weights_a_ind"].to_numpy(),
     )
     return pd.Series({"hist": hist, "bins": bin_edges})
 
@@ -641,7 +641,7 @@ distribution_df["bins"] = distribution_df["bins"].apply(
 )  # Para que bins tenga el mismo numero de elementos que 'hist'
 distribution_df = distribution_df.explode(["hist", "bins"])
 
-# Prueba con la anova, dibujho valores extremos para tenerlos
+# Prueba con la anova, dibujo valores extremos para tenerlos
 # mask=(distribution_df.Fenotype=="WT") & (distribution_df.bins==0)
 # distribution_df.loc[mask, "hist"]= np.random.randint(7, 23, size=mask.sum())
 
@@ -669,6 +669,7 @@ distribution_df_agg = (
     .dropna()
 )
 
+
 # DF con el valor de una anova para cada bin.
     
 def anova_by_fenotype(x):
@@ -688,7 +689,7 @@ distribution_df_anova = (
         "sd_hist": g["hist"].std(),
         "confid_int": np.ptp(
             st.t.interval(
-                confidence=0.90,
+                confidence=0.95,
                 df=len(g["hist"]) - 1,
                 loc=g["hist"].mean(),
                 scale=st.sem(g["hist"]))),
@@ -700,9 +701,22 @@ distribution_df_anova["p_val_sig"] = distribution_df_anova["anova_pval"] < 0.05
 
 
 
-# %%%% Plot de la agregación de histogramas como linea con margen ci 80
+
+
+# %%%% SEGuIR AQUI Plot de la agregación de histogramas como linea con margen ci 80
 # Lo represento como una linea para ver los errores
 
+
+Quiero representar solo  2 peces de unoun mut
+
+keep_fish = ["ZebraF_8", "ZebraF_9"]
+
+mask = (
+    (distribution_df.index.get_level_values("Fenotype") != "KO179") |
+    (distribution_df.index.get_level_values("Fish").isin(keep_fish))
+)
+
+df_filtered = distribution_df[mask]
 
 g = sns.FacetGrid(
     distribution_df,
@@ -724,13 +738,19 @@ g.map_dataframe(
     estimator="mean",
     x="bins",
     y="hist",
-    errorbar=("sd", 1),
+    errorbar=(lambda x: st.t.interval(
+                        confidence=0.90,
+                        df=len(x) - 1,
+                        loc=np.mean(x),
+                        scale=st.sem(x)
+                        )
+        )
 )
 
-g.add_legend(title="Fenotype", fontsize=30, markerscale=5)
+g.add_legend(title="Fenotype", fontsize=17, markerscale=5)
 g.set_axis_labels(fontsize=25)
 g.fig.suptitle("Averaged distribution of radial position relative to edge")
-plt.subplots_adjust(top=0.95)
+plt.subplots_adjust(top=0.9)
 plt.show()
 
 # %%%% Mismo Plot pero con median
@@ -756,7 +776,7 @@ g.map_dataframe(
     estimator="median",
     x="bins",
     y="hist",
-    errorbar=("ci", 80),
+    errorbar=("pi", 50),
 )
 
 g.add_legend()
