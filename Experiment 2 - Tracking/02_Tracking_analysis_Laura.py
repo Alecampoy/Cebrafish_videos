@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.stats as st
 from scipy import stats
+from statannotations.Annotator import Annotator
+
 
 
 def get_files_in_folder(folder_path):
@@ -628,6 +630,13 @@ def compute_histogram(group, nbins):
     )
     return pd.Series({"hist": hist, "bins": bin_edges})
 
+# Si solo quiero representar algun pez
+# keep_fish = ["ZebraF_8", "ZebraF_9"]
+# mask = (
+#     (df.index.get_level_values("Fenotype") != "KO179") |
+#     ((df.index.get_level_values("Fenotype") == "KO179") &
+#         (df.index.get_level_values("Fish").isin(keep_fish))))
+
 # DF con la altura del bin para cada zebra
 distribution_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])
@@ -701,22 +710,21 @@ distribution_df_anova["p_val_sig"] = distribution_df_anova["anova_pval"] < 0.05
 
 
 
+# %%%% [md]
+"""
+En el siguiente plot agrego usando la media los histogramas normalizados de cada condición por batch. 
+Las barras de error se corresponden a los intervalos al 90% de un t- test
+"""
 
-
-# %%%% SEGuIR AQUI Plot de la agregación de histogramas como linea con margen ci 80
+# %%%% Plot de la agregación de histogramas como linea con margen ci 80
 # Lo represento como una linea para ver los errores
 
 
-Quiero representar solo  2 peces de unoun mut
-
-keep_fish = ["ZebraF_8", "ZebraF_9"]
-
-mask = (
-    (distribution_df.index.get_level_values("Fenotype") != "KO179") |
-    (distribution_df.index.get_level_values("Fish").isin(keep_fish))
-)
-
-df_filtered = distribution_df[mask]
+# Si Quiero representar solo  2 peces de unoun mut
+# keep_fish = ["ZebraF_8", "ZebraF_9"]
+# mask = ((distribution_df["Fenotype"] != "KO179") |      
+#     ((distribution_df["Fenotype"] == "KO179") & (distribution_df["Fish"].isin(keep_fish))))
+# df_filtered = distribution_df[mask]
 
 g = sns.FacetGrid(
     distribution_df,
@@ -738,22 +746,23 @@ g.map_dataframe(
     estimator="mean",
     x="bins",
     y="hist",
+    #errorbar="sd"
     errorbar=(lambda x: st.t.interval(
                         confidence=0.90,
                         df=len(x) - 1,
                         loc=np.mean(x),
                         scale=st.sem(x)
-                        )
-        )
+                        ))
 )
 
+g.set(xticks=bins[:-1], xticklabels=[f"{x:.2f}" for x in bins][:-1])
 g.add_legend(title="Fenotype", fontsize=17, markerscale=5)
 g.set_axis_labels(fontsize=25)
 g.fig.suptitle("Averaged distribution of radial position relative to edge")
 plt.subplots_adjust(top=0.9)
 plt.show()
 
-# %%%% Mismo Plot pero con median
+# %%%% Mismo Plot pero median
 # Lo represento como una linea para ver los errores
 
 g = sns.FacetGrid(
@@ -788,37 +797,36 @@ plt.show()
 
 # %%%% [md]
 """
-Resumen, cada batch diferente
+Resumen: XXXX
 """
-# %%% Porcentaje de tiempo pegado al borde [md]
+# %% Porcentaje de tiempo pegado al borde mediante threshold [md]
 """
-###  Porcentaje de tiempo pegado al borde
+##  Porcentaje de tiempo pegado al borde
 Por último, voy a realizar un análisis del tiempo que pasa cercano al borde. Para ello hay que definir un threshold de cercania, así que estudiaremos la evolución del resultado con respecto a la distancia que consideramos.
 """
 
 # A partir de aqui reusar el codigo de los coletazos
 
-# %%%% Plot Ejemplo threshold
-batch = "batch 12"
+# %%% Plot Ejemplo threshold
+batch = "batch 3"
 
-df_temp = df.loc[("batch 12", "KO179", "ZebraF_23")].reset_index()
-df_temp = df.loc[(batch, "KO44", "ZebraF_14")].reset_index()
-df_temp2 = df.loc[(batch, "KO44")].reset_index()
+df_temp = df.loc[(batch, "KO179", "ZebraF_2")].reset_index()
+# df_temp = df.loc[(batch, "KO44", "ZebraF_4")].reset_index()
 
-g = sns.lineplot(data=df_temp, x="Frame", y="Dist_border")
+g = sns.lineplot(data=df_temp, x="Frame", y="Dist_border_feret")
 g.axhline(0.2, color="red")
 g.set_title("Tiempo en el borde - Dist = 0", size=25)
 plt.show()
 
-# %%%% [md]
+# %%% [md]
 """
 Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenemos
 """
 
-# %%%% Comparación usando un threshold fijo
+# %%% Comparación usando un threshold fijo
 
-Variable_plot = "Dist_border"
-threshold = 0.15
+Variable_plot = "Dist_border_feret"
+threshold = 0.2
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .agg(
@@ -835,6 +843,8 @@ time_over_Thr = (
 # )
 # plt.show()
 
+
+# base boxplot - Código de chatgpt
 grped_bplot = sns.catplot(
     x="Batch",
     y="boder_time_cent",
@@ -847,43 +857,81 @@ grped_bplot = sns.catplot(
     aspect=1.9,
     hue_order=["WT", "KO44", "KO179"],
 )
-# make grouped stripplot
-grped_bplot = sns.stripplot(
+grped_bplot._legend.remove()
+# overlay the stripplot (jittered points)
+ax = grped_bplot.ax  # get the matplotlib Axes
+sns.stripplot(
     x="Batch",
     y="boder_time_cent",
     data=time_over_Thr,
     hue="Fenotype",
-    jitter=True,
     dodge=True,
+    jitter=True,
     marker="o",
     color="black",
+    ax=ax,
     legend=False,
-    # palette="Set2",
     hue_order=["WT", "KO44", "KO179"],
 )
 
-grped_bplot.set_title(
-    "Porcentaje del tiempo que pasa el pez cerca del borde - Threshold = "
-    + str(threshold),
-    size=20,
+# define the pairwise comparisons per Batch
+pairs = []
+for batch in time_over_Thr["Batch"].unique():
+    pairs.extend([
+        ((batch, "WT"), (batch, "KO44")),
+        ((batch, "WT"), (batch, "KO179")),
+    ])
+
+# add the statistical annotations
+annotator = Annotator(
+    ax,
+    pairs,
+    data=time_over_Thr,
+    x="Batch",
+    y="boder_time_cent",
+    hue="Fenotype",
+    hue_order=["WT", "KO44", "KO179"]
 )
 
+annotator.configure(
+    test="t-test_ind",       # can also use "Mann-Whitney", "Kruskal"
+    text_format="star",      # or "simple" to show ns/p-values
+    loc="inside",            # inside or outside bars
+    comparisons_correction="bonferroni"
+)
+
+annotator.apply_and_annotate()
+
+ax.set_title(
+    f"Porcentaje del tiempo que pasa el pez cerca del borde - Threshold = {threshold}",
+    size=20
+)
+
+ax.legend(
+    title="Fenotype",
+    bbox_to_anchor=(0.95, 1),  # place it outside to the right
+    loc='upper left'
+)
+
+plt.tight_layout()
 plt.show()
 
 
-# %%%% Evolución del resultado con el threshold [md]
+
+
+# %%% Evolución del resultado con el threshold [md]
 """
 ### Evolución del resultado con el threshold
 Dado que este resultado es sensible al Threshold, vamos a ver como evoluciona el resultado con el Threshold
 elegido. Se representa la diferencia de la mediana por batch del tiempo que pasa replegado el KO con respecto a su mutante. 
 """
 
-# %%%% Construcción del DF de evolución del resultado con el threshold
+# %%% Construcción del DF de evolución del resultado con el threshold
 
-Variable_plot = "Dist_border"
+Variable_plot = "Dist_border_feret"
 
 threshold_result = pd.DataFrame(
-    columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "CI"]
+    columns=["Threshold", "Batch", "Fenotype", "Mean_diff", "Median_diff", "CI", "IQR_high_dif", "IQR_low_dif"]
 )
 ref = ko44 = ko179 = np.nan
 
@@ -916,13 +964,15 @@ for thr in np.arange(0.0, 0.30, 0.02):  # iteración sobre el threshold
                     "Threshold": thr,
                     "Batch": batch,
                     "Fenotype": fenotype,
-                    "Mean_diff": np.mean(WT) - np.mean(mut),
+                    "Mean_diff": np.mean(WT) - np.mean(mut),                    
+                    "Median_diff": np.median(WT) - np.median(mut),
                     "CI": np.ptp(
                         stats.ttest_ind(WT, mut).confidence_interval(
-                            confidence_level=0.80  # El ancho del intervalo del confianza en el plot subsiguiente
+                            confidence_level=0.90  # El ancho del intervalo del confianza en el plot subsiguiente
                         )
-                    )
-                    / 2,
+                    ) / 2,
+                    "IQR_high_dif": np.percentile(WT, 75) - np.percentile(mut, 75),
+                    "IQR_low_dif": np.percentile(WT, 25) - np.percentile(mut, 25),
                 }
                 threshold_result.loc[len(threshold_result)] = new_row
 
@@ -937,6 +987,10 @@ df_plot = threshold_result
 # ]  # filtro para lo que se quiere repesentar
 df_plot["CI_up"] = df_plot.Mean_diff + df_plot.CI
 df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
+df_plot["IQR_dif_up"] = df_plot.Median_diff + df_plot.IQR_high_dif
+df_plot["IQR_dif_down"] = df_plot.Median_diff - df_plot.IQR_low_dif
+
+
 
 g = sns.lineplot(
     data=df_plot,
@@ -944,7 +998,7 @@ g = sns.lineplot(
     y="Mean_diff",
     hue="hue",
 )
-g.set_title("Evolución del resultado (diferencia de medias) con el threshold Threshold")
+g.set_title("Evolución del resultado (diferencia de medias con t-test CI) con el Threshold")
 
 for hue in df_plot.hue.unique():
     g.fill_between(
@@ -956,6 +1010,24 @@ for hue in df_plot.hue.unique():
     )
 plt.show()
 
+
+g = sns.lineplot(
+    data=df_plot,
+    x="Threshold",
+    y="Median_diff",
+    hue="hue",
+)
+g.set_title("Evolución del resultado (diferencia de medianas Q75 y Q25) con el Threshold (la sombra significa otra cosa)")
+
+for hue in df_plot.hue.unique():
+    g.fill_between(
+        x="Threshold",
+        y1="IQR_dif_up",
+        y2="IQR_dif_down",
+        alpha=0.1,
+        data=df_plot[df_plot.hue == hue],
+    )
+plt.show()
 
 # %%%% [md]
 """
@@ -973,7 +1045,7 @@ Como sugerencia de Tomás, voy a calcular el sumatorio de la distancia radial al
 # %%% Calculo del DF de la variable extensiva
 
 Distancia_acumulada = (
-    df.groupby(["Batch", "Fenotype", "Fish"])["Dist_center"]
+    df.groupby(["Batch", "Fenotype", "Fish"])["Dist_border_feret"]
     .sum()
     .rename("Distancia_acumulada")
     .reset_index()
@@ -988,7 +1060,7 @@ grped_bplot = sns.catplot(
     data=Distancia_acumulada,
     hue="Fenotype",
     kind="box",
-    legend=False,
+    legend=True,
     showfliers=False,
     height=6,
     aspect=1.9,
@@ -1001,6 +1073,7 @@ grped_bplot = sns.stripplot(
     data=Distancia_acumulada,
     hue="Fenotype",
     jitter=True,
+    legend=False,
     dodge=True,
     marker="o",
     color="black",
