@@ -50,8 +50,8 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 # %%% Load batches 12-14
 
 if platform.system() == "Windows":
-    # folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Lauraaaaaa"
-    folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\\test"
+    folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Laura NO strict"
+    #folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\\test"
 else:
     folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/datos csv\Experimento Tracking\Batches Laura"
 
@@ -77,32 +77,32 @@ elements = round(
 print(str(elements).replace(".0", "").replace("],", "]\n"))
 
 
-# df["Batch"] = pd.Categorical(
-#     df["Batch"],
-#     categories=[
-#         "batch 1",
-#         "batch 2",
-#         "batch 3",
-#         "batch 4",
-#         "batch 5",
-#         "batch 6",
-#         "batch 7",
-#         "batch 8",
-#     ],
-#     ordered=True,
-# )
-
-# %% solo para el test
-
 df["Batch"] = pd.Categorical(
     df["Batch"],
     categories=[
+        "batch 1",
+        "batch 2",
         "batch 3",
-        "batch 44",
-        "batch 70",
+        "batch 4",
+        "batch 5",
+        "batch 6",
+        "batch 7",
+        "batch 8",
     ],
     ordered=True,
 )
+
+# # %% solo para el test
+
+# df["Batch"] = pd.Categorical(
+#     df["Batch"],
+#     categories=[
+#         "batch 3",
+#         "batch 44",
+#         "batch 70",
+#     ],
+#     ordered=True,
+# )
 
 # %% NAs [md]
 """
@@ -826,7 +826,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border_feret"
-threshold = 0.2
+threshold = 0.15
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .agg(
@@ -1066,6 +1066,11 @@ grped_bplot = sns.catplot(
     aspect=1.9,
     hue_order=["WT", "KO44", "KO179"],
 )
+
+#grped_bplot._legend.remove()
+# overlay the stripplot (jittered points)
+ax = grped_bplot.ax  # get the matplotlib Axes
+
 # make grouped stripplot
 grped_bplot = sns.stripplot(
     x="Batch",
@@ -1085,7 +1090,35 @@ grped_bplot.set_title(
     "Distancia radial acumulada como variable extensiva",
     size=20,
 )
-plt.legend(handles[0:3], labels[0:3])
+
+# define the pairwise comparisons per Batch
+pairs = []
+for batch in time_over_Thr["Batch"].unique():
+    pairs.extend([
+        ((batch, "WT"), (batch, "KO44")),
+        ((batch, "WT"), (batch, "KO179")),
+    ])
+
+# add the statistical annotations
+annotator = Annotator(
+    ax,
+    pairs,
+    data=time_over_Thr,
+    x="Batch",
+    y="boder_time_cent",
+    hue="Fenotype",
+    hue_order=["WT", "KO44", "KO179"]
+)
+
+annotator.configure(
+    test="t-test_ind",       # can also use "Mann-Whitney", "Kruskal"
+    text_format="star",      # or "simple" to show ns/p-values
+    loc="inside"            # inside or outside bars
+
+)
+
+annotator.apply_and_annotate()
+
 plt.show()
 
 # %%% Conclusiones [md]
