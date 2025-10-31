@@ -47,7 +47,7 @@ Lectura de todos los archivos csv con los resultados de los diferentes batches.
 Se añade una columna representando el gusano y el batch mediante el uso de regex
 """
 
-# %%% Load batches 12-14
+# %%% Load batches 
 
 if platform.system() == "Windows":
     folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Laura NO strict"
@@ -169,7 +169,7 @@ Con el dataset limpio genero unas variables auxiliares. La más importante es la
 
 # Para evaluar la distancia al borde de 0 (border) a 1 (center)
 df["Dist_border_dmap"] = (
-    df["Mean-Distance"] / 170
+    df["Mean-Distance"] / 172
 )  # valor del radio del pocillo medido de las imagenes
 
 df["Dist_center_dmap"] = abs(df["Dist_border_dmap"] - 1)
@@ -200,7 +200,7 @@ df["Y_diff"] = df.groupby(["Batch", "Fenotype", "Fish"]).Y.diff()
 df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
 # ejemplo de la distribución de los saltos entre frames
-df_temp = df.loc[("batch 3", "KO44", "ZebraF_6")].reset_index()
+df_temp = df.loc[("batch 8", "KO44", "ZebraF_6")].reset_index()
 
 g = sns.histplot(data=df_temp, x="dist", stat="count", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
@@ -234,7 +234,6 @@ for i in range(15):
     df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
 
-df_temp = df.loc[("batch 3", "KO44", "ZebraF_6")].reset_index()
 
 g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
@@ -282,10 +281,10 @@ Dist = Dist.loc[
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 
 
-# %%% Box-plot
+# %%% SEGuir AQuI Box-plot
 
-# batches_2_plot = ["batch 6", "batch 7", "batch 8", "batch 11"]
-batches_2_plot = ["batch 3", "batch 44", "batch 70"]
+batches_2_plot = ["batch 3", "batch 4","batch 5"]
+# batches_2_plot = ["batch 3", "batch 44", "batch 70"]
 df_plot = Dist.loc[(batches_2_plot)].reset_index()
 df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
 
@@ -298,7 +297,7 @@ grped_bplot = sns.catplot(
     height=6,
     aspect=1.9,
     data=df_plot,
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 # make grouped stripplot
 grped_bplot = sns.stripplot(
@@ -312,7 +311,7 @@ grped_bplot = sns.stripplot(
     color="black",
     # palette="Set2",
     data=df_plot,
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 
 handles, labels = grped_bplot.get_legend_handles_labels()
