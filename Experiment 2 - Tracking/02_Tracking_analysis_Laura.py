@@ -234,6 +234,7 @@ for i in range(15):
     df["dist"] = np.sqrt((df.X_diff**2) + (df.Y_diff**2))
 
 
+df_temp = df.loc[("batch 8", "KO44", "ZebraF_6")].reset_index()
 
 g = sns.histplot(data=df_temp, x="dist", stat="density", binwidth=9)
 g.set_title("Distribution of frame movement of a single zebra")
@@ -271,7 +272,7 @@ Se calcula la distancia que recorre el pez a lo largo del video y se gráfica po
 # dataframe con la distancia recorrida por el  gusano
 Dist = (
     df.dropna()
-    .groupby(["Batch", "Fenotype", "Fish"], as_index=True)
+    .groupby(["Batch", "Fenotype", "Fish"], observed=True, as_index=True)
     .dist.sum(min_count=100)
     .round()
 )  # .reset_index()
@@ -281,10 +282,12 @@ Dist = Dist.loc[
 ]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
 
 
-# %%% SEGuir AQuI Box-plot
+# %%% Box-plot
 
-batches_2_plot = ["batch 3", "batch 4","batch 5"]
-# batches_2_plot = ["batch 3", "batch 44", "batch 70"]
+batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4","batch 5","batch 6","batch 7","batch 8"]
+#batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4"]
+#batches_2_plot = ["batch 5","batch 6","batch 7","batch 8"]
+batches_2_plot = ["batch 4","batch 5","batch 6","batch 7","batch 8"]
 df_plot = Dist.loc[(batches_2_plot)].reset_index()
 df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
 
@@ -334,7 +337,7 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se piensa
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
 # %%% Grafico Histograma 1 Zebra
-df_temp = df.loc[("batch 44", "WT", "ZebraF_5")].reset_index()
+df_temp = df.loc[("batch 6", "WT", "ZebraF_5")].reset_index()
 
 nbins = 12
 g = sns.histplot(
@@ -381,7 +384,7 @@ g = sns.histplot(
     data=df_temp,
     x="Dist_border_feret",
     stat="density",
-    weights=weights_r,
+    weights=weights_a_ind,
     binrange=[0, 1],
     bins=nbins,
 )
@@ -413,7 +416,7 @@ g = sns.FacetGrid(
     data=df.reset_index(),
     row="Batch",
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
     palette="pastel",
     sharex="col",
     sharey=False,
@@ -457,7 +460,7 @@ weights_a = -np.diff(weights_a)
 bin_of_dist = np.searchsorted(bins, df.Dist_border_feret) - 1
 df["weights_a_ind"] = 1 / weights_a[bin_of_dist]
 
-df_temp = df.loc[("batch 44", "WT", "ZebraF_5")].reset_index()
+df_temp = df.loc[("batch 6", "WT", "ZebraF_5")].reset_index()
 
 # %%%% Hist. ponderado por distribución radial
 
@@ -465,8 +468,8 @@ g = sns.FacetGrid(
     data=df.reset_index(),
     row="Batch",
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179"],
-    palette="pastel",
+    hue_order=["WT", "KO44", "KO179", "KO185"],
+    palette= ["blue", "red", "green", "yellow"],#"pastel",
     sharex="col",
     sharey=False,
     height=5,
@@ -481,7 +484,7 @@ g.map_dataframe(
     x="Dist_border_feret",
     element="step",
     edgecolor="black",
-    alpha=0.5,
+    alpha=0.1,
     binrange=[0, 1],
     # cumulative=True,
     bins=nbins,
@@ -519,11 +522,11 @@ Haciendolo de manera ponderada. *Recomiendo verlo para cada batch*
 """OJO que me he dado cuenta que la funcion plot considera la density total, y creo que es diferente que la density de la de un zebra en concreto, y por eso tengo seguramente variabilidad en los resutlados. Comprobarlo y ver como seria lo mas adecuado. hacerme una tabla en papel. esto tambien puede ser la diferencia con los intervalos significativos y que no sea lo mismo"""
 
 
-batch = "batch 70"
-Fenotype="KO179"
+batch = "batch 5"
+Fenotype="KO44"
 df_temp = df.loc[(batch, "WT")].reset_index()
-df_temp2 = df.loc[(batch, Fenotype, ["ZebraF_8", "ZebraF_9"])].reset_index()
-df_temp2 = df.loc[(batch, "KO179")].reset_index()
+#df_temp2 = df.loc[(batch, Fenotype, ["ZebraF_8", "ZebraF_9"])].reset_index()
+df_temp2 = df.loc[(batch, Fenotype)].reset_index()
 
 nbins = 12
 
@@ -539,7 +542,7 @@ sns.histplot(
     common_norm=True,
     element="poly",
     weights="weights_a_ind",
-    stat="probability",
+    stat="density",
     binrange=[0, 1],
     bins=nbins,
     palette="Blues",
@@ -574,7 +577,7 @@ sns.histplot(
     element="step",
     common_norm=True,
     weights="weights_a_ind",
-    stat="probability",
+    stat="densit",
     binrange=[0, 1],
     bins=nbins,
     palette="Oranges",
@@ -715,7 +718,7 @@ En el siguiente plot agrego usando la media los histogramas normalizados de cada
 Las barras de error se corresponden a los intervalos al 90% de un t- test
 """
 
-# %%%% Plot de la agregación de histogramas como linea con margen ci 80
+# %%%% Plot de la agregación de histogramas como linea con t.test CI
 # Lo represento como una linea para ver los errores
 
 
@@ -728,7 +731,7 @@ Las barras de error se corresponden a los intervalos al 90% de un t- test
 g = sns.FacetGrid(
     distribution_df,
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
     row="Batch",
     palette="pastel",
     sharex="col",
@@ -758,7 +761,7 @@ g.set(xticks=bins[:-1], xticklabels=[f"{x:.2f}" for x in bins][:-1])
 g.add_legend(title="Fenotype", fontsize=17, markerscale=5)
 g.set_axis_labels(fontsize=25)
 g.fig.suptitle("Averaged distribution of radial position relative to edge")
-plt.subplots_adjust(top=0.9)
+plt.subplots_adjust(top=0.95)
 plt.show()
 
 # %%%% Mismo Plot pero median
@@ -767,7 +770,7 @@ plt.show()
 g = sns.FacetGrid(
     distribution_df,
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
     row="Batch",
     palette="pastel",
     sharex="col",
@@ -825,7 +828,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border_feret"
-threshold = 0.15
+threshold = 0.01
 time_over_Thr = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .agg(
@@ -854,7 +857,7 @@ grped_bplot = sns.catplot(
     showfliers=False,
     height=6,
     aspect=1.9,
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 grped_bplot._legend.remove()
 # overlay the stripplot (jittered points)
@@ -870,7 +873,7 @@ sns.stripplot(
     color="black",
     ax=ax,
     legend=False,
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 
 # define the pairwise comparisons per Batch
@@ -879,6 +882,7 @@ for batch in time_over_Thr["Batch"].unique():
     pairs.extend([
         ((batch, "WT"), (batch, "KO44")),
         ((batch, "WT"), (batch, "KO179")),
+        ((batch, "WT"), (batch, "KO185")),
     ])
 
 # add the statistical annotations
@@ -889,14 +893,14 @@ annotator = Annotator(
     x="Batch",
     y="boder_time_cent",
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179", "KO185"]
 )
 
 annotator.configure(
     test="t-test_ind",       # can also use "Mann-Whitney", "Kruskal"
     text_format="star",      # or "simple" to show ns/p-values
     loc="inside",            # inside or outside bars
-    comparisons_correction="bonferroni"
+    #comparisons_correction="bonferroni"
 )
 
 annotator.apply_and_annotate()
@@ -1063,7 +1067,7 @@ grped_bplot = sns.catplot(
     showfliers=False,
     height=6,
     aspect=1.9,
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 
 #grped_bplot._legend.remove()
@@ -1082,7 +1086,7 @@ grped_bplot = sns.stripplot(
     marker="o",
     color="black",
     # palette="Set2",
-    hue_order=["WT", "KO44", "KO179"],
+    hue_order=["WT", "KO44", "KO179", "KO185"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 grped_bplot.set_title(
@@ -1096,17 +1100,18 @@ for batch in time_over_Thr["Batch"].unique():
     pairs.extend([
         ((batch, "WT"), (batch, "KO44")),
         ((batch, "WT"), (batch, "KO179")),
+        ((batch, "WT"), (batch, "KO185"))
     ])
 
 # add the statistical annotations
 annotator = Annotator(
     ax,
     pairs,
-    data=time_over_Thr,
+    data=Distancia_acumulada,
     x="Batch",
-    y="boder_time_cent",
+    y="Distancia_acumulada",
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179"]
+    hue_order=["WT", "KO44", "KO179", "KO185"]
 )
 
 annotator.configure(
