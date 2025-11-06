@@ -15,8 +15,8 @@
 *///////////////////////////////////////////////////////////////////////////////////////////////
 
 
-STRICT = false; // argumento de find maxima
-if (STRICT == true) {strict_value = 40;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
+STRICT = true; // argumento de find maxima
+if (STRICT == true) {strict_value = 50;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 
 // 0.0 Clean previous data in FIJI
@@ -85,6 +85,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		pocillo_diam = List.getValue("Feret");
 		roiManager("Add");
 		run("Fit Circle");
+		run("Enlarge...", "enlarge=6"); // lo hago un poco mas grande para que el distance map se ajuste mejor
 		roiManager("Add");
 		roiManager("Select", roiManager("count")-1); // selecciona la ultima para que se ejecute la acción
 		run("Create Mask");
@@ -96,7 +97,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		selectImage(original);
 		run("Select None");
 		roiManager("Select", 1); // voy a usar gaussian solamente fuera de la selección del pocillo
-		run("Enlarge...", "enlarge=-1");
+		run("Enlarge...", "enlarge=-8"); // quiero hacer -2 sobre el fit circle, pero como lo he agrandado antes 6, lo compenso
 		run("Make Inverse");
 		run("Gaussian Blur...", "sigma=1 stack");
 		run("Select None");
@@ -112,7 +113,7 @@ for (j = 0; j<list_parent.length; j++) { // loop en las carpetas de los batches,
 		// limpio fuera del pocillo para evitar que se detecte debris que ocurre en el video
 		roiManager("Select", 1);
 		mean_bck = getValue("Mean raw");
-		run("Enlarge...", "enlarge=18");
+		run("Enlarge...", "enlarge=15");
 		setBackgroundColor(mean_bck, mean_bck, mean_bck);
 		run("Clear Outside", "stack");
 		run("Select None");
