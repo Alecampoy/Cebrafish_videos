@@ -106,17 +106,21 @@ df["Batch"] = pd.Categorical(
 
 # %% Elimino peces muertos del NO STRICT. estos videos pueden estar bien en el otro analisis y substiirse
 
-pez_video_mal = (
-    (df['Batch'] == 'batch 1')
-    & (df['Fenotype'] == "KO179")
-    & (df['Fish'] == 'ZebraF_12'))
-df = df[~pez_video_mal]
+"""
+Los comentados es que se han sustituido por el análisis strict, donde ha salido bien
+"""
 
-pez_video_mal = (
-    (df['Batch'] == 'batch 1')
-    & (df['Fenotype'] == "WT")
-    & (df['Fish'] == 'ZebraF_3'))
-df = df[~pez_video_mal]
+# pez_video_mal = (
+#     (df['Batch'] == 'batch 1')
+#     & (df['Fenotype'] == "KO179")
+#     & (df['Fish'] == 'ZebraF_12'))
+# df = df[~pez_video_mal]
+
+# pez_video_mal = (
+#     (df['Batch'] == 'batch 1')
+#     & (df['Fenotype'] == "WT")
+#     & (df['Fish'] == 'ZebraF_3'))
+# df = df[~pez_video_mal]
 
 pez_video_mal = (
     (df['Batch'] == 'batch 2')
@@ -190,7 +194,7 @@ pez_video_mal = (
     & (df['Fish'] == 'ZebraF_11'))
 df = df[~pez_video_mal]
 
-pez_video_mal = (
+pez_video_mal = ( #mal segmentado
     (df['Batch'] == 'batch 6')
     & (df['Fenotype'] == "KO185")
     & (df['Fish'] == 'ZebraF_5'))
@@ -202,19 +206,19 @@ pez_video_mal = (
     & (df['Fish'] == 'ZebraF_10'))
 df = df[~pez_video_mal]
 
-pez_video_mal = (
+pez_video_mal = ( #mal segmentado
     (df['Batch'] == 'batch 6')
     & (df['Fenotype'] == "KO185")
     & (df['Fish'] == 'ZebraF_11'))
 df = df[~pez_video_mal]
 
-pez_video_mal = (
+pez_video_mal = ( 
     (df['Batch'] == 'batch 6')
     & (df['Fenotype'] == "KO185")
     & (df['Fish'] == 'ZebraF_12'))
 df = df[~pez_video_mal]
 
-pez_video_mal = (
+pez_video_mal = ( #mal segmentado
     (df['Batch'] == 'batch 6')
     & (df['Fenotype'] == "WT")
     & (df['Fish'] == 'ZebraF_1'))
@@ -226,23 +230,23 @@ pez_video_mal = (
     & (df['Fish'] == 'ZebraF_2'))
 df = df[~pez_video_mal]
 
-pez_video_mal = (
-    (df['Batch'] == 'batch 7')
-    & (df['Fenotype'] == "KO179")
-    & (df['Fish'] == 'ZebraF_5'))
-df = df[~pez_video_mal]
+# pez_video_mal = (
+#     (df['Batch'] == 'batch 7')
+#     & (df['Fenotype'] == "KO179")
+#     & (df['Fish'] == 'ZebraF_5'))
+# df = df[~pez_video_mal]
 
-pez_video_mal = (
-    (df['Batch'] == 'batch 7')
-    & (df['Fenotype'] == "KO179")
-    & (df['Fish'] == 'ZebraF_9'))
-df = df[~pez_video_mal]
+# pez_video_mal = (
+#     (df['Batch'] == 'batch 7')
+#     & (df['Fenotype'] == "KO179")
+#     & (df['Fish'] == 'ZebraF_9'))
+# df = df[~pez_video_mal]
 
-pez_video_mal = (
-    (df['Batch'] == 'batch 7')
-    & (df['Fenotype'] == "KO185")
-    & (df['Fish'] == 'ZebraF_1'))
-df = df[~pez_video_mal]
+# pez_video_mal = (
+#     (df['Batch'] == 'batch 7')
+#     & (df['Fenotype'] == "KO185")
+#     & (df['Fish'] == 'ZebraF_1'))
+# df = df[~pez_video_mal]
 
 pez_video_mal = (
     (df['Batch'] == 'batch 7')
@@ -262,17 +266,17 @@ pez_video_mal = (
     & (df['Fish'] == 'ZebraF_2'))
 df = df[~pez_video_mal]
 
-pez_video_mal = (
-    (df['Batch'] == 'batch 8')
-    & (df['Fenotype'] == "KO44")
-    & (df['Fish'] == 'ZebraF_3'))
-df = df[~pez_video_mal]
+# pez_video_mal = (
+#     (df['Batch'] == 'batch 8')
+#     & (df['Fenotype'] == "KO44")
+#     & (df['Fish'] == 'ZebraF_3'))
+# df = df[~pez_video_mal]
 
-pez_video_mal = (
-    (df['Batch'] == 'batch 8')
-    & (df['Fenotype'] == "WT")
-    & (df['Fish'] == 'ZebraF_9'))
-df = df[~pez_video_mal]
+# pez_video_mal = (
+#     (df['Batch'] == 'batch 8')
+#     & (df['Fenotype'] == "WT")
+#     & (df['Fish'] == 'ZebraF_9'))
+# df = df[~pez_video_mal]
 
 elements = round(
     pd.crosstab(index=df.Batch, columns=df.Fenotype) / 5601
@@ -453,7 +457,6 @@ Distancia_recorrida = (
     .round()
 ).reset_index()
 
-
 Distancia_recorrida = Distancia_recorrida.rename(columns={'dist': 'Distancia_recorrida'})
 
 
@@ -463,7 +466,7 @@ batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4","batch 5","batch 6","
 #batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4"]
 #batches_2_plot = ["batch 5","batch 6","batch 7","batch 8"]
 #batches_2_plot = ["batch 4","batch 5","batch 6","batch 7","batch 8"]
-df_plot = Distancia_recorrida.loc[Distancia_recorrida.Batches.isin(batches_2_plot)]
+df_plot = Distancia_recorrida.loc[Distancia_recorrida.Batch.isin(batches_2_plot)]
 df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
 
 grped_bplot = sns.catplot(
