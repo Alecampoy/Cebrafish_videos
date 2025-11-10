@@ -50,7 +50,7 @@ Se añade una columna representando el gusano y el batch mediante el uso de rege
 # %%% Load batches 
 
 if platform.system() == "Windows":
-    folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Laura NO strict"
+    folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\Batches Laura\\No Strict"
     #folder_path = "P:\CABD\Lab Ozren\datos csv\Experimento Tracking\\test"
 else:
     folder_path = "/home/ale/pCloudDrive/CABD/Lab Ozren/datos csv\Experimento Tracking\Batches Laura"
@@ -103,6 +103,182 @@ df["Batch"] = pd.Categorical(
 #     ],
 #     ordered=True,
 # )
+
+# %% Elimino peces muertos del NO STRICT. estos videos pueden estar bien en el otro analisis y substiirse
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 1')
+    & (df['Fenotype'] == "KO179")
+    & (df['Fish'] == 'ZebraF_12'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 1')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_3'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 2')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_9'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 2')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_11'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 3')
+    & (df['Fenotype'] == "KO44")
+    & (df['Fish'] == 'ZebraF_9'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 3')
+    & (df['Fenotype'] == "KO44")
+    & (df['Fish'] == 'ZebraF_10'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 3')
+    & (df['Fenotype'] == "KO179")
+    & (df['Fish'] == 'ZebraF_7'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 3')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_3'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 4')
+    & (df['Fenotype'] == "KO179")
+    & (df['Fish'] == 'ZebraF_10'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 4')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_2'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 5')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_8'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 5')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_12'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "KO179")
+    & (df['Fish'] == 'ZebraF_5'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "KO179")
+    & (df['Fish'] == 'ZebraF_11'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_5'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_10'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_11'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_12'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_1'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 6')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_2'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 7')
+    & (df['Fenotype'] == "KO179")
+    & (df['Fish'] == 'ZebraF_5'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 7')
+    & (df['Fenotype'] == "KO179")
+    & (df['Fish'] == 'ZebraF_9'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 7')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_1'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 7')
+    & (df['Fenotype'] == "KO185")
+    & (df['Fish'] == 'ZebraF_12'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 7')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_1'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 7')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_2'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 8')
+    & (df['Fenotype'] == "KO44")
+    & (df['Fish'] == 'ZebraF_3'))
+df = df[~pez_video_mal]
+
+pez_video_mal = (
+    (df['Batch'] == 'batch 8')
+    & (df['Fenotype'] == "WT")
+    & (df['Fish'] == 'ZebraF_9'))
+df = df[~pez_video_mal]
+
+elements = round(
+    pd.crosstab(index=df.Batch, columns=df.Fenotype) / 5601
+)  # divided by lengh of the video
+print(str(elements).replace(".0", "").replace("],", "]\n"))
+
 
 # %% NAs [md]
 """
@@ -287,7 +463,7 @@ Dist = Dist.loc[
 batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4","batch 5","batch 6","batch 7","batch 8"]
 #batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4"]
 #batches_2_plot = ["batch 5","batch 6","batch 7","batch 8"]
-batches_2_plot = ["batch 4","batch 5","batch 6","batch 7","batch 8"]
+#batches_2_plot = ["batch 4","batch 5","batch 6","batch 7","batch 8"]
 df_plot = Dist.loc[(batches_2_plot)].reset_index()
 df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
 
@@ -411,41 +587,43 @@ Voy a ver si, en media, un fenotipo cambia su modo de distribuirse en el pocillo
 # %%%% Hitograma por batch sin ponderar
 
 nbins=12
-
-g = sns.FacetGrid(
-    data=df.reset_index(),
-    row="Batch",
-    hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179", "KO185"],
-    palette="pastel",
-    sharex="col",
-    sharey=False,
-    height=5,
-    aspect=4,
-)
-
-# g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
-# fontsize=24, fontdict={"weight": "bold"})
-
-g.map_dataframe(
-    sns.histplot,
-    x="Dist_border_feret",
-    element="step",
-    edgecolor="black",
-    alpha=0.4,
-    binrange=[0, 1],
-    # cumulative=True,
-    bins=nbins,
-    stat="density",
-    common_norm=False,
-    kde=False,
-    kde_kws={"bw_adjust": 1},
-)
-g.add_legend()
-g.set_axis_labels(fontsize=20)
-g.fig.suptitle("Accumulated distribution of radial position relative to edge")
-plt.subplots_adjust(top=0.95)
-plt.show()
+i=0
+for j in ["KO44", "KO179", "KO185"]:
+    g = sns.FacetGrid(
+        data=df.reset_index(),
+        row="Batch",
+        hue="Fenotype",
+        hue_order=["WT", j],
+        palette= ["blue", ["red", "green", "yellow"][i]],#"pastel",
+        sharex="col",
+        sharey=False,
+        height=5,
+        aspect=4,
+    )
+    
+    # g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+    # fontsize=24, fontdict={"weight": "bold"})
+    
+    g.map_dataframe(
+        sns.histplot,
+        x="Dist_border_feret",
+        element="step",
+        edgecolor="black",
+        alpha=0.4,
+        binrange=[0, 1],
+        # cumulative=True,
+        bins=nbins,
+        stat="density",
+        common_norm=False,
+        kde=False,
+        kde_kws={"bw_adjust": 1},
+    )
+    g.add_legend()
+    g.set_axis_labels(fontsize=20)
+    g.fig.suptitle("Accumulated distribution of radial position relative to edge")
+    plt.subplots_adjust(top=0.95)
+    plt.show()
+    i=i+1
 
 # %%%% Calculo Pesos para Ponderar por la distribución radial por Batch
 
@@ -460,45 +638,48 @@ weights_a = -np.diff(weights_a)
 bin_of_dist = np.searchsorted(bins, df.Dist_border_feret) - 1
 df["weights_a_ind"] = 1 / weights_a[bin_of_dist]
 
-df_temp = df.loc[("batch 6", "WT", "ZebraF_5")].reset_index()
 
 # %%%% Hist. ponderado por distribución radial
 
-g = sns.FacetGrid(
-    data=df.reset_index(),
-    row="Batch",
-    hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179", "KO185"],
-    palette= ["blue", "red", "green", "yellow"],#"pastel",
-    sharex="col",
-    sharey=False,
-    height=5,
-    aspect=4,
-)
-
-# g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
-# fontsize=24, fontdict={"weight": "bold"})
-
-g.map_dataframe(
-    sns.histplot,
-    x="Dist_border_feret",
-    element="step",
-    edgecolor="black",
-    alpha=0.1,
-    binrange=[0, 1],
-    # cumulative=True,
-    bins=nbins,
-    stat="density",
-    weights="weights_a_ind",
-    common_norm=False,
-    kde=False,
-    kde_kws={"bw_adjust": 0.8},
-)
-g.add_legend()
-g.set_axis_labels(fontsize=20)
-g.fig.suptitle("Accumulated distribution of radial position relative to edge")
-plt.subplots_adjust(top=0.95)
-plt.show()
+nbins=12
+i=0
+for j in ["KO44", "KO179", "KO185"]:
+    g = sns.FacetGrid(
+        data=df.reset_index(),
+        row="Batch",
+        hue="Fenotype",
+        hue_order=["WT", j],
+        palette= ["blue", ["red", "green", "yellow"][i]],#"pastel",
+        sharex="col",
+        sharey=False,
+        height=5,
+        aspect=4,
+    )
+    
+    # g.fig.suptitle("Evolución temporal de todas las variables para un pez de ejemplo",
+    # fontsize=24, fontdict={"weight": "bold"})
+    
+    g.map_dataframe(
+        sns.histplot,
+        x="Dist_border_feret",
+        element="step",
+        edgecolor="black",
+        alpha=0.1,
+        binrange=[0, 1],
+        # cumulative=True,
+        bins=nbins,
+        stat="density",
+        weights="weights_a_ind",
+        common_norm=False,
+        kde=False,
+        kde_kws={"bw_adjust": 0.8},
+    )
+    g.add_legend()
+    g.set_axis_labels(fontsize=20)
+    g.fig.suptitle("Accumulated distribution of radial position relative to edge")
+    plt.subplots_adjust(top=0.95)
+    plt.show()
+    i=i+1
 
 # %%%% [md]
 """
@@ -520,94 +701,96 @@ Haciendolo de manera ponderada. *Recomiendo verlo para cada batch*
 """
 # %%% Hist apilado ponderado por Zebra
 """OJO que me he dado cuenta que la funcion plot considera la density total, y creo que es diferente que la density de la de un zebra en concreto, y por eso tengo seguramente variabilidad en los resutlados. Comprobarlo y ver como seria lo mas adecuado. hacerme una tabla en papel. esto tambien puede ser la diferencia con los intervalos significativos y que no sea lo mismo"""
-
-
-batch = "batch 5"
-Fenotype="KO44"
-df_temp = df.loc[(batch, "WT")].reset_index()
-#df_temp2 = df.loc[(batch, Fenotype, ["ZebraF_8", "ZebraF_9"])].reset_index()
-df_temp2 = df.loc[(batch, Fenotype)].reset_index()
-
-nbins = 12
-
-# Create a new figure and axis
-fig, ax = plt.subplots(figsize=(10, 6))
-
-# # Plot 1: Blue histogram
-sns.histplot(
-    data=df_temp,
-    x="Dist_border_feret",
-    hue="Fish",
-    multiple="stack", # puede cambiarse a stack
-    common_norm=True,
-    element="poly",
-    weights="weights_a_ind",
-    stat="density",
-    binrange=[0, 1],
-    bins=nbins,
-    palette="Blues",
-    alpha=0.4,
-    ax=ax,
-    legend=False,  # Disable default legend for manual handling
-)
-
-# Get unique categories for Fish in df_temp
-fish_categories_temp = df_temp["Fish"].unique()
-
-# Manually create legend for Plot 1 (Blue)
-blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
-blue_legend_elements = [
-    plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
-    for i, cat in enumerate(fish_categories_temp)
-]
-legend1 = ax.legend(
-    handles=blue_legend_elements,
-    loc="upper left",
-    bbox_to_anchor=(1.05, 1.05),
-    title="WT",
-)
-plt.gca().add_artist(legend1)  # Add the first legend manually
-
-# Plot 2: Orange histogram
-sns.histplot(
-    data=df_temp2,
-    x="Dist_border_feret",
-    hue="Fish",
-    multiple="stack",
-    element="step",
-    common_norm=True,
-    weights="weights_a_ind",
-    stat="densit",
-    binrange=[0, 1],
-    bins=nbins,
-    palette="Oranges",
-    alpha=0.3,
-    ax=ax,
-    legend=False,  # Disable default legend for manual handling
-)
-
-# Get unique categories for Fish in df_temp2
-fish_categories_temp2 = df_temp2["Fish"].unique()
-
-# Manually create legend for Plot 2 (Orange)
-orange_palette = sns.color_palette("Oranges", len(fish_categories_temp2))
-orange_legend_elements = [
-    plt.Line2D([0], [0], color=orange_palette[i], lw=4, label=cat)
-    for i, cat in enumerate(fish_categories_temp2)
-]
-legend2 = ax.legend(
-    handles=orange_legend_elements,
-    loc="upper left",
-    bbox_to_anchor=(1.05, 0.4),
-    title=Fenotype,
-)
-
-# Set the title and layout
-ax.set_title("Ponderated Stacked histogram of radial position for " + batch)
-plt.tight_layout()
-
-# Show the plot
-plt.show()
+    
+nbins=12
+i=0
+for Fenotype in ["KO44", "KO179", "KO185"]:
+    batch = "batch 5"
+    df_temp = df.loc[(batch, "WT")].reset_index()
+    #df_temp2 = df.loc[(batch, Fenotype, ["ZebraF_8", "ZebraF_9"])].reset_index()
+    df_temp2 = df.loc[(batch, Fenotype)].reset_index()
+    
+    nbins = 12
+    
+    # Create a new figure and axis
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # # Plot 1: Blue histogram
+    sns.histplot(
+        data=df_temp,
+        x="Dist_border_feret",
+        hue="Fish",
+        multiple="stack", # puede cambiarse a stack
+        common_norm=True,
+        element="poly",
+        weights="weights_a_ind",
+        stat="density",
+        binrange=[0, 1],
+        bins=nbins,
+        palette="Blues",
+        alpha=0.4,
+        ax=ax,
+        legend=False,  # Disable default legend for manual handling
+    )
+    
+    # Get unique categories for Fish in df_temp
+    fish_categories_temp = df_temp["Fish"].unique()
+    
+    # Manually create legend for Plot 1 (Blue)
+    blue_palette = sns.color_palette("Blues", len(fish_categories_temp))
+    blue_legend_elements = [
+        plt.Line2D([0], [0], color=blue_palette[i], lw=4, label=cat)
+        for i, cat in enumerate(fish_categories_temp)
+    ]
+    legend1 = ax.legend(
+        handles=blue_legend_elements,
+        loc="upper left",
+        bbox_to_anchor=(1.05, 1.05),
+        title="WT",
+    )
+    plt.gca().add_artist(legend1)  # Add the first legend manually
+    
+    # Plot 2: Orange histogram
+    sns.histplot(
+        data=df_temp2,
+        x="Dist_border_feret",
+        hue="Fish",
+        multiple="stack",
+        element="step",
+        common_norm=True,
+        weights="weights_a_ind",
+        stat="density",
+        binrange=[0, 1],
+        bins=nbins,
+        palette=["Reds", "Greens", "Oranges"][i],#"Oranges",
+        alpha=0.3,
+        ax=ax,
+        legend=False,  # Disable default legend for manual handling
+    )
+    
+    # Get unique categories for Fish in df_temp2
+    fish_categories_temp2 = df_temp2["Fish"].unique()
+    
+    # Manually create legend for Plot 2 (Orange)
+    orange_palette = sns.color_palette("Oranges", len(fish_categories_temp2))
+    orange_legend_elements = [
+        plt.Line2D([0], [0], color=orange_palette[i], lw=4, label=cat)
+        for i, cat in enumerate(fish_categories_temp2)
+    ]
+    legend2 = ax.legend(
+        handles=orange_legend_elements,
+        loc="upper left",
+        bbox_to_anchor=(1.05, 0.4),
+        title=Fenotype,
+    )
+    
+    # Set the title and layout
+    ax.set_title("Ponderated Stacked histogram of radial position for " + batch)
+    plt.tight_layout()
+    
+    # Show the plot
+    plt.show()
+    i=i+1
 
 
 # %% Comparación de histogramas [md]
@@ -731,9 +914,9 @@ Las barras de error se corresponden a los intervalos al 90% de un t- test
 g = sns.FacetGrid(
     distribution_df,
     hue="Fenotype",
-    hue_order=["WT", "KO44", "KO179", "KO185"],
+    hue_order=["KO44", "KO179", "KO185", "WT"],
     row="Batch",
-    palette="pastel",
+    palette=["red", "green", "yellow", "blue"],
     sharex="col",
     sharey=False,
     height=3,
@@ -772,7 +955,7 @@ g = sns.FacetGrid(
     hue="Fenotype",
     hue_order=["WT", "KO44", "KO179", "KO185"],
     row="Batch",
-    palette="pastel",
+    palette=["blue", "red", "green", "yellow"],
     sharex="col",
     sharey=False,
     height=4,
@@ -828,8 +1011,8 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border_feret"
-threshold = 0.01
-time_over_Thr = (
+threshold = 0.05
+time_over_Thr_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .agg(
         boder_time=lambda x: (x < threshold).sum(),
@@ -838,10 +1021,10 @@ time_over_Thr = (
     .reset_index()
 )  # .dropna()
 
-# a = sns.boxplot(x="Fenotype", y="contracted_perc", data=time_over_Thr)
+# a = sns.boxplot(x="Fenotype", y="contracted_perc", data=time_over_Thr_df)
 # a.set_title("Numero de tiempo replegado con Thr " + str(threshold))
 # b = sns.stripplot(
-#     x="Fenotype", y="contracted_perc", data=time_over_Thr, color="grey", size=8
+#     x="Fenotype", y="contracted_perc", data=time_over_Thr_df, color="grey", size=8
 # )
 # plt.show()
 
@@ -850,7 +1033,7 @@ time_over_Thr = (
 grped_bplot = sns.catplot(
     x="Batch",
     y="boder_time_cent",
-    data=time_over_Thr,
+    data=time_over_Thr_df,
     hue="Fenotype",
     kind="box",
     legend=True,
@@ -865,7 +1048,7 @@ ax = grped_bplot.ax  # get the matplotlib Axes
 sns.stripplot(
     x="Batch",
     y="boder_time_cent",
-    data=time_over_Thr,
+    data=time_over_Thr_df,
     hue="Fenotype",
     dodge=True,
     jitter=True,
@@ -878,7 +1061,7 @@ sns.stripplot(
 
 # define the pairwise comparisons per Batch
 pairs = []
-for batch in time_over_Thr["Batch"].unique():
+for batch in time_over_Thr_df["Batch"].unique():
     pairs.extend([
         ((batch, "WT"), (batch, "KO44")),
         ((batch, "WT"), (batch, "KO179")),
@@ -889,7 +1072,7 @@ for batch in time_over_Thr["Batch"].unique():
 annotator = Annotator(
     ax,
     pairs,
-    data=time_over_Thr,
+    data=time_over_Thr_df,
     x="Batch",
     y="boder_time_cent",
     hue="Fenotype",
@@ -938,7 +1121,7 @@ threshold_result = pd.DataFrame(
 )
 ref = ko44 = ko179 = np.nan
 
-for thr in np.arange(0.0, 0.30, 0.02):  # iteración sobre el threshold
+for thr in np.arange(0.0, 0.2, 0.02):  # iteración sobre el threshold
     # data frame con los valores para ese threshold
     time_over_Thr = (
         df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
@@ -993,44 +1176,44 @@ df_plot["CI_down"] = df_plot.Mean_diff - df_plot.CI
 df_plot["IQR_dif_up"] = df_plot.Median_diff + df_plot.IQR_high_dif
 df_plot["IQR_dif_down"] = df_plot.Median_diff - df_plot.IQR_low_dif
 
-
-
-g = sns.lineplot(
-    data=df_plot,
-    x="Threshold",
-    y="Mean_diff",
-    hue="hue",
-)
-g.set_title("Evolución del resultado (diferencia de medias con t-test CI) con el Threshold")
-
-for hue in df_plot.hue.unique():
-    g.fill_between(
+for f in ["KO44", "KO179", "KO185"]:
+    df_temp = df_plot.loc[df_plot.Fenotype == f]
+    g = sns.lineplot(
+        data=df_temp,
         x="Threshold",
-        y1="CI_up",
-        y2="CI_down",
-        alpha=0.1,
-        data=df_plot[df_plot.hue == hue],
+        y="Mean_diff",
+        hue="hue",
     )
-plt.show()
+    g.set_title("Evolución del resultado (diferencia de medias con t-test CI) con el Threshold")
+    
+    for hue in df_plot.hue.unique():
+        g.fill_between(
+            x="Threshold",
+            y1="CI_up",
+            y2="CI_down",
+            alpha=0.1,
+            data=df_temp[df_temp.hue == hue],
+        )
+    plt.show()
+    
 
+# g = sns.lineplot(
+#     data=df_plot,
+#     x="Threshold",
+#     y="Median_diff",
+#     hue="hue",
+# )
+# g.set_title("Evolución del resultado (diferencia de medianas Q75 y Q25) con el Threshold (la sombra significa otra cosa)")
 
-g = sns.lineplot(
-    data=df_plot,
-    x="Threshold",
-    y="Median_diff",
-    hue="hue",
-)
-g.set_title("Evolución del resultado (diferencia de medianas Q75 y Q25) con el Threshold (la sombra significa otra cosa)")
-
-for hue in df_plot.hue.unique():
-    g.fill_between(
-        x="Threshold",
-        y1="IQR_dif_up",
-        y2="IQR_dif_down",
-        alpha=0.1,
-        data=df_plot[df_plot.hue == hue],
-    )
-plt.show()
+# for hue in df_plot.hue.unique():
+#     g.fill_between(
+#         x="Threshold",
+#         y1="IQR_dif_up",
+#         y2="IQR_dif_down",
+#         alpha=0.1,
+#         data=df_plot[df_plot.hue == hue],
+#     )
+# plt.show()
 
 # %%%% [md]
 """
@@ -1096,7 +1279,7 @@ grped_bplot.set_title(
 
 # define the pairwise comparisons per Batch
 pairs = []
-for batch in time_over_Thr["Batch"].unique():
+for batch in Distancia_acumulada["Batch"].unique():
     pairs.extend([
         ((batch, "WT"), (batch, "KO44")),
         ((batch, "WT"), (batch, "KO179")),
@@ -1125,10 +1308,30 @@ annotator.apply_and_annotate()
 
 plt.show()
 
-# %%% Conclusiones [md]
+# %% Correlaciones [md]
+"""
+Como último recurso voy a graficar las relaciones entre distancia y la posición al borde
+"""
+
+# %%% Merge DF
+correlaciones_df = Distancia_acumulada.merge(Dist.reset_index(), on=['Batch', 'Fenotype', 'Fish'], how='inner')
+correlaciones_df = correlaciones_df.merge(time_over_Thr_df, on=['Batch', 'Fenotype', 'Fish'], how='inner')
+
+# %%% Correlation Plot
+
+
+
+g = sns.lmplot(data=correlaciones_df, x='dist', y='Distancia_acumulada', hue='Fenotype',
+           hue_order=["WT", "KO44", "KO179", "KO185"],
+           ci=95)
+g.fig.suptitle(
+    "Distancia radial acumulada vs Distancia Recorrida",
+    size=10)
+
+plt.show()
+
+
+# %% Conclusiones [md]
 """
 He comprobado y No hay diferencia entre los dos métodos de análisis de los videos (strict y maximun maxima).
-El batch 11 no se ha posido procesar bien
-
-
 """
