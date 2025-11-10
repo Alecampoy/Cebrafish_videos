@@ -446,16 +446,15 @@ Se calcula la distancia que recorre el pez a lo largo del video y se gráfica po
 # %%% Calculo de la distancia recorrida
 
 # dataframe con la distancia recorrida por el  gusano
-Dist = (
+Distancia_recorrida = (
     df.dropna()
     .groupby(["Batch", "Fenotype", "Fish"], observed=True, as_index=True)
     .dist.sum(min_count=100)
     .round()
-)  # .reset_index()
+).reset_index()
 
-Dist = Dist.loc[
-    Dist != np.nan
-]  # Importante. Elimina los Zebra que corresponden a categorias de las que no hay datos, ya que el groupby las genera
+
+Distancia_recorrida = Distancia_recorrida.rename(columns={'dist': 'Distancia_recorrida'})
 
 
 # %%% Box-plot
@@ -464,12 +463,12 @@ batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4","batch 5","batch 6","
 #batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4"]
 #batches_2_plot = ["batch 5","batch 6","batch 7","batch 8"]
 #batches_2_plot = ["batch 4","batch 5","batch 6","batch 7","batch 8"]
-df_plot = Dist.loc[(batches_2_plot)].reset_index()
+df_plot = Distancia_recorrida.loc[Distancia_recorrida.Batches.isin(batches_2_plot)]
 df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
 
 grped_bplot = sns.catplot(
     x="Batch",
-    y="dist",
+    y="Distancia_recorrida",
     hue="Fenotype",
     kind="box",
     showfliers=False,
@@ -481,7 +480,7 @@ grped_bplot = sns.catplot(
 # make grouped stripplot
 grped_bplot = sns.stripplot(
     x="Batch",
-    y="dist",
+    y="Distancia_recorrida",
     hue="Fenotype",
     jitter=0.18,
     dodge=True,
@@ -1016,7 +1015,7 @@ time_over_Thr_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .agg(
         boder_time=lambda x: (x < threshold).sum(),
-        boder_time_cent=lambda x: 100 * (x < threshold).sum() / len(x),
+        border_time_perc=lambda x: 100 * (x < threshold).sum() / len(x),
     )
     .reset_index()
 )  # .dropna()
@@ -1032,7 +1031,7 @@ time_over_Thr_df = (
 # base boxplot - Código de chatgpt
 grped_bplot = sns.catplot(
     x="Batch",
-    y="boder_time_cent",
+    y="border_time_perc",
     data=time_over_Thr_df,
     hue="Fenotype",
     kind="box",
@@ -1047,7 +1046,7 @@ grped_bplot._legend.remove()
 ax = grped_bplot.ax  # get the matplotlib Axes
 sns.stripplot(
     x="Batch",
-    y="boder_time_cent",
+    y="border_time_perc",
     data=time_over_Thr_df,
     hue="Fenotype",
     dodge=True,
@@ -1074,7 +1073,7 @@ annotator = Annotator(
     pairs,
     data=time_over_Thr_df,
     x="Batch",
-    y="boder_time_cent",
+    y="border_time_perc",
     hue="Fenotype",
     hue_order=["WT", "KO44", "KO179", "KO185"]
 )
@@ -1314,21 +1313,43 @@ Como último recurso voy a graficar las relaciones entre distancia y la posició
 """
 
 # %%% Merge DF
-correlaciones_df = Distancia_acumulada.merge(Dist.reset_index(), on=['Batch', 'Fenotype', 'Fish'], how='inner')
+correlaciones_df = Distancia_acumulada.merge(Distancia_recorrida, on=['Batch', 'Fenotype', 'Fish'], how='inner')
 correlaciones_df = correlaciones_df.merge(time_over_Thr_df, on=['Batch', 'Fenotype', 'Fish'], how='inner')
 
 # %%% Correlation Plot
+batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4","batch 5","batch 6","batch 7","batch 8"]
+#batches_2_plot = ["batch 1","batch 2","batch 3", "batch 4"]
+batches_2_plot = ["batch 4","batch 5","batch 6","batch 7","batch 8"]
+
+df_plot = correlaciones_df.loc[correlaciones_df.Batch.isin(batches_2_plot)]
+df_plot["Batch"] = df_plot["Batch"].cat.remove_unused_categories()
 
 
-
-g = sns.lmplot(data=correlaciones_df, x='dist', y='Distancia_acumulada', hue='Fenotype',
+g = sns.lmplot(data=df_plot, x='Distancia_recorrida', y='Distancia_acumulada', hue='Fenotype',
            hue_order=["WT", "KO44", "KO179", "KO185"],
            ci=95)
 g.fig.suptitle(
     "Distancia radial acumulada vs Distancia Recorrida",
     size=10)
-
 plt.show()
+
+g = sns.lmplot(data=df_plot, x='Distancia_recorrida', y='border_time_perc', hue='Fenotype',
+           hue_order=["WT", "KO44", "KO179", "KO185"],
+           ci=95)
+g.fig.suptitle(
+    "Distancia radial acumulada vs Distancia Recorrida",
+    size=10)
+plt.show()
+
+g = sns.lmplot(data=df_plot, x='Distancia_acumulada', y='border_time_perc', hue='Fenotype',
+           hue_order=["WT", "KO44", "KO179", "KO185"],
+           ci=95)
+g.fig.suptitle(
+    "Distancia radial acumulada vs Distancia Recorrida",
+    size=10)
+plt.show()
+
+
 
 
 # %% Conclusiones [md]
