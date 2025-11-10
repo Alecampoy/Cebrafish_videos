@@ -16,7 +16,7 @@
 
 
 STRICT = true; // argumento de find maxima
-if (STRICT == true) {strict_value = 50;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
+if (STRICT == true) {strict_value = 26;} // quizas poner el argumento  strict para que no aparezca ningun punto si el pez no se detecta
 
 
 // 0.0 Clean previous data in FIJI
