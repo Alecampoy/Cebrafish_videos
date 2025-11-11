@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-# Spyder Editor
-
+# ---
+# jupyter:
+#   jupytext:
+#     cell_markers: '"""'
+# ---
 # %% Intro [md]
 """
 # **Análisis de Movimiento Zebrafish**
