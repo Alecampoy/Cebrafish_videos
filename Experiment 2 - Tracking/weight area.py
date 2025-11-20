@@ -26,10 +26,11 @@ weights_a_ind = 1 / weights_a[bin_of_r]
 # método 2 para los pesos
 weights_r = 1 / (np.pi * (1 - r))  # dada la naturaleza radial de los datos
 
-sns.histplot(r, stat="density", binrange=[0, 1], bins=10)
+sns.histplot(r, stat="probability", binrange=[0, 1], bins=10)
 
 plt.show()
-sns.histplot(x=r, stat="density", weights=weights_r, binrange=[0, 1], bins=10)
+sns.histplot(x=r, stat="probability", weights=weights_r, binrange=[0, 1], bins=10)
+
 
 
 count, bins = np.histogram(r, bins, density=True)
