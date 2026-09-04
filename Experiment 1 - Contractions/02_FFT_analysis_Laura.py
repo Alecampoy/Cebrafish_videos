@@ -52,7 +52,7 @@ if platform.system() == "Windows":
     folder_path = "p:\\CABD\\Lab Ozren\\datos csv\\Experimento Coletazos\\"
 else:
     folder_path = (
-        "/home/ale/pCloudDrive/CABD/Lab Ozren/Marta Fernandez/Experimento Coletazos/"
+        "/home/ale/pCloudDrive/CABD/Lab Ozren/datos csv/Experimento Coletazos/"
     )
 files = get_files_in_folder(folder_path)
 
