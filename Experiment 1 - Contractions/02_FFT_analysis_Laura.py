@@ -183,7 +183,7 @@ Encuentro que hay peces que apenas dan coletazos, de este modo su gráfica tiene
 
 STD_Rango = (
     df.groupby(["Batch", "Fenotype", "Fish"])
-    .Round.agg(
+    .Circ.agg(
         STD=lambda x: x.std(), Rango=lambda x: x.max() - x.min(), n_obs=lambda x: len(x)
     )
     .dropna()
@@ -253,6 +253,10 @@ Dist = (
 )
 
 # %%% Box-plot por batch
+batches_laura = [b for b in Dist.index.get_level_values('Batch').unique() 
+                 if b.endswith('_L')]
+data = Dist[Dist.index.get_level_values('Batch').isin(batches_laura)].reset_index()
+data["Batch"] = data["Batch"].cat.remove_unused_categories()
 
 grped_bplot = sns.catplot(
     x="Batch",
@@ -263,7 +267,7 @@ grped_bplot = sns.catplot(
     legend=False,
     height=6,
     aspect=1.9,
-    data=Dist,
+    data=data,
     hue_order=["WT", "KO44", "KO179"],
 )
 # make grouped stripplot
@@ -276,13 +280,16 @@ grped_bplot = sns.stripplot(
     marker="o",
     color="black",
     # palette="Set2",
-    data=Dist,
+    data=data,
     hue_order=["WT", "KO44", "KO179"],
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
 
 grped_bplot.set_title("Distancia Recorrida por el Zebrafish durante el video (px)")
+
+plt.xticks(rotation=45, ha='right')  # 45 grados, alineado a la derecha
+
 plt.legend(handles[0:3], labels[0:3])
 plt.show()
 
@@ -351,6 +358,7 @@ grped_bplot = sns.stripplot(
 )
 handles, labels = grped_bplot.get_legend_handles_labels()
 
+plt.xticks(rotation=45, ha='right')  # 45 grados, alineado a la derecha
 
 grped_bplot.set_title(
     "Distancia Suavizada Recorrida por el Zebrafish durante el video (px)"
@@ -1008,6 +1016,7 @@ peaks_df = (
     .rename(columns={Variable_plot: "N_peaks"})
 )
 
+# Filtrar para batches por laura
 peaks_df = peaks_df.loc[peaks_df["Batch"].str.contains("_L", na=False)].copy()
 peaks_df["Batch"] = peaks_df["Batch"].cat.remove_unused_categories()
 
@@ -1049,7 +1058,9 @@ grped_bplot = sns.stripplot(
 #handles, labels = grped_bplot.get_legend_handles_labels()
 #l = plt.legend(handles[0:4], labels[0:4])
 grped_bplot.set_title("Number of peaks using " + Variable_plot)
-ax.set_ylim(-3, 66)
+plt.xticks(rotation=45, ha='right')  # 45 grados, alineado a la derecha
+
+ax.set_ylim(-3, 100)
 # plt.figure(figsize=(19,8))
 plt.show()
 
@@ -1078,7 +1089,7 @@ En lugar de contar el número de picos, voy a usar transformar las señales al d
 # %%% Zebra Ejemplo FFT - Analisis de Frecuencias del movimiento para un Pez Zebra
 
 
-zebra_temp = df.loc[("batch 7", "WT", "ZebraF_3")]
+zebra_temp = df.loc[("batch 6_L", "WT", "ZebraF_003")]
 
 signal = zebra_temp.Circ_filt.values  # signal as array
 # smooth signal

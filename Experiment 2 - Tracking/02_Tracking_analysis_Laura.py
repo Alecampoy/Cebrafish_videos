@@ -531,7 +531,7 @@ A lo largo del video, el pez se posiciona en algún lugar de la placa. Se piensa
 Vamos a evaluar el histograma de 1 Zebra. Este nos va a indicar donde se posiciona el Zebra a lo largo del tiempo del video.
 """
 # %%% Grafico Histograma 1 Zebra
-df_temp = df.loc[("batch 6", "WT", "ZebraF_5")].reset_index()
+df_temp = df.loc[("batch 6", "WT", "ZebraF_6")].reset_index()
 
 nbins = 12
 g = sns.histplot(
@@ -720,7 +720,7 @@ Haciendolo de manera ponderada. *Recomiendo verlo para cada batch*
 nbins=12
 i=0
 for Fenotype in ["KO44", "KO179", "KO185"]:
-    batch = "batch 5"
+    batch = "batch 6"
     df_temp = df.loc[(batch, "WT")].reset_index()
     #df_temp2 = df.loc[(batch, Fenotype, ["ZebraF_8", "ZebraF_9"])].reset_index()
     df_temp2 = df.loc[(batch, Fenotype)].reset_index()
@@ -1028,7 +1028,7 @@ Contando para cada Zebra el total del tiempo que pasa bajo el Threshold, obtenem
 # %%% Comparación usando un threshold fijo
 
 Variable_plot = "Dist_border_feret"
-threshold = 0.05
+threshold = 0.1
 time_over_Thr_df = (
     df.groupby(["Batch", "Fenotype", "Fish"])[Variable_plot]
     .agg(
